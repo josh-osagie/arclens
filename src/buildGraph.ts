@@ -7,7 +7,8 @@ import {
 } from "./extractors/exports";
 import { findExportByFile, findExportByName, nodeId } from "./extractors/find";
 
-export function buildGraph(  importEdges: ReturnType<typeof extractImportEdges>,
+export function buildGraph(
+  importEdges: ReturnType<typeof extractImportEdges>,
   exports: ExportRecord[],
   renders: ReturnType<typeof extractJsxRenders>,
   uses: ReturnType<typeof extractHookUsage>,

@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "analyze": "tsx src/analyze.ts",
+    "react-atlas": "tsx src/cli.ts",
+    "analyze": "tsx src/cli.ts analyze",
     "analyze:watch": "chokidar \"samples/**/*.{ts,tsx}\" \"src/**/*.ts\" -i node_modules -c \"pnpm analyze\" --initial",
     "dev:viewer": "pnpm --dir viewer dev",
     "dev": "concurrently -n analyze,viewer -c blue,yellow \"pnpm analyze:watch\" \"pnpm dev:viewer\""
@@ -14,6 +15,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.24.0",
   "dependencies": {
+    "commander": "^15.0.0",
     "ts-morph": "^28.0.0"
   },
   "devDependencies": {
