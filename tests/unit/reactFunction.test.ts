@@ -63,6 +63,14 @@ describe("reactFunction", () => {
       );
       expect(classifyExport("fetchUser", declarations)).toBe("utility");
     });
+
+    it("classifies createContext exports as context", () => {
+      const { declarations } = parseExport(
+        `export const ThemeContext = createContext("light");`,
+        "ThemeContext",
+      );
+      expect(classifyExport("ThemeContext", declarations)).toBe("context");
+    });
   });
 
   describe("resolveDefaultExportName", () => {

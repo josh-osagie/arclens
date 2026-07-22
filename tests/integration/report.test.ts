@@ -89,7 +89,7 @@ describe("graph output shape (viewer contract)", () => {
 
     for (const node of graph.nodes) {
       expect(node.id).toContain("::");
-      expect(["component", "hook", "utility"]).toContain(node.type);
+      expect(["component", "hook", "utility", "context"]).toContain(node.type);
     }
 
     for (const edge of graph.edges) {
@@ -105,6 +105,6 @@ describe("graph output shape (viewer contract)", () => {
 
     expect(json.nodesByType.component.count).toBeGreaterThan(0);
     expect(json.mostReferenced.length).toBeGreaterThan(0);
-    expect(json.verbose?.scannedFiles.length).toBe(4);
+    expect(json.verbose?.scannedFiles.length).toBe(5);
   });
 });

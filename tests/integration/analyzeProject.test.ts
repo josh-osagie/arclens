@@ -14,8 +14,9 @@ describe("analyzeProject integration", () => {
     const result = analyzeSamples();
 
     it("scans all sample TypeScript files", () => {
-      expect(result.fileCount).toBe(4);
+      expect(result.fileCount).toBe(5);
       expect(result.scannedFiles.some((f) => f.endsWith("Counter.tsx"))).toBe(true);
+      expect(result.scannedFiles.some((f) => f.endsWith("ThemeContext.tsx"))).toBe(true);
     });
 
     it("detects components, hooks, and utilities", () => {
