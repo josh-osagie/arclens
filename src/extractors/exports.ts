@@ -1,6 +1,37 @@
-import { SourceFile, SyntaxKind, type Node } from "ts-morph";
+import { SourceFile, SyntaxKind } from "ts-morph";
+import {
+  classifyExport,
+  resolveDefaultExportName,
+} from "./reactFunction";
 
-export type ExportRecord = ReturnType<typeof extractExportsDeclarations>[number];
+export type ExportRecord = {
+  file: string;
+  /** Resolved symbol name (e.g. App, not "default") */
+  name: string;
+  exportKind: "default" | "named";
+  kind: string | undefined;
+  type: "component" | "hook" | "utility";
+};
+
+export function dedupeExports(exports: ExportRecord[]): ExportRecord[] {
+  const byKey = new Map<string, ExportRecord>();
+
+  for (const exp of exports) {
+    const key = `${exp.file}::${exp.name}`;
+    const existing = byKey.get(key);
+
+    if (!existing) {
+      byKey.set(key, exp);
+      continue;
+    }
+
+    if (existing.exportKind === "default" && exp.exportKind === "named") {
+      byKey.set(key, exp);
+    }
+  }
+
+  return [...byKey.values()];
+}
 
 export function extractImportEdges(sourceFile: SourceFile) {
   return sourceFile.getImportDeclarations().map((i) => ({
@@ -14,34 +45,30 @@ export function extractImportEdges(sourceFile: SourceFile) {
   }));
 }
 
-export function extractExportsDeclarations(sourceFile: SourceFile) {
+export function extractExportsDeclarations(sourceFile: SourceFile): ExportRecord[] {
   const exported = sourceFile.getExportedDeclarations();
+  const filePath = sourceFile.getFilePath();
+  const records: ExportRecord[] = [];
 
-  return [...exported.entries()].map(([name, declarations]) => ({
-    file: sourceFile.getFilePath(),
-    name,
-    kind: declarations[0]?.getKindName(),
-    type: classifyExport(name, declarations),
-  }));
+  for (const [exportKey, declarations] of exported.entries()) {
+    const isDefault = exportKey === "default";
+    const name = isDefault
+      ? resolveDefaultExportName(declarations[0], filePath)
+      : exportKey;
+
+    records.push({
+      file: filePath,
+      name,
+      exportKind: isDefault ? "default" : "named",
+      kind: declarations[0]?.getKindName(),
+      type: classifyExport(name, declarations),
+    });
+  }
+
+  return dedupeExports(records);
 }
 
-export function classifyExport(
-  name: string,
-  declarations: Node[],
-): "component" | "hook" | "service" {
-  if (/^use[A-Z]/.test(name)) return "hook";
-
-  const node = declarations[0];
-  if (!node) return "service";
-
-  const hasJsx =
-    node.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement).length > 0 ||
-    node.getDescendantsOfKind(SyntaxKind.JsxElement).length > 0;
-
-  if (/^[A-Z]/.test(name) && hasJsx) return "component";
-
-  return "service";
-}
+export { classifyExport } from "./reactFunction";
 
 export function extractHookUsage(sourceFile: SourceFile) {
   return sourceFile

@@ -5,6 +5,7 @@ import graph from "../../graph.json";
 const typeColors = {
   component: "#3b82f6",
   hook: "#bbffee",
+  utility: "#10b981",
   service: "#10b981",
 } as const;
 
@@ -34,7 +35,7 @@ const typedGraph = graph as {
   edges: GraphEdge[];
 };
 
-const nodeTypes = ["component", "hook", "service"] as const;
+const nodeTypes = ["component", "hook", "utility"] as const;
 
 function layoutGraph(nodes: Node[], edges: Edge[]) {
   const g = new dagre.graphlib.Graph();

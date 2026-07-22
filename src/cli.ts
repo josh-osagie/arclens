@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import ora from "ora";
 import { Command } from "commander";
 import { analyzeProject } from "./analyzeProject";
-import { printReport } from "./report";
+import { printReport, writeReportFile } from "./report";
 import { resolveTarget } from "./resolveTarget";
 
 const program = new Command();
@@ -16,22 +17,97 @@ program
   .command("analyze")
   .description("Analyze a React/TypeScript project and generate graph.json")
   .argument("[path]", "directory to analyze", "./samples")
-  .option("-o, --output <file>", "output path for graph.json", "graph.json")
-  .action((inputPath: string, options: { output: string }) => {
-    try {
-      const targetDir = resolveTarget(inputPath);
-      const outputPath = path.resolve(process.cwd(), options.output);
+  .option(
+    "-o, --output [file]",
+    "write graph.json (default: graph.json unless --report-file is used alone)",
+  )
+  .option(
+    "--report-file <file>",
+    "write a full report (.txt = human-readable, .json = structured data)",
+  )
+  .option("-v, --verbose", "show scanned files and export kind breakdown")
+  .option(
+    "--insights",
+    "show architecture suggestions and ESLint-style hints",
+  )
+  .option("-q, --quiet", "minimal output (written file paths only)")
+  .option("--no-color", "disable ANSI colors in terminal output")
+  .option(
+    "--max-files <number>",
+    "refuse to scan more than N files (safety guard)",
+    "3000",
+  )
+  .action(
+    (
+      inputPath: string,
+      options: {
+        output?: string;
+        reportFile?: string;
+        verbose?: boolean;
+        insights?: boolean;
+        quiet?: boolean;
+        color?: boolean;
+        maxFiles: string;
+      },
+    ) => {
+      const spinner = options.quiet ? null : ora({ color: "cyan" }).start();
 
-      const result = analyzeProject(targetDir);
+      try {
+        const targetDir = resolveTarget(inputPath);
+        const maxFiles = Number.parseInt(options.maxFiles, 10);
 
-      fs.writeFileSync(outputPath, JSON.stringify(result.graph, null, 2));
+        if (Number.isNaN(maxFiles) || maxFiles <= 0) {
+          throw new Error("--max-files must be a positive number");
+        }
 
-      printReport(result, outputPath);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`react-atlas: ${message}`);
-      process.exitCode = 1;
-    }
-  });
+        const result = analyzeProject(targetDir, {
+          maxFiles,
+          onProgress: (message) => {
+            if (spinner) spinner.text = message;
+          },
+        });
+
+        // Write graph.json by default, unless user only asked for --report-file
+        const shouldWriteGraph = Boolean(options.output) || !options.reportFile;
+        const graphPath = shouldWriteGraph
+          ? path.resolve(process.cwd(), options.output ?? "graph.json")
+          : null;
+
+        if (graphPath) {
+          fs.writeFileSync(graphPath, JSON.stringify(result.graph, null, 2));
+        }
+
+        const reportPath = options.reportFile
+          ? path.resolve(process.cwd(), options.reportFile)
+          : null;
+
+        if (reportPath) {
+          writeReportFile(result, reportPath, {
+            verbose: options.verbose,
+            insights: true,
+            color: false,
+            graphOutput: graphPath,
+            reportOutput: reportPath,
+          });
+        }
+
+        spinner?.stop();
+
+        printReport(result, {
+          verbose: options.verbose,
+          insights: options.insights,
+          quiet: options.quiet,
+          color: options.color,
+          graphOutput: graphPath,
+          reportOutput: reportPath,
+        });
+      } catch (error) {
+        spinner?.stop();
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`react-atlas: ${message}`);
+        process.exitCode = 1;
+      }
+    },
+  );
 
 program.parse();

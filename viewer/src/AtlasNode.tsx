@@ -2,13 +2,14 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 
 type AtlasNodeData = {
   label: string;
-  type: "component" | "hook" | "service";
+  type: "component" | "hook" | "utility" | "service";
 };
 
 const typeLabels = {
   component: "Component",
   hook: "Hook",
-  service: "Service",
+  utility: "Utility",
+  service: "Utility",
 } as const;
 
 export function AtlasNode({ data }: NodeProps) {

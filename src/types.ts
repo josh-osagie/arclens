@@ -2,7 +2,7 @@ export type GraphNode = {
   id: string;
   name: string;
   file: string;
-  type: "component" | "hook" | "service";
+  type: "component" | "hook" | "utility";
 };
 
 export type GraphEdge = {

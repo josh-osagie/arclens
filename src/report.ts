@@ -1,8 +1,87 @@
+import fs from "node:fs";
 import path from "node:path";
+import pc from "picocolors";
 import type { AnalysisResult, ImportEdge } from "./analyzeProject";
-import type { Graph, GraphEdge, GraphNode } from "./types";
+import {
+  buildInsights,
+  countInsightsBySeverity,
+  exportsByKind,
+  nodeNameFromId,
+  type Insight,
+} from "./insights";
+import type { GraphEdge, GraphNode, Graph } from "./types";
+import { FILE_COUNT_SLOW, FILE_COUNT_WARNING, formatDuration } from "./discoverFiles";
+
+export type ReportOptions = {
+  verbose?: boolean;
+  insights?: boolean;
+  quiet?: boolean;
+  color?: boolean;
+  graphOutput?: string | null;
+  reportOutput?: string | null;
+};
+
+export type ReportFormat = "text" | "json";
+
+export type JsonReport = {
+  meta: {
+    targetDir: string;
+    fileCount: number;
+    durationMs: number;
+    tsConfigPath: string | null;
+    graphOutput: string | null;
+    reportOutput: string | null;
+  };
+  summary: {
+    nodes: number;
+    edges: number;
+    types: number;
+  };
+  nodesByType: Record<
+    NodeType,
+    {
+      count: number;
+      names: string[];
+    }
+  >;
+  relationships: Record<GraphEdge["type"], number>;
+  externalLibraries: string[];
+  topConnections: Array<{
+    from: string;
+    to: string;
+    types: string[];
+  }>;
+  mostReferenced: Array<{
+    name: string;
+    incoming: number;
+  }>;
+  insights: {
+    counts: ReturnType<typeof countInsightsBySeverity>;
+    items: Insight[];
+  };
+  verbose?: {
+    exportKinds: Record<string, number>;
+    scannedFiles: string[];
+  };
+  graph: Graph;
+};
+
+function relPath(filePath: string): string {
+  return path.relative(process.cwd(), filePath) || filePath;
+}
+
+export function getReportFormat(reportFilePath: string): ReportFormat {
+  return path.extname(reportFilePath).toLowerCase() === ".json" ? "json" : "text";
+}
 
 type NodeType = GraphNode["type"];
+
+function createColors(enabled: boolean) {
+  if (!enabled) {
+    return new Proxy(pc, { get: () => (value: string) => value });
+  }
+  return pc;
+}
 
 function countNodesByType(nodes: GraphNode[]): Record<NodeType, number> {
   return nodes.reduce(
@@ -10,7 +89,7 @@ function countNodesByType(nodes: GraphNode[]): Record<NodeType, number> {
       counts[node.type] += 1;
       return counts;
     },
-    { component: 0, hook: 0, service: 0 },
+    { component: 0, hook: 0, utility: 0 },
   );
 }
 
@@ -33,16 +112,10 @@ function getExternalLibs(importEdges: ImportEdge[]): string[] {
     const isNodeBuiltin = specifier.startsWith("node:");
 
     if (isRelative || isNodeBuiltin || !specifier) continue;
-
     libs.add(specifier);
   }
 
   return [...libs].sort();
-}
-
-function nodeNameFromId(id: string): string {
-  const parts = id.split("::");
-  return parts.length > 1 ? parts[parts.length - 1] : id;
 }
 
 function getTopConnections(edges: GraphEdge[], limit = 5) {
@@ -87,77 +160,319 @@ function formatNodeList(nodes: GraphNode[], type: NodeType): string {
   return names.length > 0 ? names.join(", ") : "—";
 }
 
-export function printReport(result: AnalysisResult, outputPath: string): void {
-  const { graph, importEdges, targetDir, fileCount, tsConfigPath } = result;
+function severityColor(
+  colors: typeof pc,
+  severity: Insight["severity"],
+): (text: string) => string {
+  switch (severity) {
+    case "error":
+      return colors.red;
+    case "warning":
+      return colors.yellow;
+    case "info":
+      return colors.cyan;
+    default:
+      return colors.dim;
+  }
+}
+
+function formatInsight(insight: Insight, colors: typeof pc): string {
+  const paint = severityColor(colors, insight.severity);
+  const rule = insight.eslintRule
+    ? colors.dim(` (see: ${insight.eslintRule})`)
+    : "";
+  const location = insight.file
+    ? colors.dim(
+        `  at ${insight.file}${insight.line !== undefined ? `:${insight.line}` : ""}`,
+      )
+    : null;
+
+  return [
+    `  ${paint(`[${insight.severity}]`)} ${insight.title}`,
+    `    ${colors.dim(insight.detail)}${rule}`,
+    ...(location ? [location] : []),
+  ].join("\n");
+}
+
+export function formatReport(
+  result: AnalysisResult,
+  options: ReportOptions = {},
+): string {
+  const colors = createColors(options.color !== false);
+  const lines: string[] = [];
+
+  const { graph, importEdges, targetDir, fileCount, tsConfigPath, durationMs } =
+    result;
   const nodeCounts = countNodesByType(graph.nodes);
   const edgeCounts = countEdgesByType(graph.edges);
   const externalLibs = getExternalLibs(importEdges);
   const topConnections = getTopConnections(graph.edges);
   const mostUsed = getMostUsedNodes(graph.edges);
+  const kindCounts = exportsByKind(result.exports);
+  const insights = options.insights ? buildInsights(result) : [];
+  const insightCounts = countInsightsBySeverity(insights);
 
   const relTarget = path.relative(process.cwd(), targetDir) || ".";
-  const relOutput = path.relative(process.cwd(), outputPath) || outputPath;
+  const totalNodes = graph.nodes.length;
+  const totalEdges = graph.edges.length;
+  const totalTypes = nodeCounts.component + nodeCounts.hook + nodeCounts.utility;
 
-  console.log("");
-  console.log("React Atlas");
-  console.log("===========");
-  console.log(`Target:     ${relTarget}`);
-  console.log(`Files:      ${fileCount} TypeScript sources`);
-  console.log(
-    `Tsconfig:   ${tsConfigPath ? path.relative(process.cwd(), tsConfigPath) : "not found (resolution may be limited)"}`,
-  );
-  console.log(`Output:     ${relOutput}`);
-  console.log("");
-  console.log("Nodes");
-  console.log("-----");
-  console.log(
-    `  ${nodeCounts.component} component${nodeCounts.component === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "component")})`,
-  );
-  console.log(
-    `  ${nodeCounts.hook} hook${nodeCounts.hook === 1 ? "" : "s"}       (${formatNodeList(graph.nodes, "hook")})`,
-  );
-  console.log(
-    `  ${nodeCounts.service} service${nodeCounts.service === 1 ? "" : "s"}   (${formatNodeList(graph.nodes, "service")})`,
-  );
-  console.log("");
-  console.log("Relationships");
-  console.log("-------------");
-  console.log(`  ${edgeCounts.imports} import${edgeCounts.imports === 1 ? "" : "s"}`);
-  console.log(`  ${edgeCounts.renders} render${edgeCounts.renders === 1 ? "" : "s"}`);
-  console.log(`  ${edgeCounts.uses} hook use${edgeCounts.uses === 1 ? "" : "s"}`);
-  console.log("");
-  console.log("External libraries");
-  console.log("------------------");
-  if (externalLibs.length === 0) {
-    console.log("  —");
-  } else {
-    for (const lib of externalLibs) {
-      console.log(`  ${lib}`);
+  if (!options.quiet) {
+    lines.push("");
+    lines.push(`${colors.bold(colors.cyan("React Atlas"))}`);
+    lines.push(colors.dim("=".repeat(40)));
+    lines.push(`${colors.dim("Target:")}     ${colors.white(relTarget)}`);
+    lines.push(
+      `${colors.dim("Files:")}      ${colors.white(String(fileCount))} TypeScript sources`,
+    );
+    lines.push(
+      `${colors.dim("Duration:")}   ${colors.white(formatDuration(durationMs))}`,
+    );
+    lines.push(
+      `${colors.dim("Tsconfig:")}   ${colors.white(tsConfigPath ? path.relative(process.cwd(), tsConfigPath) : "not found")}`,
+    );
+    if (options.graphOutput) {
+      lines.push(
+        `${colors.dim("Graph:")}      ${colors.green(path.relative(process.cwd(), options.graphOutput) || options.graphOutput)}`,
+      );
     }
-  }
-  console.log("");
-  console.log("Top connections");
-  console.log("---------------");
-  if (topConnections.length === 0) {
-    console.log("  —");
-  } else {
-    for (const connection of topConnections) {
-      console.log(
-        `  ${connection.from} → ${connection.to}  [${[...connection.types].join(", ")}]`,
+    if (options.reportOutput) {
+      lines.push(
+        `${colors.dim("Report:")}    ${colors.green(path.relative(process.cwd(), options.reportOutput) || options.reportOutput)}`,
+      );
+    }
+    if (!options.graphOutput && !options.reportOutput) {
+      lines.push(`${colors.dim("Output:")}     ${colors.dim("(none)")}`);
+    }
+    lines.push("");
+    lines.push(colors.bold("Summary"));
+    lines.push(
+      `${colors.dim("Nodes:")} ${totalNodes}  ${colors.dim("|")}  ${colors.dim("Edges:")} ${totalEdges}  ${colors.dim("|")}  ${colors.dim("Types:")} ${totalTypes}`,
+    );
+    lines.push("");
+    lines.push(colors.bold("Nodes by type"));
+    lines.push(
+      `  ${colors.blue(String(nodeCounts.component))} ${colors.dim("component")}${nodeCounts.component === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "component")})`,
+    );
+    lines.push(
+      `  ${colors.magenta(String(nodeCounts.hook))} ${colors.dim("hook")}${nodeCounts.hook === 1 ? "" : "s"}       (${formatNodeList(graph.nodes, "hook")})`,
+    );
+    lines.push(
+      `  ${colors.green(String(nodeCounts.utility))} ${colors.dim("utilit")}${nodeCounts.utility === 1 ? "y   " : "ies "}    (${formatNodeList(graph.nodes, "utility")})`,
+    );
+    lines.push("");
+    lines.push(colors.bold("Relationships"));
+    lines.push(
+      `  ${colors.white(String(edgeCounts.imports))} ${colors.dim("imports")}`,
+    );
+    lines.push(
+      `  ${colors.white(String(edgeCounts.renders))} ${colors.dim("renders")}`,
+    );
+    lines.push(
+      `  ${colors.white(String(edgeCounts.uses))} ${colors.dim("hook uses")}`,
+    );
+    lines.push("");
+    lines.push(colors.bold("External libraries"));
+    if (externalLibs.length === 0) {
+      lines.push(`  ${colors.dim("—")}`);
+    } else {
+      for (const lib of externalLibs) {
+        lines.push(`  ${colors.yellow(lib)}`);
+      }
+    }
+    lines.push("");
+    lines.push(colors.bold("Top connections"));
+    if (topConnections.length === 0) {
+      lines.push(`  ${colors.dim("—")}`);
+    } else {
+      for (const connection of topConnections) {
+        lines.push(
+          `  ${colors.cyan(connection.from)} ${colors.dim("→")} ${colors.cyan(connection.to)}  ${colors.dim(`[${[...connection.types].join(", ")}]`)}`,
+        );
+      }
+    }
+    lines.push("");
+    lines.push(colors.bold("Most referenced"));
+    if (mostUsed.length === 0) {
+      lines.push(`  ${colors.dim("—")}`);
+    } else {
+      for (const entry of mostUsed) {
+        lines.push(
+          `  ${colors.white(entry.name)}  ${colors.dim(`(${entry.count} incoming)`)}`,
+        );
+      }
+    }
+
+    if (fileCount >= FILE_COUNT_SLOW) {
+      lines.push("");
+      lines.push(
+        colors.yellow(
+          "⚠ Large scan — next time try a subfolder: pnpm react-atlas analyze ./src",
+        ),
+      );
+    } else if (fileCount >= FILE_COUNT_WARNING) {
+      lines.push("");
+      lines.push(
+        colors.dim("Tip: use --report-file out.txt or --report-file out.json to save results."),
+      );
+    }
+
+    if (!options.insights && (insights.length > 0 || fileCount > 100)) {
+      lines.push("");
+      lines.push(
+        colors.dim("Run with --insights for architecture suggestions and ESLint-style hints."),
       );
     }
   }
-  console.log("");
-  console.log("Most referenced");
-  console.log("---------------");
-  if (mostUsed.length === 0) {
-    console.log("  —");
-  } else {
-    for (const entry of mostUsed) {
-      console.log(`  ${entry.name}  (${entry.count} incoming)`);
+
+  if (options.insights && insights.length > 0) {
+    lines.push("");
+    lines.push(colors.bold("Insights"));
+    lines.push(
+      colors.dim(
+        `  ${insightCounts.error} errors, ${insightCounts.warning} warnings, ${insightCounts.info} info, ${insightCounts.tip} tips`,
+      ),
+    );
+    for (const insight of insights) {
+      lines.push(formatInsight(insight, colors));
+    }
+  } else if (options.insights) {
+    lines.push("");
+    lines.push(colors.bold("Insights"));
+    lines.push(`  ${colors.green("No issues detected.")}`);
+  }
+
+  if (options.verbose) {
+    lines.push("");
+    lines.push(colors.bold("Export kinds (verbose)"));
+    for (const [kind, count] of Object.entries(kindCounts).sort()) {
+      lines.push(`  ${colors.white(String(count))} ${colors.dim(kind)}`);
+    }
+
+    lines.push("");
+    lines.push(colors.bold("Scanned files (verbose)"));
+    for (const file of result.scannedFiles) {
+      lines.push(`  ${colors.dim(path.relative(process.cwd(), file))}`);
     }
   }
-  console.log("");
-  console.log("Note: static analysis only — code is parsed, never executed.");
-  console.log("");
+
+  if (!options.quiet) {
+    lines.push("");
+    lines.push(colors.dim("Static analysis only — code is parsed, never executed."));
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
+export function printReport(
+  result: AnalysisResult,
+  options: ReportOptions = {},
+): void {
+  const text = formatReport(result, options);
+
+  if (options.quiet) {
+    const written = options.reportOutput ?? options.graphOutput;
+    if (written) {
+      console.log(`Wrote ${path.relative(process.cwd(), written) || written}`);
+    }
+    return;
+  }
+
+  console.log(text);
+}
+
+export function buildJsonReport(
+  result: AnalysisResult,
+  options: ReportOptions = {},
+): JsonReport {
+  const { graph, importEdges, targetDir, fileCount, tsConfigPath, durationMs } =
+    result;
+  const nodeCounts = countNodesByType(graph.nodes);
+  const edgeCounts = countEdgesByType(graph.edges);
+  const insights = buildInsights(result);
+  const insightCounts = countInsightsBySeverity(insights);
+  const graphOutput = options.graphOutput
+    ? relPath(options.graphOutput)
+    : null;
+  const reportOutput = options.reportOutput
+    ? relPath(options.reportOutput)
+    : null;
+
+  const nodesByType = (["component", "hook", "utility"] as const).reduce(
+    (acc, type) => {
+      const names = graph.nodes.filter((node) => node.type === type).map((n) => n.name);
+      acc[type] = { count: nodeCounts[type], names };
+      return acc;
+    },
+    {} as JsonReport["nodesByType"],
+  );
+
+  const report: JsonReport = {
+    meta: {
+      targetDir: relPath(targetDir),
+      fileCount,
+      durationMs,
+      tsConfigPath: tsConfigPath ? relPath(tsConfigPath) : null,
+      graphOutput,
+      reportOutput,
+    },
+    summary: {
+      nodes: graph.nodes.length,
+      edges: graph.edges.length,
+      types: nodeCounts.component + nodeCounts.hook + nodeCounts.utility,
+    },
+    nodesByType,
+    relationships: edgeCounts,
+    externalLibraries: getExternalLibs(importEdges),
+    topConnections: getTopConnections(graph.edges).map((connection) => ({
+      from: connection.from,
+      to: connection.to,
+      types: [...connection.types],
+    })),
+    mostReferenced: getMostUsedNodes(graph.edges).map((entry) => ({
+      name: entry.name,
+      incoming: entry.count,
+    })),
+    insights: {
+      counts: insightCounts,
+      items: insights,
+    },
+    graph,
+  };
+
+  if (options.verbose) {
+    report.verbose = {
+      exportKinds: exportsByKind(result.exports),
+      scannedFiles: result.scannedFiles.map(relPath),
+    };
+  }
+
+  return report;
+}
+
+export function writeReportFile(
+  result: AnalysisResult,
+  reportFilePath: string,
+  options: ReportOptions,
+): void {
+  const fullOptions: ReportOptions = {
+    ...options,
+    verbose: true,
+    insights: true,
+    color: false,
+    reportOutput: reportFilePath,
+  };
+
+  const format = getReportFormat(reportFilePath);
+
+  if (format === "json") {
+    fs.writeFileSync(
+      reportFilePath,
+      `${JSON.stringify(buildJsonReport(result, fullOptions), null, 2)}\n`,
+    );
+    return;
+  }
+
+  fs.writeFileSync(reportFilePath, formatReport(result, fullOptions));
 }
