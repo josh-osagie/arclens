@@ -1,9 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "./Button";
 
 
-export const Counter = () => {
+export const counter = () => {
   const [count, setCount] = useState(0);
+  if (count > 10) {
+    useEffect(() => {
+      console.log("count is greater than 10");
+    }, [count]);
+  }
 
   return (
     <div>
