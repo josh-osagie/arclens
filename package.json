@@ -1,0 +1,24 @@
+{
+  "name": "react-atlas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch playground/extract-imports.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.24.0",
+  "dependencies": {
+    "ts-morph": "^28.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "react": "^19.2.7",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}
