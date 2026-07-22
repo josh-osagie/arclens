@@ -1,0 +1,97 @@
+.graph-shell {
+  width: 100vw;
+  height: 100vh;
+  background: #0f172a;
+}
+
+.graph-panel {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: #e2e8f0;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.graph-panel h1 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+}
+
+.graph-panel p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.graph-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.graph-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+  text-transform: capitalize;
+}
+
+.graph-legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.atlas-node {
+  min-width: 160px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1e293b;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+.atlas-node--component {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.atlas-node--hook {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.atlas-node--service {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.atlas-node__badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.atlas-node__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.atlas-handle {
+  width: 8px !important;
+  height: 8px !important;
+  background: #64748b !important;
+  border: 2px solid #0f172a !important;
+}
