@@ -6,6 +6,7 @@ const typeColors = {
   component: "#3b82f6",
   hook: "#bbffee",
   utility: "#10b981",
+  context: "#f59e0b",
   service: "#10b981",
 } as const;
 
@@ -35,7 +36,7 @@ const typedGraph = graph as {
   edges: GraphEdge[];
 };
 
-const nodeTypes = ["component", "hook", "utility"] as const;
+const nodeTypes = ["component", "hook", "utility", "context"] as const;
 
 function layoutGraph(nodes: Node[], edges: Edge[]) {
   const g = new dagre.graphlib.Graph();

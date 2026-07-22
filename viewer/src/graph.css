@@ -69,9 +69,15 @@
   box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+.atlas-node--utility,
 .atlas-node--service {
   border-color: rgba(16, 185, 129, 0.5);
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.atlas-node--context {
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .atlas-node__badge {
