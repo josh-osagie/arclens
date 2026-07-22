@@ -10,7 +10,7 @@ export type ExportRecord = {
   name: string;
   exportKind: "default" | "named";
   kind: string | undefined;
-  type: "component" | "hook" | "utility";
+  type: "component" | "hook" | "utility" | "context";
 };
 
 export function dedupeExports(exports: ExportRecord[]): ExportRecord[] {

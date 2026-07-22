@@ -14,15 +14,33 @@ import {
   resolveFromExport,
 } from "./extractors/find";
 
+function createBaseNode(
+  id: string,
+  name: string,
+  file: string,
+  type: GraphNode["type"],
+  extra?: Pick<GraphNode, "exportKind" | "kind">,
+): GraphNode {
+  return {
+    id,
+    name,
+    file,
+    type,
+    ...extra,
+    connections: { incoming: [], outgoing: [] },
+    stats: { incoming: 0, outgoing: 0 },
+  };
+}
+
 function ensureNode(nodes: GraphNode[], exportRecord: ExportRecord): void {
   const id = nodeId(exportRecord);
   if (!nodes.some((node) => node.id === id)) {
-    nodes.push({
-      id,
-      name: exportRecord.name,
-      file: exportRecord.file,
-      type: exportRecord.type,
-    });
+    nodes.push(
+      createBaseNode(id, exportRecord.name, exportRecord.file, exportRecord.type, {
+        exportKind: exportRecord.exportKind,
+        kind: exportRecord.kind,
+      }),
+    );
   }
 }
 
@@ -32,12 +50,12 @@ export function buildGraph(
   renders: ReturnType<typeof extractJsxRenders>,
   uses: ReturnType<typeof extractHookUsage>,
 ): Graph {
-  const nodes: GraphNode[] = exports.map((e) => ({
-    id: nodeId(e),
-    name: e.name,
-    file: e.file,
-    type: e.type,
-  }));
+  const nodes: GraphNode[] = exports.map((e) =>
+    createBaseNode(nodeId(e), e.name, e.file, e.type, {
+      exportKind: e.exportKind,
+      kind: e.kind,
+    }),
+  );
 
   const graphEdges: GraphEdge[] = [];
 
@@ -99,12 +117,7 @@ export function buildGraph(
     const hookId = externalNodeId(use.uses);
 
     if (!nodes.some((node) => node.id === hookId)) {
-      nodes.push({
-        id: hookId,
-        name: use.uses,
-        file: "external",
-        type: "hook",
-      });
+      nodes.push(createBaseNode(hookId, use.uses, "external", "hook"));
     }
 
     graphEdges.push({

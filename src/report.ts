@@ -89,7 +89,7 @@ function countNodesByType(nodes: GraphNode[]): Record<NodeType, number> {
       counts[node.type] += 1;
       return counts;
     },
-    { component: 0, hook: 0, utility: 0 },
+    { component: 0, hook: 0, utility: 0, context: 0 },
   );
 }
 
@@ -215,7 +215,8 @@ export function formatReport(
   const relTarget = path.relative(process.cwd(), targetDir) || ".";
   const totalNodes = graph.nodes.length;
   const totalEdges = graph.edges.length;
-  const totalTypes = nodeCounts.component + nodeCounts.hook + nodeCounts.utility;
+  const totalTypes =
+    nodeCounts.component + nodeCounts.hook + nodeCounts.utility + nodeCounts.context;
 
   if (!options.quiet) {
     lines.push("");
@@ -259,6 +260,9 @@ export function formatReport(
     );
     lines.push(
       `  ${colors.green(String(nodeCounts.utility))} ${colors.dim("utilit")}${nodeCounts.utility === 1 ? "y   " : "ies "}    (${formatNodeList(graph.nodes, "utility")})`,
+    );
+    lines.push(
+      `  ${colors.yellow(String(nodeCounts.context))} ${colors.dim("context")}${nodeCounts.context === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "context")})`,
     );
     lines.push("");
     lines.push(colors.bold("Relationships"));
@@ -399,7 +403,7 @@ export function buildJsonReport(
     ? relPath(options.reportOutput)
     : null;
 
-  const nodesByType = (["component", "hook", "utility"] as const).reduce(
+  const nodesByType = (["component", "hook", "utility", "context"] as const).reduce(
     (acc, type) => {
       const names = graph.nodes.filter((node) => node.type === type).map((n) => n.name);
       acc[type] = { count: nodeCounts[type], names };
@@ -420,7 +424,7 @@ export function buildJsonReport(
     summary: {
       nodes: graph.nodes.length,
       edges: graph.edges.length,
-      types: nodeCounts.component + nodeCounts.hook + nodeCounts.utility,
+      types: nodeCounts.component + nodeCounts.hook + nodeCounts.utility + nodeCounts.context,
     },
     nodesByType,
     relationships: edgeCounts,

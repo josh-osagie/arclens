@@ -61,6 +61,17 @@ export function nodeCallsHooks(node: Node): boolean {
   return false;
 }
 
+export function nodeCreatesContext(node: Node): boolean {
+  for (const call of node.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    const text = call.getExpression().getText();
+    if (text === "createContext" || text.endsWith(".createContext")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /** Resolve the function node from an export declaration (handles `export const X = () => {}`). */
 export function getExportFunctionNode(declaration: Node): Node | undefined {
   if (FUNCTION_KINDS.has(declaration.getKind())) {
@@ -144,20 +155,20 @@ export function isReactFunctionRoot(fn: Node): boolean {
 export function classifyExport(
   name: string,
   declarations: Node[],
-): "component" | "hook" | "utility" {
+): "component" | "hook" | "utility" | "context" {
   const node = declarations[0];
   if (!node) return "utility";
 
   const fn = getExportFunctionNode(node) ?? node;
   const hasJsx = nodeHasJsx(fn);
   const callsHooks = nodeCallsHooks(fn);
+  const createsContext = nodeCreatesContext(fn) || nodeCreatesContext(node);
 
-  // JSX return → component (even if lowercase or use-prefixed)
   if (hasJsx) return "component";
 
-  // use* prefix or calls hooks without JSX → custom hook
+  if (createsContext) return "context";
+
   if (isCustomHookName(name) || callsHooks) return "hook";
 
-  // Plain exported function, constant, class, etc. — API helpers, utils, config
   return "utility";
 }

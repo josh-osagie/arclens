@@ -3,6 +3,7 @@ import path from "node:path";
 import ora from "ora";
 import { Command } from "commander";
 import { analyzeProject } from "./analyzeProject";
+import { printFocusReport } from "./focus";
 import { printReport, writeReportFile } from "./report";
 import { resolveTarget } from "./resolveTarget";
 
@@ -33,6 +34,10 @@ program
   .option("-q, --quiet", "minimal output (written file paths only)")
   .option("--no-color", "disable ANSI colors in terminal output")
   .option(
+    "--focus <name>",
+    "show who imports, renders, or uses a specific node (e.g. Button)",
+  )
+  .option(
     "--max-files <number>",
     "refuse to scan more than N files (safety guard)",
     "3000",
@@ -47,6 +52,7 @@ program
         insights?: boolean;
         quiet?: boolean;
         color?: boolean;
+        focus?: string;
         maxFiles: string;
       },
     ) => {
@@ -93,14 +99,18 @@ program
 
         spinner?.stop();
 
-        printReport(result, {
-          verbose: options.verbose,
-          insights: options.insights,
-          quiet: options.quiet,
-          color: options.color,
-          graphOutput: graphPath,
-          reportOutput: reportPath,
-        });
+        if (options.focus) {
+          printFocusReport(result, options.focus, { color: options.color });
+        } else {
+          printReport(result, {
+            verbose: options.verbose,
+            insights: options.insights,
+            quiet: options.quiet,
+            color: options.color,
+            graphOutput: graphPath,
+            reportOutput: reportPath,
+          });
+        }
       } catch (error) {
         spinner?.stop();
         const message = error instanceof Error ? error.message : String(error);

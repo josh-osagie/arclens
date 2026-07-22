@@ -2,6 +2,7 @@ import path from "node:path";
 import { Project } from "ts-morph";
 import { discoverSourceFiles, formatDuration } from "./discoverFiles";
 import { buildGraph } from "./buildGraph";
+import { enrichGraph } from "./enrichGraph";
 import {
   extractEdges,
   extractExports,
@@ -107,7 +108,7 @@ export function analyzeProject(
   const uses = extractHookUsages(project);
 
   progress("Building graph…");
-  const graph = buildGraph(importEdges, exports, renders, uses);
+  const graph = enrichGraph(buildGraph(importEdges, exports, renders, uses), exports);
 
   progress("Checking Rules of Hooks…");
   const hookRuleViolations = detectHookRuleViolations(sourceFiles);
