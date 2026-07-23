@@ -29,16 +29,15 @@ import {
 import { NodeDetails } from "./NodeDetails";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 import {
+  FORCE_FULL_GRAPH,
+  GRAPH_POLL_MS,
   LARGE_GRAPH_THRESHOLD,
-  selectVisibleGraph,
-  type ViewGraphMode,
-} from "./viewGraph";
+  VIRTUALIZE_THRESHOLD,
+} from "./viewerConfig";
+import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
 import "./graph.css";
 
 const flowNodeTypes = { atlas: AtlasNode };
-
-const POLL_MS = 2000;
-const VIRTUALIZE_THRESHOLD = 100;
 
 /** Static options — avoid new object refs each render (React Flow perf guide). */
 const PRO_OPTIONS = { hideAttribution: true } as const;
@@ -243,7 +242,7 @@ export default function App() {
     loadGraph();
     if (isLargeGraph) return undefined;
 
-    const interval = window.setInterval(loadGraph, POLL_MS);
+    const interval = window.setInterval(loadGraph, GRAPH_POLL_MS);
     return () => window.clearInterval(interval);
   }, [loadGraph, isLargeGraph]);
 
@@ -397,7 +396,9 @@ export default function App() {
           </p>
           {isLargeGraph && (
             <p className="graph-notice">
-              Large graph — search to explore. Animations off, viewport culling on.
+              {FORCE_FULL_GRAPH
+                ? "Test mode — rendering full graph. May be slow on large projects."
+                : "Large graph — search to explore. Animations off, viewport culling on."}
             </p>
           )}
           {graph.meta?.notice && (
@@ -406,10 +407,10 @@ export default function App() {
           <input
             className="graph-search"
             type="search"
-            placeholder={isLargeGraph ? "Search to explore…" : "Search nodes…"}
+            placeholder="Search nodes…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            autoFocus={isLargeGraph}
+            autoFocus={isLargeGraph && !FORCE_FULL_GRAPH}
           />
           <div className="graph-legend">
             {legendTypes.map((type) => (

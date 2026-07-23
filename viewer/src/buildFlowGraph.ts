@@ -1,7 +1,7 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
 import { edgeColors } from "./design/tokens";
-import { DAGRE_LAYOUT_THRESHOLD } from "./viewGraph";
+import { DAGRE_LAYOUT_THRESHOLD } from "./viewerConfig";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 
 export { edgeColors, nodeTypes, typeColors, typeLabels } from "./design/tokens";

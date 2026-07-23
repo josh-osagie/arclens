@@ -1,8 +1,8 @@
 import type { AtlasGraph } from "./types";
-
-export const LARGE_GRAPH_THRESHOLD = 500;
-export const DAGRE_LAYOUT_THRESHOLD = 150;
-export const MAX_VISIBLE_NODES = 200;
+import {
+  FORCE_FULL_GRAPH,
+  MAX_VISIBLE_NODES,
+} from "./viewerConfig";
 
 export type ViewGraphMode = "full" | "search" | "empty";
 
@@ -17,7 +17,7 @@ export function selectVisibleGraph(
   searchLower: string,
   isLarge: boolean,
 ): ViewGraphSelection {
-  if (!isLarge) {
+  if (!isLarge || FORCE_FULL_GRAPH) {
     return { graph, mode: "full", matchCount: graph.nodes.length };
   }
 
