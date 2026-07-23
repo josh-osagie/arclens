@@ -848,3 +848,56 @@
   border-color: var(--atlas-border-selected);
   box-shadow: var(--atlas-shadow-selected);
 }
+
+/* ── Zoom controls ────────────────────────────────────── */
+
+.zoom-controls-wrap {
+  margin: 0 0 14px 14px;
+}
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--atlas-radius-pill);
+  border: 1px solid var(--atlas-border);
+  background: color-mix(in srgb, var(--atlas-surface) 90%, transparent);
+  box-shadow: var(--atlas-shadow-sm);
+  backdrop-filter: blur(10px);
+}
+
+.zoom-controls__btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--atlas-radius-md);
+  background: var(--atlas-surface-raised);
+  color: var(--atlas-text-muted);
+  font-size: 15px;
+  font-weight: var(--atlas-weight-normal);
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--atlas-duration-fast) var(--atlas-ease),
+    color var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.zoom-controls__btn:hover {
+  background: var(--atlas-surface-hover);
+  color: var(--atlas-text);
+}
+
+.zoom-controls__label {
+  min-width: 38px;
+  padding: 0 4px 0 2px;
+  font-size: var(--atlas-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--atlas-text-muted);
+  text-align: center;
+  user-select: none;
+}

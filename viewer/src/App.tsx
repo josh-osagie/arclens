@@ -10,7 +10,6 @@ import {
 import {
   Background,
   BackgroundVariant,
-  Controls,
   MiniMap,
   Panel,
   ReactFlow,
@@ -60,6 +59,7 @@ import {
 } from "./pathHighlight";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 import { ViewportPersistence } from "./ViewportPersistence";
+import { ZoomControls } from "./ZoomControls";
 import { loadViewport } from "./viewportStorage";
 import {
   CLUSTER_BY_DEFAULT,
@@ -493,6 +493,7 @@ export default function App() {
         panOnDrag
         panOnScroll
         zoomOnScroll
+        zoomOnDoubleClick
         minZoom={0.25}
         maxZoom={2}
         proOptions={PRO_OPTIONS}
@@ -512,7 +513,7 @@ export default function App() {
         )}
 
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--atlas-canvas-grid)" />
-        <Controls showInteractive={false} />
+        <ZoomControls />
         <HelperLinesOverlay lines={helperLines} />
 
         {!isLargeGraph && (
@@ -526,6 +527,7 @@ export default function App() {
               border: "1px solid var(--atlas-border)",
               borderRadius: "var(--atlas-radius-xl)",
             }}
+            pannable
           />
         )}
 
