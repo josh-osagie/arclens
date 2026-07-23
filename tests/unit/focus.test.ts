@@ -10,7 +10,7 @@ describe("focus", () => {
 
     expect(report).toContain("Focus: Button");
     expect(report).toContain("Rendered by");
-    expect(report).toContain("counter");
+    expect(report).toContain("Counter");
     expect(report).toContain("Imports");
     expect(report).toContain("Usage:");
   });

@@ -101,6 +101,26 @@ export function NodeDetails({ node, onClose }: Props) {
         </div>
         </dl>
 
+        {node.props && node.props.length > 0 && (
+          <div className="details-section">
+            <h3>Props</h3>
+            <ul className="details-props">
+              {node.props.map((prop) => (
+                <li key={prop.name} className="details-props__item">
+                  <span className="details-props__name">
+                    {prop.name}
+                    {prop.optional ? "?" : ""}
+                  </span>
+                  {prop.type && <code className="details-props__type">{prop.type}</code>}
+                  {prop.defaultValue && (
+                    <span className="details-props__default">= {prop.defaultValue}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <ConnectionGroup title="Imported by" items={incoming.imports} />
         <ConnectionGroup title="Rendered by" items={incoming.renders} />
         <ConnectionGroup title="Hook-used by" items={incoming.uses} />

@@ -1,5 +1,12 @@
 export type GraphEdgeType = "imports" | "renders" | "uses";
 
+export type GraphProp = {
+  name: string;
+  type?: string;
+  optional?: boolean;
+  defaultValue?: string;
+};
+
 export type GraphNodeType =
   | "component"
   | "hook"
@@ -40,6 +47,7 @@ export type AtlasGraphNode = {
   type: GraphNodeType;
   exportKind?: "default" | "named";
   kind?: string;
+  props?: GraphProp[];
   layout?: {
     x: number;
     y: number;

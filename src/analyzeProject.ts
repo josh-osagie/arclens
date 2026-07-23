@@ -17,6 +17,7 @@ import type {
 } from "./extractors/exports";
 import { applyModuleClassification, assessReactProject, type ReactAssessment } from "./reactAssessment";
 import { detectHookRuleViolations, type HookRuleViolation } from "./extractors/hookRules";
+import { extractComponentProps } from "./extractors/props";
 import { findTsConfig } from "./resolveTarget";
 import type { Graph } from "./types";
 
@@ -112,7 +113,8 @@ export function analyzeProject(
   progress("Building graph…");
   const graph = buildGraph(importEdges, exports, renders, uses);
   applyModuleClassification(sourceFiles, exports, graph);
-  const enrichedGraph = enrichGraph(graph, exports);
+  const propsByNodeId = extractComponentProps(sourceFiles, exports);
+  const enrichedGraph = enrichGraph(graph, exports, propsByNodeId);
 
   progress("Checking Rules of Hooks…");
   const hookRuleViolations = detectHookRuleViolations(sourceFiles);

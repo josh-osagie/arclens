@@ -14,9 +14,9 @@ describe("enrichGraph", () => {
     }
   });
 
-  it("records outgoing connections for counter -> Button", () => {
+  it("records outgoing connections for Counter -> Button", () => {
     const result = analyzeSamples();
-    const counter = nodeByName(result, "counter");
+    const counter = nodeByName(result, "Counter");
     expect(counter).toBeDefined();
 
     const rendersButton = counter!.connections.outgoing.some(

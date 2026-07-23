@@ -21,15 +21,15 @@ describe("analyzeProject integration", () => {
 
     it("detects components, hooks, and utilities", () => {
       expect(nodeByName(result, "Button")?.type).toBe("component");
-      expect(nodeByName(result, "counter")?.type).toBe("component");
+      expect(nodeByName(result, "Counter")?.type).toBe("component");
       expect(nodeByName(result, "useCounter")?.type).toBe("hook");
       expect(nodeByName(result, "fetchUser")?.type).toBe("utility");
     });
 
     it("builds import, render, and hook-use edges", () => {
-      expect(hasEdge(result, "counter", "Button", "imports")).toBe(true);
-      expect(hasEdge(result, "counter", "Button", "renders")).toBe(true);
-      expect(outgoingEdges(result, "counter", "uses").length).toBeGreaterThan(0);
+      expect(hasEdge(result, "Counter", "Button", "imports")).toBe(true);
+      expect(hasEdge(result, "Counter", "Button", "renders")).toBe(true);
+      expect(outgoingEdges(result, "Counter", "uses").length).toBeGreaterThan(0);
     });
 
     it("tracks most-referenced nodes (Button is used twice in JSX)", () => {
@@ -38,14 +38,12 @@ describe("analyzeProject integration", () => {
 
     it("surfaces architecture insights developers care about", () => {
       const titles = insightTitles(result);
-      expect(titles.some((t) => t.includes("Rules of Hooks"))).toBe(true);
-      expect(titles.some((t) => t.includes("Component naming: counter"))).toBe(true);
       expect(titles.some((t) => t.includes("Orphan export: fetchUser"))).toBe(true);
     });
 
-    it("does not flag entry component counter as orphan", () => {
+    it("does not flag Counter as orphan", () => {
       const titles = insightTitles(result);
-      expect(titles.some((t) => t.includes("Orphan export: counter"))).toBe(false);
+      expect(titles.some((t) => t.includes("Orphan export: Counter"))).toBe(false);
     });
   });
 

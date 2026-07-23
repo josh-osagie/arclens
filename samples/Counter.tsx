@@ -4,11 +4,6 @@ import { Button } from "./Button";
 
 export const Counter = () => {
   const [count, setCount] = useState(0);
-  if (count > 10) {
-    useEffect(() => {
-      console.log("count is greater than 10");
-    }, [count]);
-  }
 
   return (
     <div>

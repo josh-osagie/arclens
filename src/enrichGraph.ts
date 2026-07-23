@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { ExportRecord } from "./extractors/exports";
 import { nodeId } from "./extractors/find";
-import type { Graph, GraphConnection, GraphEdge, GraphNode } from "./types";
+import type { Graph, GraphConnection, GraphEdge, GraphNode, GraphProp } from "./types";
 
 function relFile(filePath: string): string {
   if (filePath === "external") return "external";
@@ -22,15 +22,21 @@ function toConnection(
   };
 }
 
-export function enrichGraph(graph: Graph, exports: ExportRecord[]): Graph {
+export function enrichGraph(
+  graph: Graph,
+  exports: ExportRecord[],
+  propsByNodeId: Map<string, GraphProp[]> = new Map(),
+): Graph {
   const exportById = new Map(exports.map((exp) => [nodeId(exp), exp]));
 
   const baseNodes: GraphNode[] = graph.nodes.map((node) => {
     const exp = exportById.get(node.id);
+    const props = propsByNodeId.get(node.id);
     return {
       ...node,
       exportKind: exp?.exportKind,
       kind: exp?.kind,
+      ...(props && props.length > 0 ? { props } : {}),
       connections: { incoming: [], outgoing: [] },
       stats: { incoming: 0, outgoing: 0 },
     };

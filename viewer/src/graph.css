@@ -360,6 +360,43 @@
   color: var(--atlas-text-faint);
 }
 
+.details-props {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--atlas-space-2);
+}
+
+.details-props__item {
+  display: grid;
+  gap: 3px;
+  padding: 9px var(--atlas-space-4);
+  border-radius: var(--atlas-radius-lg);
+  background: var(--atlas-surface-raised);
+  border: 1px solid var(--atlas-border-faint);
+}
+
+.details-props__name {
+  font-size: var(--atlas-text-base);
+  font-weight: var(--atlas-weight-semibold);
+  color: var(--atlas-text);
+}
+
+.details-props__type {
+  display: block;
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-subtle);
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.details-props__default {
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-faint);
+}
+
 .details-list {
   list-style: none;
   margin: 0;

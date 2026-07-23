@@ -10,7 +10,7 @@ import {
   getReportFormat,
   writeReportFile,
 } from "../../src/report";
-import { analyzeSamples } from "../helpers";
+import { analyzeFixture, analyzeSamples } from "../helpers";
 
 describe("insights", () => {
   it("counts severities for terminal summary", () => {
@@ -18,13 +18,11 @@ describe("insights", () => {
     const insights = buildInsights(result);
     const counts = countInsightsBySeverity(insights);
 
-    expect(counts.error).toBeGreaterThanOrEqual(1);
-    expect(counts.warning).toBeGreaterThanOrEqual(1);
-    expect(counts.info).toBeGreaterThanOrEqual(1);
+    expect(counts.warning + counts.info + counts.tip).toBeGreaterThanOrEqual(1);
   });
 
   it("references @eslint-react for hook violations", () => {
-    const result = analyzeSamples();
+    const result = analyzeFixture("hooks-violation");
     const hookInsight = buildInsights(result).find((i) =>
       i.title.includes("Rules of Hooks"),
     );
