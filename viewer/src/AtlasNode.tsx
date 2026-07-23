@@ -1,17 +1,24 @@
+import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { AtlasNodeData } from "./buildFlowGraph";
 import { typeColors, typeLabels } from "./buildFlowGraph";
 
-export function AtlasNode({ data, selected, dragging }: NodeProps) {
-  const nodeData = data as AtlasNodeData & { selected?: boolean; dimmed?: boolean };
+function AtlasNodeComponent({ data, selected, dragging }: NodeProps) {
+  const nodeData = data as AtlasNodeData & {
+    selected?: boolean;
+    dimmed?: boolean;
+    compact?: boolean;
+  };
   const type = nodeData.type in typeLabels ? nodeData.type : "utility";
   const accent = typeColors[type];
+  const isSelected = selected || nodeData.selected;
 
   return (
     <div
       className={[
         "atlas-node",
-        selected || nodeData.selected ? "atlas-node--selected" : "",
+        nodeData.compact ? "atlas-node--compact" : "",
+        isSelected ? "atlas-node--selected" : "",
         nodeData.dimmed ? "atlas-node--dimmed" : "",
         dragging ? "atlas-node--dragging" : "",
       ]
@@ -30,7 +37,7 @@ export function AtlasNode({ data, selected, dragging }: NodeProps) {
         <span className="atlas-node__swatch" aria-hidden="true" />
         <div className="atlas-node__text">
           <div className="atlas-node__label">{nodeData.label}</div>
-          {nodeData.fileLabel && (
+          {!nodeData.compact && nodeData.fileLabel && (
             <div className="atlas-node__file">{nodeData.fileLabel}</div>
           )}
         </div>
@@ -44,3 +51,5 @@ export function AtlasNode({ data, selected, dragging }: NodeProps) {
     </div>
   );
 }
+
+export const AtlasNode = memo(AtlasNodeComponent);

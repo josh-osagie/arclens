@@ -11,6 +11,9 @@ export type AtlasNodeData = {
   type: AtlasGraphNode["type"];
   fileLabel?: string;
   nodeId: string;
+  compact?: boolean;
+  selected?: boolean;
+  dimmed?: boolean;
 };
 
 const NODE_W = 196;
@@ -27,7 +30,11 @@ function dagreLayout(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
     g.setNode(node.id, { width: NODE_W, height: NODE_H });
   }
 
+  const seen = new Set<string>();
   for (const edge of edges) {
+    const key = `${edge.source}|${edge.target}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     g.setEdge(edge.source, edge.target);
   }
 
@@ -59,8 +66,38 @@ function gridLayout(nodes: Node<AtlasNodeData>[]) {
   }));
 }
 
-function layoutNodes(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
+function layoutFromSaved(graph: AtlasGraph, nodes: Node<AtlasNodeData>[]) {
+  const positions = new Map(
+    graph.nodes
+      .filter((node) => node.layout)
+      .map((node) => [node.id, node.layout!]),
+  );
+
+  if (positions.size === 0) return null;
+
+  return nodes.map((node) => {
+    const saved = positions.get(node.id);
+    if (!saved) return node;
+    return {
+      ...node,
+      position: {
+        x: saved.x - NODE_W / 2,
+        y: saved.y - NODE_H / 2,
+      },
+    };
+  });
+}
+
+function layoutNodes(
+  graph: AtlasGraph,
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+) {
   if (nodes.length === 0) return nodes;
+
+  const saved = layoutFromSaved(graph, nodes);
+  if (saved) return saved;
+
   if (nodes.length <= DAGRE_LAYOUT_THRESHOLD) {
     return dagreLayout(nodes, edges);
   }
@@ -85,6 +122,7 @@ export function buildFlowGraph(
       type: node.type,
       fileLabel: node.file === "external" ? undefined : relFile(node.file),
       nodeId: node.id,
+      compact,
     },
   }));
 
@@ -102,8 +140,12 @@ export function buildFlowGraph(
       target: edge.to,
       label: compact ? undefined : edge.type,
       type: "default",
-      animated: !compact && edge.type === "uses",
-      style: { stroke: edgeColors[edge.type], strokeWidth: compact ? 1.5 : 2 },
+      // Never use stroke-dasharray bulk animation — costly at scale (see Liam ERD).
+      animated: false,
+      style: {
+        stroke: edgeColors[edge.type],
+        strokeWidth: compact ? 1.25 : 2,
+      },
       ...(compact
         ? {}
         : {
@@ -126,7 +168,7 @@ export function buildFlowGraph(
     }));
 
   return {
-    nodes: layoutNodes(initialNodes, initialEdges),
+    nodes: layoutNodes(graph, initialNodes, initialEdges),
     edges: initialEdges,
   };
 }

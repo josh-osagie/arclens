@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -35,11 +35,17 @@ import {
 } from "./viewGraph";
 import "./graph.css";
 
-const flowNodeTypes = {
-  atlas: AtlasNode,
-};
+const flowNodeTypes = { atlas: AtlasNode };
 
 const POLL_MS = 2000;
+const VIRTUALIZE_THRESHOLD = 100;
+
+/** Static options — avoid new object refs each render (React Flow perf guide). */
+const PRO_OPTIONS = { hideAttribution: true } as const;
+const COMPACT_EDGE_DEFAULTS = {
+  animated: false,
+  type: "default" as const,
+} as const;
 
 function mergeNodePositions(
   nextNodes: Node<AtlasNodeData>[],
@@ -54,22 +60,50 @@ function mergeNodePositions(
   }));
 }
 
-function applyNodePresentation(
+function nodeOpacity(
+  node: Node<AtlasNodeData>,
+  searchLower: string,
+  selectedId: string | null,
+  connectedIds: Set<string> | null,
+): number {
+  const matchesSearch =
+    !searchLower || node.data.label.toLowerCase().includes(searchLower);
+
+  if (selectedId) {
+    if (node.id === selectedId) return 1;
+    if (connectedIds?.has(node.id)) return 1;
+    return 0.28;
+  }
+
+  if (searchLower && !matchesSearch) return 0.22;
+  return 1;
+}
+
+/** Patch only nodes whose presentation changed — keeps stable refs elsewhere. */
+function patchNodePresentation(
   nodes: Node<AtlasNodeData>[],
   searchLower: string,
   selectedId: string | null,
   connectedIds: Set<string> | null,
 ): Node<AtlasNodeData>[] {
-  return nodes.map((node) => {
-    const matchesSearch =
-      !searchLower || node.data.label.toLowerCase().includes(searchLower);
+  let changed = false;
+
+  const next = nodes.map((node) => {
+    const opacity = nodeOpacity(node, searchLower, selectedId, connectedIds);
     const isSelected = selectedId === node.id;
-    const isConnected = connectedIds?.has(node.id) ?? false;
+    const dimmed = opacity < 1;
+    const prevOpacity = node.style?.opacity ?? 1;
 
-    let opacity = 1;
-    if (searchLower && !matchesSearch) opacity = 0.22;
-    if (selectedId && !isSelected && !isConnected) opacity = 0.28;
+    if (
+      node.selected === isSelected &&
+      node.data.selected === isSelected &&
+      node.data.dimmed === dimmed &&
+      prevOpacity === opacity
+    ) {
+      return node;
+    }
 
+    changed = true;
     return {
       ...node,
       selected: isSelected,
@@ -77,26 +111,41 @@ function applyNodePresentation(
       data: {
         ...node.data,
         selected: isSelected,
-        dimmed: opacity < 1,
+        dimmed,
       },
     };
   });
+
+  return changed ? next : nodes;
 }
 
-function applyEdgePresentation(
+function patchEdgePresentation(
   edges: Edge[],
   connectedIds: Set<string> | null,
+  highlightEdges: boolean,
 ): Edge[] {
-  if (!connectedIds) return edges;
+  if (!highlightEdges || !connectedIds) return edges;
 
-  return edges.map((edge) => ({
-    ...edge,
-    style: {
-      ...edge.style,
-      opacity:
-        connectedIds.has(edge.source) && connectedIds.has(edge.target) ? 1 : 0.12,
-    },
-  }));
+  let changed = false;
+  const next = edges.map((edge) => {
+    const highlighted =
+      connectedIds.has(edge.source) && connectedIds.has(edge.target);
+    const opacity = highlighted ? 1 : 0.12;
+    const prevOpacity = edge.style?.opacity ?? 1;
+
+    if (prevOpacity === opacity && edge.animated === false) {
+      return edge;
+    }
+
+    changed = true;
+    return {
+      ...edge,
+      animated: false,
+      style: { ...edge.style, opacity },
+    };
+  });
+
+  return changed ? next : edges;
 }
 
 function FitViewOnce({ viewKey, nodeCount }: { viewKey: string; nodeCount: number }) {
@@ -107,7 +156,7 @@ function FitViewOnce({ viewKey, nodeCount }: { viewKey: string; nodeCount: numbe
     if (nodeCount === 0 || lastKey.current === viewKey) return;
 
     const timer = window.setTimeout(() => {
-      fitView({ padding: 0.22, duration: 280 });
+      fitView({ padding: 0.22, duration: nodeCount > VIRTUALIZE_THRESHOLD ? 0 : 280 });
       lastKey.current = viewKey;
     }, 80);
 
@@ -124,7 +173,7 @@ function emptyViewMessage(
   searchLower: string,
 ): string {
   if (mode === "empty" && !searchLower) {
-    return `This graph has ${totalNodes.toLocaleString()} nodes — too large to render at once. Search for a component, hook, or file to explore its neighborhood.`;
+    return `This graph has ${totalNodes.toLocaleString()} nodes — search for a component, hook, or file to explore.`;
   }
   if (mode === "empty" && searchLower) {
     return `No nodes match "${searchLower}". Try another name or file path.`;
@@ -144,9 +193,13 @@ export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
-  const searchLower = search.trim().toLowerCase();
+  const baseEdgesRef = useRef<Edge[]>([]);
+
+  const deferredSearch = useDeferredValue(search);
+  const searchLower = deferredSearch.trim().toLowerCase();
 
   const isLargeGraph = (graph?.nodes.length ?? 0) > LARGE_GRAPH_THRESHOLD;
+  const shouldVirtualize = nodes.length > VIRTUALIZE_THRESHOLD;
 
   const viewSelection = useMemo(() => {
     if (!graph) {
@@ -196,7 +249,6 @@ export default function App() {
 
   useEffect(() => {
     if (!graph) return;
-
     if (buildSigRef.current === viewKey) return;
 
     let cancelled = false;
@@ -207,15 +259,19 @@ export default function App() {
       if (cancelled) return;
 
       buildSigRef.current = viewKey;
+      baseEdgesRef.current = built.edges;
+
       setNodes((current) =>
-        applyNodePresentation(
+        patchNodePresentation(
           mergeNodePositions(built.nodes, current),
           searchLower,
           selected?.id ?? null,
           connectedIds,
         ),
       );
-      setEdges(built.edges);
+      setEdges(
+        patchEdgePresentation(built.edges, connectedIds, Boolean(selected)),
+      );
       setIsBuilding(false);
     }, 0);
 
@@ -223,28 +279,20 @@ export default function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [
-    graph,
-    displayGraph,
-    viewKey,
-    isLargeGraph,
-    searchLower,
-    selected?.id,
-    connectedIds,
-    setNodes,
-    setEdges,
-  ]);
+  }, [graph, displayGraph, viewKey, isLargeGraph, setNodes, setEdges]);
 
   useEffect(() => {
     setNodes((current) =>
-      applyNodePresentation(current, searchLower, selected?.id ?? null, connectedIds),
+      patchNodePresentation(current, searchLower, selected?.id ?? null, connectedIds),
     );
-  }, [searchLower, selected?.id, connectedIds, setNodes]);
-
-  const visibleEdges = useMemo(
-    () => applyEdgePresentation(edges, connectedIds),
-    [edges, connectedIds],
-  );
+    setEdges((current) =>
+      patchEdgePresentation(
+        current.length > 0 ? current : baseEdgesRef.current,
+        connectedIds,
+        Boolean(selected),
+      ),
+    );
+  }, [searchLower, selected?.id, connectedIds, setNodes, setEdges]);
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node<AtlasNodeData>) => {
@@ -295,23 +343,27 @@ export default function App() {
     <div className="graph-shell">
       <ReactFlow
         nodes={nodes}
-        edges={visibleEdges}
+        edges={edges}
         nodeTypes={flowNodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
+        defaultEdgeOptions={COMPACT_EDGE_DEFAULTS}
         nodesDraggable
         nodesConnectable={false}
         elementsSelectable
         selectNodesOnDrag={false}
-        onlyRenderVisibleElements={isLargeGraph}
+        onlyRenderVisibleElements={shouldVirtualize}
+        elevateNodesOnSelect={false}
+        elevateEdgesOnSelect={false}
+        autoPanOnNodeFocus={false}
         panOnDrag
         panOnScroll
         zoomOnScroll
         minZoom={0.25}
         maxZoom={2}
-        proOptions={{ hideAttribution: true }}
+        proOptions={PRO_OPTIONS}
       >
         <FitViewOnce viewKey={viewKey} nodeCount={nodes.length} />
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--atlas-canvas-grid)" />
@@ -345,7 +397,7 @@ export default function App() {
           </p>
           {isLargeGraph && (
             <p className="graph-notice">
-              Large graph — search to explore. Edge labels and minimap are off.
+              Large graph — search to explore. Animations off, viewport culling on.
             </p>
           )}
           {graph.meta?.notice && (

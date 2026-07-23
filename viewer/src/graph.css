@@ -421,6 +421,18 @@
   filter: none;
 }
 
+.atlas-node--compact {
+  box-shadow: none;
+}
+
+.atlas-node--compact:hover {
+  box-shadow: none;
+}
+
+.atlas-node--compact .atlas-node__swatch {
+  box-shadow: none;
+}
+
 .atlas-node__label {
   font-size: var(--atlas-text-md);
   font-weight: var(--atlas-weight-semibold);
