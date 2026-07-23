@@ -19,6 +19,20 @@ describe("extractPropsFromDeclaration", () => {
     ]);
   });
 
+  it("marks destructured defaults as optional when type info is missing", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = project.createSourceFile(
+      "Badge.tsx",
+      `export const Badge = ({ label = "new" }) => <span>{label}</span>;`,
+    );
+    const [declaration] = sourceFile.getExportedDeclarations().get("Badge") ?? [];
+    const props = extractPropsFromDeclaration(declaration!);
+
+    expect(props).toEqual([
+      expect.objectContaining({ name: "label", optional: true, defaultValue: '"new"' }),
+    ]);
+  });
+
   it("reads props from a named Props interface", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(

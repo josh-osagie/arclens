@@ -32,10 +32,21 @@ describe("clusterGraph", () => {
     expect(clustered.nodes.some((node) => node.id === clusterNodeId("src"))).toBe(true);
   });
 
-  it("expands a folder when requested", () => {
+  it("expands a folder when fully expanded", () => {
     const expanded = applyClusterView(graph, true, new Set(["src/components"]));
     expect(expanded.nodes.some((node) => node.id === "n1")).toBe(true);
     expect(expanded.nodes.some((node) => node.id === "n2")).toBe(true);
+  });
+
+  it("reveals folder members incrementally", () => {
+    const partial = new Map([["src/components", new Set(["n1"])]]);
+    const expanded = applyClusterView(graph, true, new Set(), partial);
+
+    expect(expanded.nodes.some((node) => node.id === "n1")).toBe(true);
+    expect(expanded.nodes.some((node) => node.id === "n2")).toBe(false);
+    expect(expanded.nodes.some((node) => node.id === clusterNodeId("src/components"))).toBe(
+      true,
+    );
   });
 
   it("identifies cluster ids", () => {

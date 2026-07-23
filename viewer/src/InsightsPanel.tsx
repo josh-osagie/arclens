@@ -1,4 +1,5 @@
 import type { GraphInsight } from "./types";
+import { InfoTip } from "./InfoTip";
 
 const severityOrder = { error: 0, warning: 1, info: 2, tip: 3 } as const;
 
@@ -17,7 +18,12 @@ export function InsightsPanel({ insights }: Props) {
 
   return (
     <div className="insights-panel">
-      <h3 className="insights-panel__title">Insights</h3>
+      <h3 className="insights-panel__title">
+        <span className="field-label">
+          <span className="field-label__text">Insights</span>
+          <InfoTip text="Architecture hints from analyze — same rules as CLI --insights." />
+        </span>
+      </h3>
       <div className="insights-panel__scroll atlas-scroll">
         <ul className="insights-panel__list">
           {shown.map((insight, index) => (

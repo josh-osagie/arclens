@@ -60,7 +60,10 @@ function propsFromBindingPattern(param: ParameterDeclaration): GraphProp[] {
     return {
       name,
       type: fromType?.type,
-      optional: fromType?.optional ?? element.isOptional(),
+      optional:
+        fromType?.optional ??
+        (element.hasInitializer() ||
+          element.getChildrenOfKind(SyntaxKind.QuestionToken).length > 0),
       defaultValue: element.getInitializer()?.getText(),
     };
   });
@@ -111,7 +114,9 @@ export function extractComponentProps(
   sourceFiles: SourceFile[],
   exports: ExportRecord[],
 ): Map<string, GraphProp[]> {
-  const byFile = new Map(sourceFiles.map((file) => [file.getFilePath(), file]));
+  const byFile = new Map<string, SourceFile>(
+    sourceFiles.map((file) => [String(file.getFilePath()), file]),
+  );
   const propsByNodeId = new Map<string, GraphProp[]>();
 
   for (const exportRecord of exports) {
@@ -123,10 +128,13 @@ export function extractComponentProps(
     const declaration = exportDeclarationForRecord(sourceFile, exportRecord);
     if (!declaration) continue;
 
-    const props = extractPropsFromDeclaration(declaration);
-    if (props.length === 0) continue;
-
-    propsByNodeId.set(nodeId(exportRecord), props);
+    try {
+      const props = extractPropsFromDeclaration(declaration);
+      if (props.length === 0) continue;
+      propsByNodeId.set(nodeId(exportRecord), props);
+    } catch {
+      // Skip props for components with patterns we can't parse yet.
+    }
   }
 
   return propsByNodeId;

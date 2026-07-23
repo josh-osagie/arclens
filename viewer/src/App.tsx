@@ -31,9 +31,12 @@ import {
 } from "./buildFlowGraph";
 import {
   applyClusterView,
+  buildClusteredVisibleIds,
   findEntryNodes,
   folderFromClusterId,
+  groupNodesByFolder,
   isClusterId,
+  nextClusterReveal,
 } from "./clusterGraph";
 import { FocusOnSelect } from "./FocusOnSelect";
 import { FloatingPanel } from "./FloatingPanel";
@@ -49,6 +52,7 @@ import {
   type HelperLine,
 } from "./HelperLines";
 import { InsightsPanel } from "./InsightsPanel";
+import { InfoTip } from "./InfoTip";
 import { NodeDetails } from "./NodeDetails";
 import { NodeToolbarActions } from "./NodeToolbarActions";
 import { defaultDetailsPanelRect, defaultMainPanelRect } from "./panelStorage";
@@ -62,7 +66,6 @@ import { ViewportPersistence } from "./ViewportPersistence";
 import { ZoomControls } from "./ZoomControls";
 import { loadViewport } from "./viewportStorage";
 import {
-  CLUSTER_BY_DEFAULT,
   FORCE_FULL_GRAPH,
   GRAPH_POLL_MS,
   LARGE_GRAPH_THRESHOLD,
@@ -232,8 +235,13 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AtlasGraphNode | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
-  const [clusterMode, setClusterMode] = useState(CLUSTER_BY_DEFAULT);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set());
+  const [clusterMode, setClusterMode] = useState(false);
+  const [fullyExpandedFolders, setFullyExpandedFolders] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [partialReveals, setPartialReveals] = useState<Map<string, Set<string>>>(
+    () => new Map(),
+  );
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
   const [focusOnSelect, setFocusOnSelect] = useState(true);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
@@ -250,8 +258,11 @@ export default function App() {
   const graphKey = graph ? graphSignature(graph) : "";
 
   useEffect(() => {
-    if (isLargeGraph) setClusterMode(true);
-  }, [isLargeGraph]);
+    if (!graph) return;
+    setClusterMode(graph.nodes.length > LARGE_GRAPH_THRESHOLD);
+    setFullyExpandedFolders(new Set());
+    setPartialReveals(new Map());
+  }, [graphKey, graph]);
 
   const viewSelection = useMemo(() => {
     if (!graph) {
@@ -266,10 +277,20 @@ export default function App() {
 
   const clusteredGraph = useMemo(() => {
     if (!graph) return viewSelection.graph;
-    return applyClusterView(viewSelection.graph, clusterMode, expandedFolders);
-  }, [graph, viewSelection.graph, clusterMode, expandedFolders]);
+    return applyClusterView(
+      viewSelection.graph,
+      clusterMode,
+      fullyExpandedFolders,
+      partialReveals,
+    );
+  }, [graph, viewSelection.graph, clusterMode, fullyExpandedFolders, partialReveals]);
 
-  const viewKey = `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${[...expandedFolders].sort().join(",")}`;
+  const partialRevealKey = [...partialReveals.entries()]
+    .map(([folder, ids]) => `${folder}:${[...ids].sort().join(",")}`)
+    .sort()
+    .join("|");
+
+  const viewKey = `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${[...fullyExpandedFolders].sort().join(",")}:${partialRevealKey}`;
 
   const nodeById = useMemo(
     () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
@@ -374,7 +395,29 @@ export default function App() {
     (_event: MouseEvent, node: Node<AtlasNodeData>) => {
       if (isClusterId(node.id)) {
         const folder = folderFromClusterId(node.id);
-        setExpandedFolders((prev) => new Set([...prev, folder]));
+        if (!graph) return;
+
+        if (isLargeGraph && clusterMode) {
+          const members = groupNodesByFolder(graph.nodes).get(folder) ?? [];
+          setPartialReveals((prev) => {
+            const next = new Map(prev);
+            const already = next.get(folder) ?? new Set<string>();
+            const visible = buildClusteredVisibleIds(
+              viewSelection.graph,
+              clusterMode,
+              fullyExpandedFolders,
+              prev,
+            );
+            next.set(
+              folder,
+              nextClusterReveal(folder, members, visible, graph, already),
+            );
+            return next;
+          });
+        } else {
+          setFullyExpandedFolders((prev) => new Set([...prev, folder]));
+        }
+
         setSelected(null);
         return;
       }
@@ -384,7 +427,7 @@ export default function App() {
       if (!base) return;
       setSelected(enrichNodeForDetails(base, graph, nodeById));
     },
-    [graph, nodeById],
+    [graph, nodeById, isLargeGraph, clusterMode, viewSelection.graph, fullyExpandedFolders],
   );
 
   const onPaneClick = useCallback(() => {
@@ -430,7 +473,8 @@ export default function App() {
 
     const entry = entries[0];
     setClusterMode(false);
-    setExpandedFolders(new Set());
+    setFullyExpandedFolders(new Set());
+    setPartialReveals(new Map());
     setSearch("");
     setSelected(enrichNodeForDetails(entry, graph, nodeById));
   }, [graph, nodeById]);
@@ -555,7 +599,16 @@ export default function App() {
               <button
                 type="button"
                 className="graph-actions__btn"
-                onClick={() => setClusterMode((value) => !value)}
+                onClick={() => {
+                  setClusterMode((value) => {
+                    const next = !value;
+                    if (!next) {
+                      setFullyExpandedFolders(new Set());
+                      setPartialReveals(new Map());
+                    }
+                    return next;
+                  });
+                }}
               >
                 {clusterMode ? "Uncluster" : "Cluster folders"}
               </button>
@@ -572,7 +625,7 @@ export default function App() {
               <p className="graph-notice">
                 {FORCE_FULL_GRAPH
                   ? "Large graph — full render mode. Use cluster folders if slow."
-                  : "Large graph — search to explore, or use folder clusters."}
+                  : "Large graph — search or click folders to expand nearby nodes gradually."}
               </p>
             )}
             {graph.meta?.notice && <p className="graph-notice">{graph.meta.notice}</p>}
@@ -604,7 +657,12 @@ export default function App() {
 
             {selected && pathIds.length > 0 && (
               <p className="graph-sidebar__hint">
-                Path from entry:{" "}
+                <span className="graph-sidebar__hint-label">
+                  <span className="field-label">
+                    <span className="field-label__text">Boot path</span>
+                    <InfoTip text="Shortest chain from an app entry file to the selected node." />
+                  </span>
+                </span>
                 {pathIds.map((id) => nodeById.get(id)?.name ?? id).join(" → ")}
               </p>
             )}

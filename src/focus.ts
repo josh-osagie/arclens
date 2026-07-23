@@ -50,7 +50,8 @@ function formatNodeFocus(node: GraphNode, colors: typeof pc): string[] {
     lines.push(`${colors.dim("AST kind:")}   ${node.kind}`);
   }
   lines.push(
-    `${colors.dim("Usage:")}      ${node.stats.incoming} incoming, ${node.stats.outgoing} outgoing`,
+    `${colors.dim("Used by:")}   ${node.stats.incoming}`,
+    `${colors.dim("Depends on:")} ${node.stats.outgoing}`,
   );
   lines.push("");
 
@@ -62,7 +63,7 @@ function formatNodeFocus(node: GraphNode, colors: typeof pc): string[] {
   lines.push(...formatConnectionList(incoming.renders, colors));
   lines.push("");
 
-  lines.push(colors.bold("Hook-used by"));
+  lines.push(colors.bold("Called from"));
   lines.push(...formatConnectionList(incoming.uses, colors));
   lines.push("");
 
@@ -74,7 +75,7 @@ function formatNodeFocus(node: GraphNode, colors: typeof pc): string[] {
   lines.push(...formatConnectionList(outgoing.renders, colors));
   lines.push("");
 
-  lines.push(colors.bold("Uses hooks"));
+  lines.push(colors.bold("Calls hooks"));
   lines.push(...formatConnectionList(outgoing.uses, colors));
 
   return lines;

@@ -12,7 +12,7 @@ describe("focus", () => {
     expect(report).toContain("Rendered by");
     expect(report).toContain("Counter");
     expect(report).toContain("Imports");
-    expect(report).toContain("Usage:");
+    expect(report).toContain("Used by:");
   });
 
   it("lists known nodes when name is not found", () => {
