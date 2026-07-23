@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "./Button";
 
 
-export const counter = () => {
+export const Counter = () => {
   const [count, setCount] = useState(0);
   if (count > 10) {
     useEffect(() => {

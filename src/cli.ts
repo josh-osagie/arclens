@@ -6,6 +6,7 @@ import { analyzeProject } from "./analyzeProject";
 import { printFocusReport } from "./focus";
 import { printReport, writeReportFile } from "./report";
 import { resolveTarget } from "./resolveTarget";
+import { buildInsights } from "./insights";
 import { slimGraphForExport } from "./slimGraph";
 
 const program = new Command();
@@ -81,9 +82,14 @@ program
           : null;
 
         if (graphPath) {
+          const insights = buildInsights(result);
           fs.writeFileSync(
             graphPath,
-            `${JSON.stringify(slimGraphForExport(result.graph), null, 2)}\n`,
+            `${JSON.stringify(
+              slimGraphForExport(result.graph, { insights }),
+              null,
+              2,
+            )}\n`,
           );
         }
 

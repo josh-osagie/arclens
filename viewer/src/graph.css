@@ -3,10 +3,103 @@
 /* ── Canvas ───────────────────────────────────────────── */
 
 .graph-shell {
+  position: relative;
   width: 100vw;
   height: 100vh;
   background: var(--atlas-canvas);
   font-family: inherit;
+  overflow: hidden;
+}
+
+.graph-shell .react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Floating panels ──────────────────────────────────── */
+
+.floating-panel {
+  position: absolute;
+  z-index: 20;
+  min-width: 220px;
+  min-height: 180px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  touch-action: none;
+}
+
+.floating-panel--drag,
+.floating-panel--resize {
+  user-select: none;
+}
+
+.floating-panel__body {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.floating-panel .graph-sidebar {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+}
+
+.floating-panel .graph-sidebar--main {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.floating-panel .graph-sidebar--main .graph-sidebar__header {
+  flex-shrink: 0;
+  padding: var(--atlas-space-6) var(--atlas-space-7) var(--atlas-space-5);
+  border-bottom: 1px solid var(--atlas-border-subtle);
+  cursor: grab;
+}
+
+.floating-panel .graph-sidebar--main .graph-sidebar__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--atlas-space-5) var(--atlas-space-7) var(--atlas-space-7);
+}
+
+.floating-panel .graph-sidebar--details {
+  width: 100%;
+}
+
+.floating-panel .graph-sidebar__header {
+  cursor: grab;
+}
+
+.floating-panel--drag .graph-sidebar__header {
+  cursor: grabbing;
+}
+
+.floating-panel__resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  border-radius: 0 0 var(--atlas-radius-lg) 0;
+  opacity: 0.45;
+  background: linear-gradient(
+    135deg,
+    transparent 0 45%,
+    var(--atlas-text-faint) 45% 50%,
+    transparent 50% 70%,
+    var(--atlas-text-faint) 70% 75%,
+    transparent 75%
+  );
+  transition: opacity var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.floating-panel:hover .floating-panel__resize-handle,
+.floating-panel--resize .floating-panel__resize-handle {
+  opacity: 0.85;
 }
 
 .graph-shell--empty {
@@ -92,6 +185,15 @@
   font-size: var(--atlas-text-md);
   text-transform: lowercase;
   color: var(--atlas-text-secondary);
+}
+
+.floating-panel .graph-sidebar__header--compact h1::after {
+  content: " ···";
+  margin-left: var(--atlas-space-2);
+  font-size: var(--atlas-text-xs);
+  letter-spacing: 0.12em;
+  color: var(--atlas-text-faint);
+  opacity: 0.7;
 }
 
 .graph-sidebar__stats {
@@ -463,4 +565,249 @@
 
 .atlas-handle:hover {
   background: var(--atlas-accent) !important;
+}
+
+/* ── Graph actions ────────────────────────────────────── */
+
+.graph-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--atlas-space-2);
+  margin-bottom: var(--atlas-space-5);
+}
+
+.graph-actions__btn {
+  padding: 6px 10px;
+  border-radius: var(--atlas-radius-md);
+  border: 1px solid var(--atlas-border);
+  background: var(--atlas-surface-raised);
+  color: var(--atlas-text-muted);
+  font-size: var(--atlas-text-xs);
+  font-family: inherit;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition:
+    background var(--atlas-duration-fast) var(--atlas-ease),
+    border-color var(--atlas-duration-fast) var(--atlas-ease),
+    color var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.graph-actions__btn:hover {
+  background: var(--atlas-surface-hover);
+  border-color: var(--atlas-border-strong);
+  color: var(--atlas-text);
+}
+
+.graph-sidebar__hint {
+  margin: var(--atlas-space-5) 0 0;
+  padding: 9px 11px;
+  border-radius: var(--atlas-radius-lg);
+  border: 1px solid var(--atlas-border-faint);
+  background: var(--atlas-surface-raised);
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-subtle);
+  line-height: var(--atlas-leading-normal);
+  word-break: break-word;
+}
+
+/* ── Insights panel ───────────────────────────────────── */
+
+.insights-panel {
+  margin-bottom: var(--atlas-space-5);
+  padding: var(--atlas-space-4);
+  border-radius: var(--atlas-radius-lg);
+  border: 1px solid var(--atlas-border-faint);
+  background: var(--atlas-surface-raised);
+}
+
+.insights-panel__title {
+  margin: 0 0 var(--atlas-space-3);
+  font-size: var(--atlas-text-sm);
+  font-weight: var(--atlas-weight-medium);
+  text-transform: lowercase;
+  color: var(--atlas-text-subtle);
+}
+
+.insights-panel__scroll {
+  max-height: min(240px, 32vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-right: calc(-1 * var(--atlas-space-1));
+  padding-right: var(--atlas-space-1);
+}
+
+.insights-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--atlas-space-2);
+}
+
+.insights-panel__item {
+  display: grid;
+  gap: 2px;
+  padding: 7px 9px;
+  border-radius: var(--atlas-radius-md);
+  border-left: 3px solid var(--atlas-border);
+  background: var(--atlas-surface);
+}
+
+.insights-panel__item--error {
+  border-left-color: var(--atlas-error);
+}
+
+.insights-panel__item--warning {
+  border-left-color: var(--atlas-warning);
+}
+
+.insights-panel__item--info {
+  border-left-color: var(--atlas-accent);
+}
+
+.insights-panel__item--tip {
+  border-left-color: var(--atlas-text-faint);
+}
+
+.insights-panel__item-title {
+  font-size: var(--atlas-text-sm);
+  font-weight: var(--atlas-weight-semibold);
+  color: var(--atlas-text);
+}
+
+.insights-panel__item-detail {
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-muted);
+  line-height: var(--atlas-leading-normal);
+}
+
+.insights-panel__item-file {
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-faint);
+  font-family: var(--atlas-font-mono, monospace);
+}
+
+.insights-panel__more {
+  margin: var(--atlas-space-3) 0 0;
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-faint);
+}
+
+/* ── Cluster nodes ────────────────────────────────────── */
+
+.atlas-cluster {
+  min-width: 140px;
+  padding: var(--atlas-space-5) var(--atlas-space-6);
+  border-radius: var(--atlas-radius-xl);
+  border: 1px dashed var(--atlas-border-strong);
+  background: color-mix(in srgb, var(--atlas-surface) 88%, var(--atlas-accent) 12%);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--atlas-duration-fast) var(--atlas-ease),
+    box-shadow var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.atlas-cluster:hover {
+  border-color: var(--atlas-accent);
+  box-shadow: var(--atlas-shadow-md);
+}
+
+.atlas-cluster--selected {
+  border-style: solid;
+  border-color: var(--atlas-border-selected);
+  box-shadow: var(--atlas-shadow-selected);
+}
+
+.atlas-cluster__count {
+  font-size: var(--atlas-text-lg);
+  font-weight: var(--atlas-weight-semibold);
+  color: var(--atlas-accent);
+}
+
+.atlas-cluster__label {
+  margin-top: var(--atlas-space-1);
+  font-size: var(--atlas-text-md);
+  font-weight: var(--atlas-weight-semibold);
+  color: var(--atlas-text);
+  text-transform: lowercase;
+}
+
+.atlas-cluster__folder {
+  margin-top: 3px;
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* ── Helper lines ─────────────────────────────────────── */
+
+.helper-lines-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  overflow: visible;
+}
+
+.helper-line {
+  stroke: var(--atlas-accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.85;
+}
+
+/* ── Node toolbar ─────────────────────────────────────── */
+
+.node-toolbar {
+  display: flex;
+  gap: var(--atlas-space-1);
+  padding: var(--atlas-space-1);
+  border-radius: var(--atlas-radius-lg);
+  border: 1px solid var(--atlas-border);
+  background: var(--atlas-surface);
+  box-shadow: var(--atlas-shadow-md);
+}
+
+.node-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: var(--atlas-radius-md);
+  background: transparent;
+  color: var(--atlas-text-muted);
+  font-size: var(--atlas-text-xs);
+  font-family: inherit;
+  text-transform: lowercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--atlas-duration-fast) var(--atlas-ease),
+    color var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.node-toolbar__btn--copied {
+  color: var(--atlas-accent) !important;
+}
+
+.node-toolbar__check {
+  flex-shrink: 0;
+}
+
+.node-toolbar button:hover {
+  background: var(--atlas-surface-hover);
+  color: var(--atlas-text);
+}
+
+.react-flow__node.selected .atlas-cluster {
+  border-style: solid;
+  border-color: var(--atlas-border-selected);
+  box-shadow: var(--atlas-shadow-selected);
 }

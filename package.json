@@ -18,12 +18,14 @@
   "license": "ISC",
   "packageManager": "pnpm@10.24.0",
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "commander": "^15.0.0",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1",
     "ts-morph": "^28.0.0"
   },
   "devDependencies": {
+    "@types/dagre": "^0.7.54",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "chokidar-cli": "^3.0.0",

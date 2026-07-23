@@ -20,3 +20,6 @@ export const GRAPH_POLL_MS = 2000;
  * Set false for normal search-gated large graph behavior.
  */
 export const FORCE_FULL_GRAPH = false;
+
+/** Default folder clustering for large graphs. */
+export const CLUSTER_BY_DEFAULT = true;

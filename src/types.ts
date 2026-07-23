@@ -8,11 +8,22 @@ export type GraphNodeType =
   | "entry"
   | "config";
 
+export type GraphInsight = {
+  severity: "error" | "warning" | "info" | "tip";
+  title: string;
+  detail: string;
+  file?: string;
+  line?: number;
+  eslintRule?: string;
+};
+
 export type GraphMeta = {
   targetDir?: string;
   isReactProject: boolean;
   notice?: string;
   signals?: string[];
+  insights?: GraphInsight[];
+  entryNodeIds?: string[];
 };
 
 export type GraphConnection = {
@@ -29,6 +40,10 @@ export type GraphNode = {
   type: GraphNodeType;
   exportKind?: "default" | "named";
   kind?: string;
+  layout?: {
+    x: number;
+    y: number;
+  };
   connections: {
     incoming: GraphConnection[];
     outgoing: GraphConnection[];

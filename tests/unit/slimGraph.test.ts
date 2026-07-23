@@ -13,6 +13,7 @@ describe("slimGraphForExport", () => {
     for (const node of slim.nodes) {
       expect(node).not.toHaveProperty("connections");
       expect(node.stats).toBeDefined();
+      expect(node.layout).toBeDefined();
     }
   });
 

@@ -16,6 +16,14 @@ export type AtlasNodeData = {
   dimmed?: boolean;
 };
 
+export type ClusterNodeData = {
+  label: string;
+  folder: string;
+  count: number;
+  selected?: boolean;
+  dimmed?: boolean;
+};
+
 const NODE_W = 196;
 const NODE_H = 88;
 const GRID_GAP_X = 24;
@@ -95,13 +103,32 @@ function layoutNodes(
 ) {
   if (nodes.length === 0) return nodes;
 
-  const saved = layoutFromSaved(graph, nodes);
-  if (saved) return saved;
+  const layoutTargets = nodes.filter((node) => node.type !== "cluster");
+  const saved = layoutFromSaved(graph, layoutTargets);
+  const laidOut = saved ?? (layoutTargets.length <= DAGRE_LAYOUT_THRESHOLD
+    ? dagreLayout(layoutTargets, edges)
+    : gridLayout(layoutTargets));
 
-  if (nodes.length <= DAGRE_LAYOUT_THRESHOLD) {
-    return dagreLayout(nodes, edges);
-  }
-  return gridLayout(nodes);
+  const positions = new Map(laidOut.map((node) => [node.id, node.position]));
+
+  return nodes.map((node, index) => {
+    if (node.type === "cluster") {
+      const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
+      const cellW = NODE_W + GRID_GAP_X;
+      const cellH = NODE_H + GRID_GAP_Y;
+      return {
+        ...node,
+        position: {
+          x: (index % cols) * cellW,
+          y: Math.floor(index / cols) * cellH,
+        },
+      };
+    }
+    return {
+      ...node,
+      position: positions.get(node.id) ?? node.position,
+    };
+  });
 }
 
 export function buildFlowGraph(
@@ -112,19 +139,35 @@ export function buildFlowGraph(
   edges: Edge[];
 } {
   const compact = options.compact ?? false;
-  const initialNodes: Node<AtlasNodeData>[] = graph.nodes.map((node) => ({
-    id: node.id,
-    type: "atlas",
-    position: { x: 0, y: 0 },
-    draggable: true,
-    data: {
-      label: node.name,
-      type: node.type,
-      fileLabel: node.file === "external" ? undefined : relFile(node.file),
-      nodeId: node.id,
-      compact,
-    },
-  }));
+  const initialNodes: Node<AtlasNodeData>[] = graph.nodes.map((node) => {
+    if (node.cluster) {
+      return {
+        id: node.id,
+        type: "cluster",
+        position: { x: 0, y: 0 },
+        draggable: true,
+        data: {
+          label: node.name,
+          folder: node.cluster.folder,
+          count: node.cluster.count,
+        },
+      } as unknown as Node<AtlasNodeData>;
+    }
+
+    return {
+      id: node.id,
+      type: "atlas",
+      position: { x: 0, y: 0 },
+      draggable: true,
+      data: {
+        label: node.name,
+        type: node.type,
+        fileLabel: node.file === "external" ? undefined : relFile(node.file),
+        nodeId: node.id,
+        compact,
+      },
+    };
+  });
 
   const seenEdges = new Set<string>();
   const initialEdges: Edge[] = graph.edges

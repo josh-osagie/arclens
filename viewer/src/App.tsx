@@ -1,4 +1,12 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import {
   Background,
   BackgroundVariant,
@@ -11,8 +19,10 @@ import {
   useReactFlow,
   type Edge,
   type Node,
+  type OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { AtlasClusterNode } from "./AtlasClusterNode";
 import { AtlasNode } from "./AtlasNode";
 import {
   buildFlowGraph,
@@ -21,14 +31,38 @@ import {
   typeColors,
 } from "./buildFlowGraph";
 import {
+  applyClusterView,
+  findEntryNodes,
+  folderFromClusterId,
+  isClusterId,
+} from "./clusterGraph";
+import { FocusOnSelect } from "./FocusOnSelect";
+import { FloatingPanel } from "./FloatingPanel";
+import {
   buildNodeById,
   enrichNodeForDetails,
   getConnectedNodeIdsFromEdges,
   graphSignature,
 } from "./graphConnections";
-import { NodeDetails } from "./NodeDetails";
-import type { AtlasGraph, AtlasGraphNode } from "./types";
 import {
+  computeHelperLines,
+  HelperLinesOverlay,
+  type HelperLine,
+} from "./HelperLines";
+import { InsightsPanel } from "./InsightsPanel";
+import { NodeDetails } from "./NodeDetails";
+import { NodeToolbarActions } from "./NodeToolbarActions";
+import { defaultDetailsPanelRect, defaultMainPanelRect } from "./panelStorage";
+import {
+  findPathFromEntries,
+  mergeHighlightIds,
+  pathEdgeKeys,
+} from "./pathHighlight";
+import type { AtlasGraph, AtlasGraphNode } from "./types";
+import { ViewportPersistence } from "./ViewportPersistence";
+import { loadViewport } from "./viewportStorage";
+import {
+  CLUSTER_BY_DEFAULT,
   FORCE_FULL_GRAPH,
   GRAPH_POLL_MS,
   LARGE_GRAPH_THRESHOLD,
@@ -37,9 +71,8 @@ import {
 import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
 import "./graph.css";
 
-const flowNodeTypes = { atlas: AtlasNode };
+const flowNodeTypes = { atlas: AtlasNode, cluster: AtlasClusterNode };
 
-/** Static options — avoid new object refs each render (React Flow perf guide). */
 const PRO_OPTIONS = { hideAttribution: true } as const;
 const COMPACT_EDGE_DEFAULTS = {
   animated: false,
@@ -51,7 +84,6 @@ function mergeNodePositions(
   currentNodes: Node<AtlasNodeData>[],
 ): Node<AtlasNodeData>[] {
   const positions = new Map(currentNodes.map((node) => [node.id, node.position]));
-
   return nextNodes.map((node) => ({
     ...node,
     position: positions.get(node.id) ?? node.position,
@@ -60,35 +92,32 @@ function mergeNodePositions(
 }
 
 function nodeOpacity(
-  node: Node<AtlasNodeData>,
+  nodeId: string,
+  label: string,
   searchLower: string,
-  selectedId: string | null,
-  connectedIds: Set<string> | null,
+  highlightIds: Set<string> | null,
 ): number {
-  const matchesSearch =
-    !searchLower || node.data.label.toLowerCase().includes(searchLower);
+  const matchesSearch = !searchLower || label.toLowerCase().includes(searchLower);
 
-  if (selectedId) {
-    if (node.id === selectedId) return 1;
-    if (connectedIds?.has(node.id)) return 1;
-    return 0.28;
+  if (highlightIds && highlightIds.size > 0) {
+    return highlightIds.has(nodeId) ? 1 : 0.18;
   }
 
   if (searchLower && !matchesSearch) return 0.22;
   return 1;
 }
 
-/** Patch only nodes whose presentation changed — keeps stable refs elsewhere. */
 function patchNodePresentation(
   nodes: Node<AtlasNodeData>[],
   searchLower: string,
   selectedId: string | null,
-  connectedIds: Set<string> | null,
+  highlightIds: Set<string> | null,
 ): Node<AtlasNodeData>[] {
   let changed = false;
 
   const next = nodes.map((node) => {
-    const opacity = nodeOpacity(node, searchLower, selectedId, connectedIds);
+    const label = String(node.data.label ?? "");
+    const opacity = nodeOpacity(node.id, label, searchLower, highlightIds);
     const isSelected = selectedId === node.id;
     const dimmed = opacity < 1;
     const prevOpacity = node.style?.opacity ?? 1;
@@ -107,11 +136,7 @@ function patchNodePresentation(
       ...node,
       selected: isSelected,
       style: { ...node.style, opacity },
-      data: {
-        ...node.data,
-        selected: isSelected,
-        dimmed,
-      },
+      data: { ...node.data, selected: isSelected, dimmed },
     };
   });
 
@@ -120,21 +145,31 @@ function patchNodePresentation(
 
 function patchEdgePresentation(
   edges: Edge[],
-  connectedIds: Set<string> | null,
-  highlightEdges: boolean,
+  highlightIds: Set<string> | null,
+  pathEdges: Set<string>,
+  highlight: boolean,
 ): Edge[] {
-  if (!highlightEdges || !connectedIds) return edges;
+  if (!highlight || !highlightIds) return edges;
 
   let changed = false;
   const next = edges.map((edge) => {
-    const highlighted =
-      connectedIds.has(edge.source) && connectedIds.has(edge.target);
-    const opacity = highlighted ? 1 : 0.12;
+    let onPath = false;
+    if (pathEdges.size > 0) {
+      for (const key of pathEdges) {
+        const [from, to] = key.split("|");
+        if (from === edge.source && to === edge.target) {
+          onPath = true;
+          break;
+        }
+      }
+    } else if (highlightIds) {
+      onPath = highlightIds.has(edge.source) && highlightIds.has(edge.target);
+    }
+
+    const opacity = onPath ? 1 : 0.1;
     const prevOpacity = edge.style?.opacity ?? 1;
 
-    if (prevOpacity === opacity && edge.animated === false) {
-      return edge;
-    }
+    if (prevOpacity === opacity && edge.animated === false) return edge;
 
     changed = true;
     return {
@@ -147,20 +182,28 @@ function patchEdgePresentation(
   return changed ? next : edges;
 }
 
-function FitViewOnce({ viewKey, nodeCount }: { viewKey: string; nodeCount: number }) {
+function FitViewOnce({
+  viewKey,
+  nodeCount,
+  skip,
+}: {
+  viewKey: string;
+  nodeCount: number;
+  skip: boolean;
+}) {
   const { fitView } = useReactFlow();
   const lastKey = useRef("");
 
   useEffect(() => {
-    if (nodeCount === 0 || lastKey.current === viewKey) return;
+    if (skip || nodeCount === 0 || lastKey.current === viewKey) return;
 
     const timer = window.setTimeout(() => {
       fitView({ padding: 0.22, duration: nodeCount > VIRTUALIZE_THRESHOLD ? 0 : 280 });
       lastKey.current = viewKey;
-    }, 80);
+    }, 120);
 
     return () => window.clearTimeout(timer);
-  }, [fitView, nodeCount, viewKey]);
+  }, [fitView, nodeCount, viewKey, skip]);
 
   return null;
 }
@@ -189,16 +232,26 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AtlasGraphNode | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [clusterMode, setClusterMode] = useState(CLUSTER_BY_DEFAULT);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set());
+  const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
+  const [focusOnSelect, setFocusOnSelect] = useState(true);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
   const baseEdgesRef = useRef<Edge[]>([]);
+  const hasSavedViewportRef = useRef(false);
 
   const deferredSearch = useDeferredValue(search);
   const searchLower = deferredSearch.trim().toLowerCase();
 
   const isLargeGraph = (graph?.nodes.length ?? 0) > LARGE_GRAPH_THRESHOLD;
   const shouldVirtualize = nodes.length > VIRTUALIZE_THRESHOLD;
+  const graphKey = graph ? graphSignature(graph) : "";
+
+  useEffect(() => {
+    if (isLargeGraph) setClusterMode(true);
+  }, [isLargeGraph]);
 
   const viewSelection = useMemo(() => {
     if (!graph) {
@@ -211,25 +264,47 @@ export default function App() {
     return selectVisibleGraph(graph, searchLower, isLargeGraph);
   }, [graph, searchLower, isLargeGraph]);
 
-  const displayGraph = viewSelection.graph;
-  const viewKey = `${graphSignature(displayGraph)}:${searchLower}`;
+  const clusteredGraph = useMemo(() => {
+    if (!graph) return viewSelection.graph;
+    return applyClusterView(viewSelection.graph, clusterMode, expandedFolders);
+  }, [graph, viewSelection.graph, clusterMode, expandedFolders]);
+
+  const viewKey = `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${[...expandedFolders].sort().join(",")}`;
 
   const nodeById = useMemo(
     () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
     [graph],
   );
 
+  const entryIds = useMemo(
+    () => graph?.meta?.entryNodeIds ?? findEntryNodes(graph ?? { nodes: [], edges: [] }).map((n) => n.id),
+    [graph],
+  );
+
+  const pathIds = useMemo(() => {
+    if (!selected || !graph) return [] as string[];
+    return findPathFromEntries(graph, selected.id, entryIds);
+  }, [selected, graph, entryIds]);
+
   const connectedIds = useMemo(() => {
     if (!selected || !graph) return null;
     return getConnectedNodeIdsFromEdges(selected.id, graph.edges);
   }, [selected, graph]);
 
+  const pathEdges = useMemo(
+    () => (graph && pathIds.length > 0 ? pathEdgeKeys(pathIds, graph) : new Set<string>()),
+    [graph, pathIds],
+  );
+
+  const highlightIds = useMemo(
+    () => mergeHighlightIds(pathIds, connectedIds, selected?.id ?? null),
+    [pathIds, connectedIds, selected?.id],
+  );
+
   const loadGraph = useCallback(async () => {
     try {
       const res = await fetch("/graph.json");
-      if (!res.ok) {
-        throw new Error("graph.json not found. Run pnpm analyze first.");
-      }
+      if (!res.ok) throw new Error("graph.json not found. Run pnpm analyze first.");
       const data = (await res.json()) as AtlasGraph;
       setGraph(data);
       setError(null);
@@ -239,9 +314,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    hasSavedViewportRef.current = Boolean(graphKey && loadViewport(graphKey));
+  }, [graphKey]);
+
+  useEffect(() => {
     loadGraph();
     if (isLargeGraph) return undefined;
-
     const interval = window.setInterval(loadGraph, GRAPH_POLL_MS);
     return () => window.clearInterval(interval);
   }, [loadGraph, isLargeGraph]);
@@ -254,7 +332,7 @@ export default function App() {
     setIsBuilding(true);
 
     const timer = window.setTimeout(() => {
-      const built = buildFlowGraph(displayGraph, { compact: isLargeGraph });
+      const built = buildFlowGraph(clusteredGraph, { compact: isLargeGraph });
       if (cancelled) return;
 
       buildSigRef.current = viewKey;
@@ -265,12 +343,10 @@ export default function App() {
           mergeNodePositions(built.nodes, current),
           searchLower,
           selected?.id ?? null,
-          connectedIds,
+          highlightIds,
         ),
       );
-      setEdges(
-        patchEdgePresentation(built.edges, connectedIds, Boolean(selected)),
-      );
+      setEdges(patchEdgePresentation(built.edges, highlightIds, pathEdges, Boolean(selected)));
       setIsBuilding(false);
     }, 0);
 
@@ -278,25 +354,33 @@ export default function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [graph, displayGraph, viewKey, isLargeGraph, setNodes, setEdges]);
+  }, [graph, clusteredGraph, viewKey, isLargeGraph, setNodes, setEdges]);
 
   useEffect(() => {
     setNodes((current) =>
-      patchNodePresentation(current, searchLower, selected?.id ?? null, connectedIds),
+      patchNodePresentation(current, searchLower, selected?.id ?? null, highlightIds),
     );
     setEdges((current) =>
       patchEdgePresentation(
         current.length > 0 ? current : baseEdgesRef.current,
-        connectedIds,
+        highlightIds,
+        pathEdges,
         Boolean(selected),
       ),
     );
-  }, [searchLower, selected?.id, connectedIds, setNodes, setEdges]);
+  }, [searchLower, selected?.id, highlightIds, pathEdges, setNodes, setEdges]);
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node<AtlasNodeData>) => {
+      if (isClusterId(node.id)) {
+        const folder = folderFromClusterId(node.id);
+        setExpandedFolders((prev) => new Set([...prev, folder]));
+        setSelected(null);
+        return;
+      }
+
       if (!graph) return;
-      const base = nodeById.get(node.data.nodeId);
+      const base = nodeById.get(node.data.nodeId ?? node.id);
       if (!base) return;
       setSelected(enrichNodeForDetails(base, graph, nodeById));
     },
@@ -305,7 +389,54 @@ export default function App() {
 
   const onPaneClick = useCallback(() => {
     setSelected(null);
+    setHelperLines([]);
   }, []);
+
+  const onNodeDrag: OnNodeDrag<Node<AtlasNodeData>> = useCallback(
+    (_event, dragged) => {
+      const { lines } = computeHelperLines(dragged as Node<AtlasNodeData>, nodes);
+      setHelperLines(lines);
+    },
+    [nodes],
+  );
+
+  const onNodeDragStop: OnNodeDrag<Node<AtlasNodeData>> = useCallback(
+    (_event, dragged) => {
+      setNodes((current) => {
+        const { snapX, snapY } = computeHelperLines(dragged as Node<AtlasNodeData>, current);
+        if (snapX === undefined && snapY === undefined) return current;
+
+        return current.map((node) =>
+          node.id === dragged.id
+            ? {
+                ...node,
+                position: {
+                  x: snapX ?? node.position.x,
+                  y: snapY ?? node.position.y,
+                },
+              }
+            : node,
+        );
+      });
+      setHelperLines([]);
+    },
+    [setNodes],
+  );
+
+  const showFromEntry = useCallback(() => {
+    if (!graph) return;
+    const entries = findEntryNodes(graph);
+    if (entries.length === 0) return;
+
+    const entry = entries[0];
+    setClusterMode(false);
+    setExpandedFolders(new Set());
+    setSearch("");
+    setSelected(enrichNodeForDetails(entry, graph, nodeById));
+  }, [graph, nodeById]);
+
+  const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
+  const detailsPanelDefault = useMemo(() => defaultDetailsPanelRect(), []);
 
   const canvasMessage = graph
     ? emptyViewMessage(
@@ -348,6 +479,8 @@ export default function App() {
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         defaultEdgeOptions={COMPACT_EDGE_DEFAULTS}
         nodesDraggable
         nodesConnectable={false}
@@ -364,9 +497,24 @@ export default function App() {
         maxZoom={2}
         proOptions={PRO_OPTIONS}
       >
-        <FitViewOnce viewKey={viewKey} nodeCount={nodes.length} />
+        <ViewportPersistence graphKey={graphKey} enabled={Boolean(graphKey)} />
+        <FitViewOnce
+          viewKey={viewKey}
+          nodeCount={nodes.length}
+          skip={hasSavedViewportRef.current}
+        />
+        <FocusOnSelect nodeId={selected?.id ?? null} enabled={focusOnSelect} />
+        {selected && !selected.cluster && (
+          <NodeToolbarActions
+            node={selected}
+            onFocus={() => setFocusOnSelect(true)}
+          />
+        )}
+
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--atlas-canvas-grid)" />
         <Controls showInteractive={false} />
+        <HelperLinesOverlay lines={helperLines} />
+
         {!isLargeGraph && (
           <MiniMap
             nodeColor={(node) =>
@@ -386,51 +534,87 @@ export default function App() {
             {isBuilding ? "Building view…" : canvasMessage}
           </Panel>
         )}
+      </ReactFlow>
 
-        <Panel position="top-left" className="graph-sidebar graph-sidebar--main">
+      <FloatingPanel id="main" defaultRect={mainPanelDefault}>
+        <div className="graph-sidebar graph-sidebar--main">
           <div className="graph-sidebar__header graph-sidebar__header--compact">
             <h1>React Atlas</h1>
           </div>
-          <p className="graph-sidebar__stats">
-            {graph.nodes.length} nodes · {graph.edges.length} edges
-          </p>
-          {isLargeGraph && (
-            <p className="graph-notice">
-              {FORCE_FULL_GRAPH
-                ? "Test mode — rendering full graph. May be slow on large projects."
-                : "Large graph — search to explore. Animations off, viewport culling on."}
+          <div className="graph-sidebar__scroll atlas-scroll">
+            <p className="graph-sidebar__stats">
+              {graph.nodes.length} nodes · {graph.edges.length} edges
             </p>
-          )}
-          {graph.meta?.notice && (
-            <p className="graph-notice">{graph.meta.notice}</p>
-          )}
-          <input
-            className="graph-search"
-            type="search"
-            placeholder="Search nodes…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus={isLargeGraph && !FORCE_FULL_GRAPH}
-          />
-          <div className="graph-legend">
-            {legendTypes.map((type) => (
-              <span key={type} className="graph-legend__item">
-                <span
-                  className="graph-legend__swatch"
-                  style={{ background: typeColors[type] }}
-                />
-                {type}
-              </span>
-            ))}
-          </div>
-        </Panel>
 
-        {selected && (
-          <Panel position="top-right" className="graph-sidebar-wrap">
-            <NodeDetails node={selected} onClose={() => setSelected(null)} />
-          </Panel>
-        )}
-      </ReactFlow>
+            <div className="graph-actions">
+              <button type="button" className="graph-actions__btn" onClick={showFromEntry}>
+                From entry
+              </button>
+              <button
+                type="button"
+                className="graph-actions__btn"
+                onClick={() => setClusterMode((value) => !value)}
+              >
+                {clusterMode ? "Uncluster" : "Cluster folders"}
+              </button>
+              <button
+                type="button"
+                className="graph-actions__btn"
+                onClick={() => setFocusOnSelect((value) => !value)}
+              >
+                {focusOnSelect ? "Focus on" : "Focus off"}
+              </button>
+            </div>
+
+            {isLargeGraph && (
+              <p className="graph-notice">
+                {FORCE_FULL_GRAPH
+                  ? "Large graph — full render mode. Use cluster folders if slow."
+                  : "Large graph — search to explore, or use folder clusters."}
+              </p>
+            )}
+            {graph.meta?.notice && <p className="graph-notice">{graph.meta.notice}</p>}
+
+            <input
+              className="graph-search"
+              type="search"
+              placeholder="Search nodes…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus={isLargeGraph && !FORCE_FULL_GRAPH}
+            />
+
+            {graph.meta?.insights && graph.meta.insights.length > 0 && (
+              <InsightsPanel insights={graph.meta.insights} />
+            )}
+
+            <div className="graph-legend">
+              {legendTypes.map((type) => (
+                <span key={type} className="graph-legend__item">
+                  <span
+                    className="graph-legend__swatch"
+                    style={{ background: typeColors[type] }}
+                  />
+                  {type}
+                </span>
+              ))}
+            </div>
+
+            {selected && pathIds.length > 0 && (
+              <p className="graph-sidebar__hint">
+                Path from entry:{" "}
+                {pathIds.map((id) => nodeById.get(id)?.name ?? id).join(" → ")}
+              </p>
+            )}
+          </div>
+        </div>
+      </FloatingPanel>
+
+      {selected && !selected.cluster && (
+        <FloatingPanel id="details" defaultRect={detailsPanelDefault}>
+          <NodeDetails node={selected} onClose={() => setSelected(null)} />
+        </FloatingPanel>
+      )}
     </div>
   );
 }
