@@ -1,3 +1,4 @@
+import { findEntryNodeIds as resolveEntryNodeIds } from "./entryPoints";
 import { attachLayoutToNodes } from "./layoutGraph";
 import type { Graph, GraphMeta, GraphNode } from "./types";
 import type { Insight } from "./insights";
@@ -10,14 +11,7 @@ export type GraphExportOptions = {
 };
 
 export function findEntryNodeIds(graph: Graph): string[] {
-  return graph.nodes
-    .filter(
-      (node) =>
-        node.type === "entry" ||
-        /[/\\]main\.tsx$/i.test(node.file) ||
-        /[/\\]index\.tsx$/i.test(node.file),
-    )
-    .map((node) => node.id);
+  return resolveEntryNodeIds(graph.nodes, graph.meta?.entryNodeIds);
 }
 
 /**

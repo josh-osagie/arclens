@@ -8,6 +8,7 @@ import { printReport, writeReportFile } from "./report";
 import { resolveTarget } from "./resolveTarget";
 import { buildInsights } from "./insights";
 import { slimGraphForExport } from "./slimGraph";
+import { writeSnippetSidecars } from "./snippets";
 
 const program = new Command();
 
@@ -45,6 +46,10 @@ program
     "3000",
   )
   .option("--no-cache", "re-parse all files and ignore .react-atlas/cache.json")
+  .option(
+    "--with-snippets",
+    "write truncated source sidecars to .react-atlas/snippets/ in the analyzed project",
+  )
   .action(
     (
       inputPath: string,
@@ -58,6 +63,7 @@ program
         focus?: string;
         maxFiles: string;
         cache?: boolean;
+        withSnippets?: boolean;
       },
     ) => {
       const spinner = options.quiet ? null : ora({ color: "cyan" }).start();
@@ -94,6 +100,18 @@ program
               2,
             )}\n`,
           );
+        }
+
+        if (options.withSnippets) {
+          const snippetCount = writeSnippetSidecars(
+            targetDir,
+            result.graph.nodes.map((node) => node.file),
+          );
+          if (!options.quiet) {
+            console.log(
+              `Wrote ${snippetCount} snippet sidecar(s) to ${path.join(targetDir, ".react-atlas", "snippets")}`,
+            );
+          }
         }
 
         const reportPath = options.reportFile

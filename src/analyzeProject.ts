@@ -2,6 +2,7 @@ import path from "node:path";
 import { Project } from "ts-morph";
 import {
   buildCacheFile,
+  CACHE_DIR,
   getCachePath,
   normalizePath,
   partitionFilesByCache,
@@ -55,6 +56,7 @@ const IGNORED_PATH_PARTS = [
   `${path.sep}dist${path.sep}`,
   `${path.sep}build${path.sep}`,
   `${path.sep}.git${path.sep}`,
+  `${path.sep}${CACHE_DIR}${path.sep}`,
 ];
 
 function isSafeSourceFile(filePath: string): boolean {

@@ -1,4 +1,5 @@
 import { DetailsFieldMenu, useDetailsFieldPrefs } from "./DetailsFieldMenu";
+import { FileSnippetPreview } from "./FileSnippetPreview";
 import { InfoTip } from "./InfoTip";
 import type { DetailsFieldPrefs } from "./detailsPanelPrefs";
 import type { AtlasGraphNode, GraphConnection } from "./types";
@@ -6,6 +7,7 @@ import { relFile, typeColors } from "./buildFlowGraph";
 
 type Props = {
   node: AtlasGraphNode;
+  projectRoot?: string;
   onClose: () => void;
 };
 
@@ -68,7 +70,7 @@ function ConnectionGroup({
   );
 }
 
-export function NodeDetails({ node, onClose }: Props) {
+export function NodeDetails({ node, projectRoot, onClose }: Props) {
   const [fieldPrefs, setFieldPrefs] = useDetailsFieldPrefs();
 
   const incoming = {
@@ -156,6 +158,8 @@ export function NodeDetails({ node, onClose }: Props) {
             </div>
           )}
         </dl>
+
+        <FileSnippetPreview nodeFile={node.file} projectRoot={projectRoot} />
 
         {show("props") && node.props && node.props.length > 0 && (
           <div className="details-section">

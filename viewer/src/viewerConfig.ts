@@ -22,7 +22,11 @@ export const GRAPH_POLL_MS = 2000;
 export const FORCE_FULL_GRAPH = false;
 
 /** Default folder clustering only for large graphs. */
-export const CLUSTER_BY_DEFAULT = false;
+export const CLUSTER_BY_DEFAULT = true;
+
+/** Shortcuts panel: top folders and hub nodes shown. */
+export const OVERVIEW_TOP_FOLDERS = 8;
+export const OVERVIEW_HUB_NODES = 8;
 
 /** Nodes revealed per cluster click on large graphs. */
 export const INCREMENTAL_CLUSTER_BATCH = 24;

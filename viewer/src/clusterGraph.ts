@@ -1,3 +1,4 @@
+import { filterEntryNodes } from "../../src/entryPoints";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 import { INCREMENTAL_CLUSTER_BATCH } from "./viewerConfig";
 
@@ -166,16 +167,7 @@ export function applyClusterView(
 }
 
 export function findEntryNodes(graph: AtlasGraph): AtlasGraphNode[] {
-  const ids = new Set(graph.meta?.entryNodeIds ?? []);
-  const fromMeta = graph.nodes.filter((node) => ids.has(node.id));
-  if (fromMeta.length > 0) return fromMeta;
-
-  return graph.nodes.filter(
-    (node) =>
-      node.type === "entry" ||
-      /[/\\]main\.tsx$/i.test(node.file) ||
-      /[/\\]index\.tsx$/i.test(node.file),
-  );
+  return filterEntryNodes(graph.nodes, graph.meta?.entryNodeIds);
 }
 
 export function buildClusteredVisibleIds(

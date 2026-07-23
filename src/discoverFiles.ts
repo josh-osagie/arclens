@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { CACHE_DIR } from "./cache/fileCache";
 import { isConfigFile } from "./extractors/reactFunction";
 
 const IGNORED_DIRS = new Set([
@@ -10,6 +11,7 @@ const IGNORED_DIRS = new Set([
   "coverage",
   ".next",
   "out",
+  CACHE_DIR,
 ]);
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);

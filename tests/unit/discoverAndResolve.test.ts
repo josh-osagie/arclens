@@ -18,6 +18,19 @@ describe("discoverFiles", () => {
     expect(files.some((f) => f.endsWith("vite.config.ts"))).toBe(false);
     expect(files.some((f) => f.endsWith("App.tsx"))).toBe(true);
   });
+
+  it("skips .react-atlas snippet sidecars", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-discover-"));
+    fs.writeFileSync(path.join(dir, "App.tsx"), "export const App = () => null;\n");
+    const sidecarDir = path.join(dir, ".react-atlas", "snippets");
+    fs.mkdirSync(sidecarDir, { recursive: true });
+    fs.writeFileSync(path.join(sidecarDir, "App.tsx"), "export const App = () => null;\n");
+
+    const files = discoverSourceFiles(dir);
+    expect(files).toHaveLength(1);
+    expect(files[0]).toMatch(/App\.tsx$/);
+    expect(files[0]).not.toContain(".react-atlas");
+  });
 });
 
 describe("resolveTarget", () => {

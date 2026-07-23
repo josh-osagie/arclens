@@ -225,3 +225,35 @@ export function relFile(filePath: string): string {
   }
   return parts.slice(-2).join("/") || filePath;
 }
+
+export function formatRelativePath(filePath: string, projectRoot?: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+
+  if (projectRoot) {
+    const root = projectRoot.replace(/\\/g, "/").replace(/\/+$/, "");
+    const rootLower = root.toLowerCase();
+    const fileLower = normalized.toLowerCase();
+
+    if (fileLower === rootLower) {
+      const slash = normalized.lastIndexOf("/");
+      return slash >= 0 ? normalized.slice(slash + 1) : normalized;
+    }
+
+    const prefix = `${rootLower}/`;
+    if (fileLower.startsWith(prefix)) {
+      return normalized.slice(root.length + 1);
+    }
+  }
+
+  const srcMatch = normalized.match(/(?:^|\/)((?:src|app|pages)\/.+)$/);
+  if (srcMatch?.[1]) {
+    return srcMatch[1];
+  }
+
+  return relFile(normalized);
+}
+
+export function truncatePath(filePath: string, maxLength = 42): string {
+  if (filePath.length <= maxLength) return filePath;
+  return `…${filePath.slice(-(maxLength - 1))}`;
+}

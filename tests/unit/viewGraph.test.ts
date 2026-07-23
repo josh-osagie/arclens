@@ -21,10 +21,11 @@ describe("selectVisibleGraph", () => {
     expect(result.graph.nodes).toHaveLength(3);
   });
 
-  it("returns empty graph for large projects without search", () => {
+  it("returns folder overview for large projects without search", () => {
     const result = selectVisibleGraph(graph, "", true);
-    expect(result.mode).toBe("empty");
-    expect(result.graph.nodes).toHaveLength(0);
+    expect(result.mode).toBe("overview");
+    expect(result.graph.nodes).toHaveLength(3);
+    expect(result.matchCount).toBe(3);
   });
 
   it("returns search subgraph with neighbors for large projects", () => {

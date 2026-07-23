@@ -88,6 +88,15 @@ describe("reactFunction", () => {
       );
       expect(classifyFileModule(file)).toBe("entry");
     });
+
+    it("does not classify nested barrel index files as entry modules", () => {
+      const project = new Project({ useInMemoryFileSystem: true });
+      const file = project.createSourceFile(
+        "/src/components/badge/index.tsx",
+        `export { BadgeIcon } from "./BadgeIcon";\nexport { BadgeLabel } from "./BadgeLabel";`,
+      );
+      expect(classifyFileModule(file)).toBe("utility");
+    });
   });
 
   describe("resolveDefaultExportName", () => {

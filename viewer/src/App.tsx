@@ -32,6 +32,7 @@ import {
 import {
   applyClusterView,
   buildClusteredVisibleIds,
+  clusterNodeId,
   findEntryNodes,
   folderFromClusterId,
   groupNodesByFolder,
@@ -47,6 +48,12 @@ import {
   graphSignature,
 } from "./graphConnections";
 import {
+  computeEntryPoints,
+  computeHubNodes,
+  computeTopFolders,
+  type FolderOverview,
+} from "./graphOverview";
+import {
   computeHelperLines,
   HelperLinesOverlay,
   type HelperLine,
@@ -54,6 +61,7 @@ import {
 import { InsightsPanel } from "./InsightsPanel";
 import { InfoTip } from "./InfoTip";
 import { NodeDetails } from "./NodeDetails";
+import { OverviewShortcuts } from "./OverviewShortcuts";
 import { NodeToolbarActions } from "./NodeToolbarActions";
 import { defaultDetailsPanelRect, defaultMainPanelRect } from "./panelStorage";
 import {
@@ -69,6 +77,8 @@ import {
   FORCE_FULL_GRAPH,
   GRAPH_POLL_MS,
   LARGE_GRAPH_THRESHOLD,
+  OVERVIEW_HUB_NODES,
+  OVERVIEW_TOP_FOLDERS,
   VIRTUALIZE_THRESHOLD,
 } from "./viewerConfig";
 import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
@@ -217,6 +227,9 @@ function emptyViewMessage(
   matchCount: number,
   searchLower: string,
 ): string {
+  if (mode === "overview" && !searchLower) {
+    return "Showing folder overview — click a folder to expand, or use shortcuts below.";
+  }
   if (mode === "empty" && !searchLower) {
     return `This graph has ${totalNodes.toLocaleString()} nodes — search for a component, hook, or file to explore.`;
   }
@@ -244,6 +257,7 @@ export default function App() {
   );
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
   const [focusOnSelect, setFocusOnSelect] = useState(true);
+  const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
@@ -322,6 +336,21 @@ export default function App() {
     [pathIds, connectedIds, selected?.id],
   );
 
+  const overviewEntries = useMemo(
+    () => (graph ? computeEntryPoints(graph) : []),
+    [graph],
+  );
+
+  const overviewFolders = useMemo(
+    () => (graph ? computeTopFolders(graph, OVERVIEW_TOP_FOLDERS) : []),
+    [graph],
+  );
+
+  const overviewHubs = useMemo(
+    () => (graph ? computeHubNodes(graph, OVERVIEW_HUB_NODES) : []),
+    [graph],
+  );
+
   const loadGraph = useCallback(async () => {
     try {
       const res = await fetch("/graph.json");
@@ -391,43 +420,85 @@ export default function App() {
     );
   }, [searchLower, selected?.id, highlightIds, pathEdges, setNodes, setEdges]);
 
+  const expandClusterFolder = useCallback(
+    (folder: string) => {
+      if (!graph) return;
+
+      if (isLargeGraph && clusterMode) {
+        const members = groupNodesByFolder(graph.nodes).get(folder) ?? [];
+        setPartialReveals((prev) => {
+          const next = new Map(prev);
+          const already = next.get(folder) ?? new Set<string>();
+          const visible = buildClusteredVisibleIds(
+            viewSelection.graph,
+            clusterMode,
+            fullyExpandedFolders,
+            prev,
+          );
+          next.set(
+            folder,
+            nextClusterReveal(folder, members, visible, graph, already),
+          );
+          return next;
+        });
+      } else {
+        setFullyExpandedFolders((prev) => new Set([...prev, folder]));
+      }
+
+      setCanvasFocusId(clusterNodeId(folder));
+      setSelected(null);
+    },
+    [graph, isLargeGraph, clusterMode, viewSelection.graph, fullyExpandedFolders],
+  );
+
+  const focusGraphNode = useCallback(
+    (node: AtlasGraphNode) => {
+      if (!graph) return;
+
+      if (isLargeGraph && !FORCE_FULL_GRAPH) {
+        setSearch(node.name);
+      }
+
+      setSelected(enrichNodeForDetails(node, graph, nodeById));
+      setFocusOnSelect(true);
+      setCanvasFocusId(null);
+    },
+    [graph, isLargeGraph, nodeById],
+  );
+
+  const onOverviewFolderClick = useCallback(
+    (folder: FolderOverview) => {
+      if (!clusterMode) setClusterMode(true);
+      expandClusterFolder(folder.folder);
+      setFocusOnSelect(true);
+    },
+    [expandClusterFolder, clusterMode],
+  );
+
+  const onOverviewEntryClick = useCallback(
+    (node: AtlasGraphNode) => focusGraphNode(node),
+    [focusGraphNode],
+  );
+
+  const onOverviewHubClick = useCallback(
+    (node: AtlasGraphNode) => focusGraphNode(node),
+    [focusGraphNode],
+  );
+
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node<AtlasNodeData>) => {
       if (isClusterId(node.id)) {
-        const folder = folderFromClusterId(node.id);
-        if (!graph) return;
-
-        if (isLargeGraph && clusterMode) {
-          const members = groupNodesByFolder(graph.nodes).get(folder) ?? [];
-          setPartialReveals((prev) => {
-            const next = new Map(prev);
-            const already = next.get(folder) ?? new Set<string>();
-            const visible = buildClusteredVisibleIds(
-              viewSelection.graph,
-              clusterMode,
-              fullyExpandedFolders,
-              prev,
-            );
-            next.set(
-              folder,
-              nextClusterReveal(folder, members, visible, graph, already),
-            );
-            return next;
-          });
-        } else {
-          setFullyExpandedFolders((prev) => new Set([...prev, folder]));
-        }
-
-        setSelected(null);
+        expandClusterFolder(folderFromClusterId(node.id));
         return;
       }
 
       if (!graph) return;
       const base = nodeById.get(node.data.nodeId ?? node.id);
       if (!base) return;
+      setCanvasFocusId(null);
       setSelected(enrichNodeForDetails(base, graph, nodeById));
     },
-    [graph, nodeById, isLargeGraph, clusterMode, viewSelection.graph, fullyExpandedFolders],
+    [graph, nodeById, expandClusterFolder],
   );
 
   const onPaneClick = useCallback(() => {
@@ -471,12 +542,13 @@ export default function App() {
     const entries = findEntryNodes(graph);
     if (entries.length === 0) return;
 
-    const entry = entries[0];
     setClusterMode(false);
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
     setSearch("");
-    setSelected(enrichNodeForDetails(entry, graph, nodeById));
+    setSelected(enrichNodeForDetails(entries[0], graph, nodeById));
+    setFocusOnSelect(true);
+    setCanvasFocusId(null);
   }, [graph, nodeById]);
 
   const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
@@ -548,7 +620,10 @@ export default function App() {
           nodeCount={nodes.length}
           skip={hasSavedViewportRef.current}
         />
-        <FocusOnSelect nodeId={selected?.id ?? null} enabled={focusOnSelect} />
+        <FocusOnSelect
+          nodeId={canvasFocusId ?? selected?.id ?? null}
+          enabled={focusOnSelect}
+        />
         {selected && !selected.cluster && (
           <NodeToolbarActions
             node={selected}
@@ -596,6 +671,16 @@ export default function App() {
               {graph.nodes.length} nodes · {graph.edges.length} edges
             </p>
 
+            <OverviewShortcuts
+              entries={overviewEntries}
+              projectRoot={graph.meta?.targetDir}
+              folders={overviewFolders}
+              hubs={overviewHubs}
+              onEntryClick={onOverviewEntryClick}
+              onFolderClick={onOverviewFolderClick}
+              onHubClick={onOverviewHubClick}
+            />
+
             <div className="graph-actions">
               <button type="button" className="graph-actions__btn" onClick={showFromEntry}>
                 From entry
@@ -629,7 +714,9 @@ export default function App() {
               <p className="graph-notice">
                 {FORCE_FULL_GRAPH
                   ? "Large graph — full render mode. Use cluster folders if slow."
-                  : "Large graph — search or click folders to expand nearby nodes gradually."}
+                  : viewSelection.mode === "overview"
+                    ? "Large graph — folder overview loaded. Expand folders or search to drill in."
+                    : "Large graph — search or click folders to expand nearby nodes gradually."}
               </p>
             )}
             {graph.meta?.notice && <p className="graph-notice">{graph.meta.notice}</p>}
@@ -640,7 +727,6 @@ export default function App() {
               placeholder="Search nodes…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              autoFocus={isLargeGraph && !FORCE_FULL_GRAPH}
             />
 
             {graph.meta?.insights && graph.meta.insights.length > 0 && (
@@ -676,7 +762,11 @@ export default function App() {
 
       {selected && !selected.cluster && (
         <FloatingPanel id="details" defaultRect={detailsPanelDefault}>
-          <NodeDetails node={selected} onClose={() => setSelected(null)} />
+          <NodeDetails
+            node={selected}
+            projectRoot={graph.meta?.targetDir}
+            onClose={() => setSelected(null)}
+          />
         </FloatingPanel>
       )}
     </div>

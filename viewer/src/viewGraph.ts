@@ -4,7 +4,7 @@ import {
   MAX_VISIBLE_NODES,
 } from "./viewerConfig";
 
-export type ViewGraphMode = "full" | "search" | "empty";
+export type ViewGraphMode = "full" | "search" | "empty" | "overview";
 
 export type ViewGraphSelection = {
   graph: AtlasGraph;
@@ -23,9 +23,9 @@ export function selectVisibleGraph(
 
   if (!searchLower) {
     return {
-      graph: { meta: graph.meta, nodes: [], edges: [] },
-      mode: "empty",
-      matchCount: 0,
+      graph,
+      mode: "overview",
+      matchCount: graph.nodes.length,
     };
   }
 

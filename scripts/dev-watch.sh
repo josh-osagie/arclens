@@ -6,9 +6,10 @@ while [ "${1:-}" = "--" ]; do
 done
 
 TARGET="${1:-./samples}"
+ABS_TARGET="$(cd "${TARGET}" && pwd)"
 
 pnpm exec concurrently \
   -n analyze,viewer \
   -c blue,yellow \
   "pnpm analyze:watch -- \"${TARGET}\"" \
-  "pnpm dev:viewer"
+  "VITE_ATLAS_PROJECT_ROOT=\"${ABS_TARGET}\" pnpm dev:viewer"

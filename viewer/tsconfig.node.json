@@ -9,7 +9,7 @@
     /* Bundler mode */
     "module": "nodenext",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "moduleDetection": "force",
     "noEmit": true,
 

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { isAppEntryFile } from "../entryPoints";
 import {
   SyntaxKind,
   type CallExpression,
@@ -179,7 +180,7 @@ export function classifyFileModule(
     return "entry";
   }
 
-  if (isEntryFileName(filePath) && nodeHasJsx(sourceFile)) {
+  if (isAppEntryFile(filePath)) {
     return "entry";
   }
 
