@@ -6,10 +6,10 @@
   "scripts": {
     "react-atlas": "tsx src/cli.ts",
     "analyze": "tsx src/cli.ts analyze",
-    "analyze:watch": "chokidar \"samples/**/*.{ts,tsx}\" \"src/**/*.ts\" -i node_modules -c \"pnpm analyze\" --initial",
+    "analyze:watch": "bash scripts/watch.sh",
     "dev:viewer": "pnpm --dir viewer dev",
-    "dev": "\"pnpm dev:viewer\"",
-    "dev:watch": "concurrently -n analyze,viewer -c blue,yellow \"pnpm analyze:watch\" \"pnpm dev:viewer\"",
+    "dev": "pnpm dev:viewer",
+    "dev:watch": "bash scripts/dev-watch.sh",
     "test": "vitest run",
     "test:watch": "vitest"
   },
