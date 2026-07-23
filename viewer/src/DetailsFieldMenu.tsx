@@ -69,25 +69,38 @@ export function DetailsFieldMenu({ prefs, onChange }: Props) {
       </button>
       {open && (
         <div className="details-field-menu__panel">
-          {FIELD_GROUPS.map((group) => (
-            <div key={group.title} className="details-field-menu__group">
-              <p className="details-field-menu__group-title">{group.title}</p>
-              <ul className="details-field-menu__list">
-                {group.keys.map((key) => (
-                  <li key={key}>
-                    <label className="details-field-menu__option">
-                      <input
-                        type="checkbox"
-                        checked={prefs[key]}
-                        onChange={() => toggle(key)}
-                      />
-                      <span>{DETAILS_FIELD_LABELS[key]}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="details-field-menu__header">
+            <p className="details-field-menu__title">fields</p>
+            <button
+              type="button"
+              className="details-field-menu__close"
+              aria-label="Close fields menu"
+              onClick={() => setOpen(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="details-field-menu__scroll atlas-scroll">
+            {FIELD_GROUPS.map((group) => (
+              <div key={group.title} className="details-field-menu__group">
+                <p className="details-field-menu__group-title">{group.title}</p>
+                <ul className="details-field-menu__list">
+                  {group.keys.map((key) => (
+                    <li key={key}>
+                      <label className="details-field-menu__option">
+                        <input
+                          type="checkbox"
+                          checked={prefs[key]}
+                          onChange={() => toggle(key)}
+                        />
+                        <span>{DETAILS_FIELD_LABELS[key]}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
           <button type="button" className="details-field-menu__reset" onClick={reset}>
             reset defaults
           </button>
