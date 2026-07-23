@@ -7,6 +7,7 @@ describe("slimGraphForExport", () => {
     const result = analyzeSamples();
     const slim = slimGraphForExport(result.graph);
 
+    expect(slim.meta?.projectName).toBe("samples");
     expect(slim.nodes.length).toBe(result.graph.nodes.length);
     expect(slim.edges.length).toBe(result.graph.edges.length);
 

@@ -1,7 +1,6 @@
-import type { SourceFile } from "ts-morph";
 import type { AnalysisResult } from "./analyzeProject";
 import type { ExportRecord } from "./extractors/exports";
-import { classifyFileModule, isConfigFile } from "./extractors/reactFunction";
+import { isConfigFile } from "./extractors/reactFunction";
 import type { Graph, GraphNodeType } from "./types";
 
 export type ReactAssessment = {
@@ -11,20 +10,10 @@ export type ReactAssessment = {
 };
 
 export function applyModuleClassification(
-  sourceFiles: SourceFile[],
+  moduleTypeByFile: Map<string, GraphNodeType>,
   exports: ExportRecord[],
   graph: Graph,
 ): void {
-  const moduleTypeByFile = new Map<string, GraphNodeType>();
-
-  for (const sourceFile of sourceFiles) {
-    const filePath = sourceFile.getFilePath();
-    const moduleType = classifyFileModule(sourceFile);
-    if (moduleType !== "utility") {
-      moduleTypeByFile.set(filePath, moduleType);
-    }
-  }
-
   for (const exp of exports) {
     if (isConfigFile(exp.file)) {
       exp.type = "config";

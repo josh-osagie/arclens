@@ -44,6 +44,7 @@ program
     "refuse to scan more than N files (safety guard)",
     "3000",
   )
+  .option("--no-cache", "re-parse all files and ignore .react-atlas/cache.json")
   .action(
     (
       inputPath: string,
@@ -56,6 +57,7 @@ program
         color?: boolean;
         focus?: string;
         maxFiles: string;
+        cache?: boolean;
       },
     ) => {
       const spinner = options.quiet ? null : ora({ color: "cyan" }).start();
@@ -70,6 +72,7 @@ program
 
         const result = analyzeProject(targetDir, {
           maxFiles,
+          cache: options.cache,
           onProgress: (message) => {
             if (spinner) spinner.text = message;
           },

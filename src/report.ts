@@ -26,6 +26,7 @@ export type ReportFormat = "text" | "json";
 export type JsonReport = {
   meta: {
     targetDir: string;
+    projectName: string;
     fileCount: number;
     durationMs: number;
     tsConfigPath: string | null;
@@ -213,6 +214,7 @@ export function formatReport(
   const insightCounts = countInsightsBySeverity(insights);
 
   const relTarget = path.relative(process.cwd(), targetDir) || ".";
+  const projectName = graph.meta?.projectName ?? path.basename(targetDir);
   const totalNodes = graph.nodes.length;
   const totalEdges = graph.edges.length;
   const projectExports = graph.nodes.filter((node) => node.file !== "external").length;
@@ -221,6 +223,7 @@ export function formatReport(
     lines.push("");
     lines.push(`${colors.bold(colors.cyan("React Atlas"))}`);
     lines.push(colors.dim("=".repeat(40)));
+    lines.push(`${colors.dim("Project:")}   ${colors.white(projectName)}`);
     lines.push(`${colors.dim("Target:")}     ${colors.white(relTarget)}`);
     lines.push(
       `${colors.dim("Files:")}      ${colors.white(String(fileCount))} TypeScript sources`,
@@ -430,6 +433,7 @@ export function buildJsonReport(
   const report: JsonReport = {
     meta: {
       targetDir: relPath(targetDir),
+      projectName: graph.meta?.projectName ?? path.basename(targetDir),
       fileCount,
       durationMs,
       tsConfigPath: tsConfigPath ? relPath(tsConfigPath) : null,

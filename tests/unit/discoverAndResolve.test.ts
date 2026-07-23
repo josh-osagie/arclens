@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { discoverSourceFiles } from "../../src/discoverFiles";
-import { findTsConfig, resolveTarget } from "../../src/resolveTarget";
+import { findTsConfig, resolveProjectName, resolveTarget } from "../../src/resolveTarget";
 import { fixturesDir } from "../helpers";
 
 describe("discoverFiles", () => {
@@ -43,5 +43,22 @@ describe("findTsConfig", () => {
   it("finds tsconfig in fixture folder", () => {
     const config = findTsConfig(path.join(fixturesDir, "default-export-app"));
     expect(config).toMatch(/tsconfig\.json$/);
+  });
+});
+
+describe("resolveProjectName", () => {
+  it("uses package.json name when present", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-name-"));
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ name: "my-cool-app" }),
+    );
+
+    expect(resolveProjectName(dir)).toBe("my-cool-app");
+  });
+
+  it("falls back to directory basename without package.json", () => {
+    const dir = path.join(fixturesDir, "default-export-app");
+    expect(resolveProjectName(dir)).toBe("default-export-app");
   });
 });

@@ -12,12 +12,15 @@ export function fixturePath(name: string): string {
   return path.join(fixturesDir, name);
 }
 
-export function analyzeFixture(name: string, options?: { maxFiles?: number }): AnalysisResult {
-  return analyzeProject(fixturePath(name), options);
+export function analyzeFixture(
+  name: string,
+  options?: { maxFiles?: number; cache?: boolean },
+): AnalysisResult {
+  return analyzeProject(fixturePath(name), { cache: false, ...options });
 }
 
-export function analyzeSamples(options?: { maxFiles?: number }): AnalysisResult {
-  return analyzeProject(samplesDir, options);
+export function analyzeSamples(options?: { maxFiles?: number; cache?: boolean }): AnalysisResult {
+  return analyzeProject(samplesDir, { cache: false, ...options });
 }
 
 export function nodeByName(result: AnalysisResult, name: string): GraphNode | undefined {

@@ -26,6 +26,7 @@ export type GraphInsight = {
 
 export type GraphMeta = {
   targetDir?: string;
+  projectName?: string;
   isReactProject: boolean;
   notice?: string;
   signals?: string[];

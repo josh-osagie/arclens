@@ -70,7 +70,7 @@ describe("extractComponentProps integration", () => {
     expect(button?.props).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "onClick", type: "() => void" }),
-        expect.objectContaining({ name: "label", type: "string" }),
+        expect.objectContaining({ name: "label", type: "string | undefined", optional: true }),
       ]),
     );
   });

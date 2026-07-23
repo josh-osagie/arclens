@@ -1,33 +1,36 @@
 import path from "node:path";
 import { Project } from "ts-morph";
+import {
+  buildCacheFile,
+  getCachePath,
+  normalizePath,
+  partitionFilesByCache,
+  readFileCache,
+  tsConfigCacheKey,
+  writeFileCache,
+} from "./cache/fileCache";
 import { discoverSourceFiles, formatDuration } from "./discoverFiles";
 import { buildGraph } from "./buildGraph";
 import { enrichGraph } from "./enrichGraph";
 import {
-  extractEdges,
-  extractExports,
-  extractHookUsages,
-  extractRenders,
-} from "./extractors/extracts";
-import type {
-  ExportRecord,
-  extractHookUsage,
-  extractImportEdges,
-  extractJsxRenders,
-} from "./extractors/exports";
+  extractFileAnalysis,
+  mergeFilePayloads,
+  type ImportEdge,
+  type RenderEdge,
+  type UseEdge,
+} from "./extractFileAnalysis";
+import type { ExportRecord } from "./extractors/exports";
 import { applyModuleClassification, assessReactProject, type ReactAssessment } from "./reactAssessment";
-import { detectHookRuleViolations, type HookRuleViolation } from "./extractors/hookRules";
-import { extractComponentProps } from "./extractors/props";
-import { findTsConfig } from "./resolveTarget";
+import type { HookRuleViolation } from "./extractors/hookRules";
+import { findTsConfig, resolveProjectName } from "./resolveTarget";
 import type { Graph } from "./types";
 
-export type ImportEdge = ReturnType<typeof extractImportEdges>[number];
-export type RenderEdge = ReturnType<typeof extractJsxRenders>[number];
-export type UseEdge = ReturnType<typeof extractHookUsage>[number];
+export type { ImportEdge, RenderEdge, UseEdge };
 
 export type AnalyzeOptions = {
   maxFiles?: number;
   onProgress?: (message: string) => void;
+  cache?: boolean;
 };
 
 export type AnalysisResult = {
@@ -43,6 +46,8 @@ export type AnalysisResult = {
   uses: UseEdge[];
   hookRuleViolations: HookRuleViolation[];
   reactAssessment: ReactAssessment;
+  cacheHits?: number;
+  cacheMisses?: number;
 };
 
 const IGNORED_PATH_PARTS = [
@@ -68,6 +73,7 @@ export function analyzeProject(
   const started = Date.now();
   const progress = options.onProgress ?? (() => undefined);
   const maxFiles = options.maxFiles ?? 3000;
+  const useCache = options.cache !== false;
 
   progress("Discovering TypeScript files…");
   const discoveredFiles = discoverSourceFiles(targetDir);
@@ -86,13 +92,32 @@ export function analyzeProject(
   progress(`Found ${discoveredFiles.length} files — parsing…`);
 
   const tsConfigPath = findTsConfig(targetDir);
+  const tsConfigKey = tsConfigCacheKey(tsConfigPath);
+  const cachePath = getCachePath(targetDir);
+
+  let cacheHits = 0;
+  let cacheMisses = discoveredFiles.length;
+
+  const existingCache = useCache ? readFileCache(cachePath) : null;
+  const partition = useCache
+    ? partitionFilesByCache(targetDir, discoveredFiles, existingCache, tsConfigKey)
+    : { cached: [], toParse: discoveredFiles, cacheHits: 0, cacheMisses: discoveredFiles.length };
+
+  cacheHits = partition.cacheHits;
+  cacheMisses = partition.cacheMisses;
+
+  if (useCache && partition.cacheHits > 0) {
+    progress(
+      `Cache: ${partition.cacheHits} hit(s), ${partition.cacheMisses} miss(es) — parsing ${partition.toParse.length} file(s)…`,
+    );
+  }
 
   const project = new Project({
     tsConfigFilePath: tsConfigPath,
     skipAddingFilesFromTsConfig: true,
   });
 
-  for (const filePath of discoveredFiles) {
+  for (const filePath of partition.toParse) {
     project.addSourceFileAtPath(filePath);
   }
 
@@ -102,33 +127,50 @@ export function analyzeProject(
     }
   }
 
-  const sourceFiles = project.getSourceFiles();
-  progress(`Extracting relationships from ${sourceFiles.length} files…`);
+  const freshPayloads = project.getSourceFiles().map(extractFileAnalysis);
+  const payloadByFile = new Map(
+    [...partition.cached, ...freshPayloads].map((payload) => [
+      normalizePath(payload.filePath),
+      payload,
+    ]),
+  );
+  const allPayloads = discoveredFiles.flatMap((filePath) => {
+    const payload = payloadByFile.get(normalizePath(filePath));
+    return payload ? [payload] : [];
+  });
 
-  const importEdges = extractEdges(project);
-  const exports = extractExports(project);
-  const renders = extractRenders(project);
-  const uses = extractHookUsages(project);
+  progress(`Extracting relationships from ${allPayloads.length} files…`);
+
+  const merged = mergeFilePayloads(allPayloads);
+
+  if (useCache) {
+    const nextCache = buildCacheFile(targetDir, discoveredFiles, allPayloads, tsConfigKey);
+    writeFileCache(cachePath, nextCache);
+  }
 
   progress("Building graph…");
-  const graph = buildGraph(importEdges, exports, renders, uses);
-  applyModuleClassification(sourceFiles, exports, graph);
-  const propsByNodeId = extractComponentProps(sourceFiles, exports);
-  const enrichedGraph = enrichGraph(graph, exports, propsByNodeId);
+  const graph = buildGraph(
+    merged.importEdges,
+    merged.exports,
+    merged.renders,
+    merged.uses,
+  );
+  applyModuleClassification(merged.moduleTypeByFile, merged.exports, graph);
+  const enrichedGraph = enrichGraph(graph, merged.exports, merged.propsByNodeId);
 
   progress("Checking Rules of Hooks…");
-  const hookRuleViolations = detectHookRuleViolations(sourceFiles);
 
   const reactAssessment = assessReactProject({
     graph: enrichedGraph,
-    exports,
-    renders,
-    uses,
-    importEdges,
+    exports: merged.exports,
+    renders: merged.renders,
+    uses: merged.uses,
+    importEdges: merged.importEdges,
   });
 
   enrichedGraph.meta = {
     targetDir,
+    projectName: resolveProjectName(targetDir),
     isReactProject: reactAssessment.isReactProject,
     signals: reactAssessment.signals,
     ...(reactAssessment.message ? { notice: reactAssessment.message } : {}),
@@ -140,15 +182,17 @@ export function analyzeProject(
   return {
     targetDir,
     tsConfigPath,
-    fileCount: sourceFiles.length,
-    scannedFiles: sourceFiles.map((file) => file.getFilePath()),
+    fileCount: merged.scannedFiles.length,
+    scannedFiles: merged.scannedFiles,
     durationMs,
     graph: enrichedGraph,
-    importEdges,
-    exports,
-    renders,
-    uses,
-    hookRuleViolations,
+    importEdges: merged.importEdges,
+    exports: merged.exports,
+    renders: merged.renders,
+    uses: merged.uses,
+    hookRuleViolations: merged.hookRuleViolations,
     reactAssessment,
+    cacheHits,
+    cacheMisses,
   };
 }

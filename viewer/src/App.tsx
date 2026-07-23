@@ -585,7 +585,11 @@ export default function App() {
       <FloatingPanel id="main" defaultRect={mainPanelDefault}>
         <div className="graph-sidebar graph-sidebar--main">
           <div className="graph-sidebar__header graph-sidebar__header--compact">
-            <h1>React Atlas</h1>
+            <div>
+              {graph.meta?.projectName && (
+                <p className="graph-sidebar__project">{graph.meta.projectName}</p>
+              )}
+            </div>
           </div>
           <div className="graph-sidebar__scroll atlas-scroll">
             <p className="graph-sidebar__stats">

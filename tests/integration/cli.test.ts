@@ -21,6 +21,8 @@ describe("CLI (developer workflow)", () => {
     const output = runCli(["analyze", "./samples", "--insights", "--no-color"]);
 
     expect(output).toContain("React Atlas");
+    expect(output).toContain("Project:");
+    expect(output).toContain("samples");
     expect(output).toContain("Nodes:");
     expect(output).toContain("Relationships");
     expect(output).toContain("External libraries");
@@ -37,6 +39,7 @@ describe("CLI (developer workflow)", () => {
     expect(fs.existsSync(graphPath)).toBe(true);
     const graph = JSON.parse(fs.readFileSync(graphPath, "utf8"));
     expect(graph.nodes.length).toBeGreaterThan(0);
+    expect(graph.meta.projectName).toBe("samples");
   });
 
   it("writes .txt vs .json reports based on extension", () => {

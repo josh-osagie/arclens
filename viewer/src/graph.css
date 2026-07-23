@@ -187,6 +187,16 @@
   color: var(--atlas-text-secondary);
 }
 
+.graph-sidebar__project {
+  margin: var(--atlas-space-1) 0 0;
+  font-size: var(--atlas-text-sm);
+  font-weight: var(--atlas-weight-medium);
+  color: var(--atlas-edge-imports);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .floating-panel .graph-sidebar__header--compact h1::after {
   content: " ···";
   margin-left: var(--atlas-space-2);

@@ -36,6 +36,8 @@ describe("report", () => {
   it("includes product-facing terminal sections", () => {
     const text = formatReport(result, { insights: true, color: false });
 
+    expect(text).toContain("Project:");
+    expect(text).toContain("samples");
     expect(text).toContain("Summary");
     expect(text).toContain("Nodes by type");
     expect(text).toContain("Relationships");
@@ -84,6 +86,8 @@ describe("report", () => {
 describe("graph output shape (viewer contract)", () => {
   it("produces nodes and edges for graph.json", () => {
     const { graph } = analyzeProject(path.join(process.cwd(), "samples"));
+
+    expect(graph.meta?.projectName).toBe("samples");
 
     for (const node of graph.nodes) {
       expect(node.id).toContain("::");

@@ -33,6 +33,28 @@ export function resolveTarget(inputPath: string): string {
 }
 
 /**
+ * Human-readable project label for CLI and viewer.
+ * Prefers package.json "name" at the analyzed root; falls back to folder basename.
+ */
+export function resolveProjectName(targetDir: string): string {
+  const packageJsonPath = path.join(targetDir, "package.json");
+
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const raw = fs.readFileSync(packageJsonPath, "utf8");
+      const pkg = JSON.parse(raw) as { name?: unknown };
+      if (typeof pkg.name === "string" && pkg.name.trim()) {
+        return pkg.name.trim();
+      }
+    } catch {
+      // fall through to basename
+    }
+  }
+
+  return path.basename(targetDir);
+}
+
+/**
  * Find the nearest tsconfig.json starting from the target directory.
  * TypeScript uses this for module resolution — not for running code.
  */
