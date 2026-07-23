@@ -30,6 +30,7 @@ Existing IDE navigation is file-centric. React Atlas provides **architecture-cen
 - New team members ramping on large codebases
 
 ## Goals
+React Atlas is not perfect yet, but it aims to be a comprehensive tool for understanding and analyzing React codebases.
 
 - Understand unfamiliar codebases quickly
 - Visualize architectural relationships
@@ -37,9 +38,9 @@ Existing IDE navigation is file-centric. React Atlas provides **architecture-cen
 - Reduce onboarding time
 - Improve confidence when changing shared modules
 
-## What React Atlas is not (MVP)
+## What React Atlas is not
 
-React Atlas is **not** an IDE, AI code editor, bundler, linter, or performance profiler. It is a read-only analysis and exploration tool:your code is parsed with ts-morph and never executed.
+React Atlas is **not** an IDE, AI code editor, bundler, linter, or performance profiler. It is a read-only analysis and exploration tool, your code is parsed with ts-morph and never executed.
 
 ## MVP capabilities
 
@@ -54,8 +55,8 @@ React Atlas today can:
 
 ## Success metric
 
-A developer should understand the architecture of an unfamiliar React application in **under 10 minutes**.
+A developer should understand the architecture of an unfamiliar React application within few minutes.
 
 ## Future vision
 
-React Atlas is evolving toward a code intelligence platform with architecture health reports, impact analysis, circular dependency detection, dead code discovery, AI-assisted exploration, git history integration, and monorepo support. See the [Roadmap](/roadmap/) for current progress.
+React Atlas is evolving toward a code intelligence platform with architecture health reports, impact analysis, circular dependency detection, dead code discovery, AI-assisted exploration, git history integration, and monorepo support. See the [Roadmap](../../../../roadmap.md) for current progress.

@@ -96,13 +96,13 @@ pnpm react-atlas analyze ./samples -v --insights
 
 A typical analyze run prints:
 
-- **Summary**:node and edge counts, scan duration
-- **Nodes by type**:components, hooks, contexts, utilities, entry, config
-- **Relationships**:counts of `imports`, `renders`, and `uses` edges
-- **External libraries**:npm packages referenced from the project
-- **Top connections**:strongest links in the graph
-- **Most referenced**:nodes with the most incoming edges
-- **Insights**:when `--insights` is set (errors, warnings, info, tips)
+- **Summary**: node and edge counts, scan duration
+- **Nodes by type**: components, hooks, contexts, utilities, entry, config
+- **Relationships**: counts of `imports`, `renders`, and `uses` edges
+- **External libraries**: npm packages referenced from the project
+- **Top connections**: strongest links in the graph
+- **Most referenced**: nodes with the most incoming edges
+- **Insights**: when `--insights` is set (errors, warnings, info, tips)
 
 ## Exit codes
 

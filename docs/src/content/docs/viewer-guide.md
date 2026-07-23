@@ -28,9 +28,17 @@ The viewer has three main areas:
 
 Floating panels are draggable and resizable; positions persist in local storage.
 
+![React Atlas viewer showing the samples dependency graph with sidebar, canvas, and minimap](/images/viewer/graph-overview.png)
+
+The screenshot above uses the `samples` fixture:a small graph with components, hooks, utilities, and context nodes connected by import, render, and use edges.
+
 ## Search
 
 Use the search field in the top-left panel to filter nodes by name.
+
+![Sticky search bar and compact overview shortcuts in the left sidebar](/images/viewer/sidebar-search.png)
+
+The sidebar keeps search and project stats pinned at the top while folder, entry, and hub lists scroll underneath.
 
 On large graphs (above the virtualize threshold), search switches to **subgraph mode**: only matching nodes and their immediate neighborhood are shown, keeping the canvas responsive.
 
@@ -42,6 +50,10 @@ The **Folders** section lists top folders by node count. Click a folder to:
 - Drill into individual files inside that folder
 
 Folder clustering helps you navigate monolithic apps without rendering every node at once.
+
+![Folder overview on a large graph with entry points, top folders, and hub shortcuts](/images/viewer/folder-overview.png)
+
+On large graphs, the sidebar loads a compact folder overview first. Expand folders or search to drill into specific areas without rendering every node at once.
 
 ## Entry points
 
@@ -57,11 +69,13 @@ Click an entry to select it and highlight the path from that entry through the d
 
 When `graph.json` includes insights (always written by analyze), an **Insights** badge appears on the canvas.
 
+![Floating insights badge summarizing insight counts by severity](/images/viewer/insights-badge.png)
+
 - The badge summarizes counts by severity: error, warning, info, tip
 - Click it to open a drawer listing every insight with title, detail, file, and optional ESLint rule id
 - Press `Escape` or click outside to close
 
-Insights in the viewer mirror CLI `--insights` output:orphan exports, naming hints, Rules of Hooks violations, and more.
+Insights in the viewer mirror CLI `--insights` output, orphan exports, naming hints, Rules of Hooks violations, and more.
 
 ## Node details
 
@@ -75,6 +89,10 @@ Click any node to open the details panel:
 | AST kind | Declaration shape ts-morph detected |
 | Props | Component prop names and types when available |
 | Connections | Incoming and outgoing imports, renders, and uses |
+
+![Node details panel with metadata, props, and live source preview](/images/viewer/node-details-snippet.png)
+
+Selecting a node opens the details panel on the right with type, usage counts, props, and a syntax-highlighted source preview.
 
 ### Node toolbar
 
@@ -112,6 +130,14 @@ When node count exceeds thresholds, the viewer automatically:
 - Virtualizes rendering for very large graphs
 
 Run analyze on a subfolder (e.g. `./src/features/checkout`) if the full repo graph is too dense.
+
+## Missing graph
+
+If `graph.json` is missing or invalid, the viewer shows a clear empty state instead of a blank page:
+
+![Empty state when graph.json has not been generated yet](/images/viewer/empty-graph.png)
+
+Run `pnpm analyze <path>` first, then refresh or restart `pnpm dev:viewer`.
 
 ## Configuration
 
