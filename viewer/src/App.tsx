@@ -58,7 +58,7 @@ import {
   HelperLinesOverlay,
   type HelperLine,
 } from "./HelperLines";
-import { InsightsPanel } from "./InsightsPanel";
+import { InsightsBadge } from "./InsightsBadge";
 import { InfoTip } from "./InfoTip";
 import { NodeDetails } from "./NodeDetails";
 import { OverviewShortcuts } from "./OverviewShortcuts";
@@ -69,6 +69,11 @@ import {
   mergeHighlightIds,
   pathEdgeKeys,
 } from "./pathHighlight";
+import {
+  emptyGraphPresentation,
+  validateGraphData,
+  type EmptyGraphPresentation,
+} from "./graphValidation";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 import { ViewportPersistence } from "./ViewportPersistence";
 import { ZoomControls } from "./ZoomControls";
@@ -242,9 +247,23 @@ function emptyViewMessage(
   return "";
 }
 
+function EmptyGraphPanel({ presentation }: { presentation: EmptyGraphPresentation }) {
+  return (
+    <div className="graph-shell graph-shell--empty">
+      <div className="graph-panel graph-panel--empty">
+        <p className="graph-panel__eyebrow">React Atlas</p>
+        <h1>{presentation.title}</h1>
+        <p>{presentation.body}</p>
+        <p className="graph-panel__detail">{presentation.detail}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [graph, setGraph] = useState<AtlasGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [emptyGraph, setEmptyGraph] = useState<EmptyGraphPresentation | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AtlasGraphNode | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
@@ -355,10 +374,20 @@ export default function App() {
     try {
       const res = await fetch("/graph.json");
       if (!res.ok) throw new Error("graph.json not found. Run pnpm analyze first.");
-      const data = (await res.json()) as AtlasGraph;
-      setGraph(data);
+      const data: unknown = await res.json();
+      const validated = validateGraphData(data);
+      if (!validated.ok) {
+        setGraph(null);
+        setEmptyGraph(emptyGraphPresentation(validated.detail));
+        setError(null);
+        return;
+      }
+      setGraph(validated.graph);
+      setEmptyGraph(null);
       setError(null);
     } catch (err) {
+      setGraph(null);
+      setEmptyGraph(null);
       setError(err instanceof Error ? err.message : "Failed to load graph.json");
     }
   }, []);
@@ -567,19 +596,24 @@ export default function App() {
     return (
       <div className="graph-shell graph-shell--empty">
         <div className="graph-panel">
-          <h1>React Atlas</h1>
+          <p className="graph-panel__eyebrow">React Atlas</p>
+          <h1>Could not load graph</h1>
           <p className="graph-error">{error}</p>
         </div>
       </div>
     );
   }
 
+  if (emptyGraph) {
+    return <EmptyGraphPanel presentation={emptyGraph} />;
+  }
+
   if (!graph) {
     return (
       <div className="graph-shell graph-shell--empty">
         <div className="graph-panel">
-          <h1>React Atlas</h1>
-          <p>Loading graph…</p>
+          <p className="graph-panel__eyebrow">React Atlas</p>
+          <h1>Loading graph…</h1>
         </div>
       </div>
     );
@@ -657,20 +691,35 @@ export default function App() {
         )}
       </ReactFlow>
 
+      {graph.meta?.insights && graph.meta.insights.length > 0 && (
+        <InsightsBadge insights={graph.meta.insights} />
+      )}
+
       <FloatingPanel id="main" defaultRect={mainPanelDefault}>
         <div className="graph-sidebar graph-sidebar--main">
-          <div className="graph-sidebar__header graph-sidebar__header--compact">
-            <div>
-              {graph.meta?.projectName && (
-                <p className="graph-sidebar__project">{graph.meta.projectName}</p>
-              )}
+          <div className="graph-sidebar__sticky">
+            <div className="graph-sidebar__header graph-sidebar__header--compact">
+              <div>
+                {graph.meta?.projectName && (
+                  <p className="graph-sidebar__project">{graph.meta.projectName}</p>
+                )}
+                <p className="graph-sidebar__stats graph-sidebar__stats--inline">
+                  {graph.nodes.length} nodes · {graph.edges.length} edges
+                </p>
+              </div>
+            </div>
+            <div className="graph-sidebar__search-wrap">
+              <input
+                className="graph-search graph-search--sticky"
+                type="search"
+                placeholder="Search nodes…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
           </div>
-          <div className="graph-sidebar__scroll atlas-scroll">
-            <p className="graph-sidebar__stats">
-              {graph.nodes.length} nodes · {graph.edges.length} edges
-            </p>
 
+          <div className="graph-sidebar__scroll atlas-scroll">
             <OverviewShortcuts
               entries={overviewEntries}
               projectRoot={graph.meta?.targetDir}
@@ -720,18 +769,6 @@ export default function App() {
               </p>
             )}
             {graph.meta?.notice && <p className="graph-notice">{graph.meta.notice}</p>}
-
-            <input
-              className="graph-search"
-              type="search"
-              placeholder="Search nodes…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-
-            {graph.meta?.insights && graph.meta.insights.length > 0 && (
-              <InsightsPanel insights={graph.meta.insights} />
-            )}
 
             <div className="graph-legend">
               {legendTypes.map((type) => (

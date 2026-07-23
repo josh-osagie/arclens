@@ -1,7 +1,17 @@
+import { useCallback, useState, type ReactNode } from "react";
 import type { FolderOverview, HubOverview, EntryOverview } from "./graphOverview";
 import { InfoTip } from "./InfoTip";
 import { formatRelativePath, truncatePath } from "./buildFlowGraph";
+import {
+  loadSidebarSections,
+  saveSidebarSections,
+  toggleSidebarSection,
+  type SidebarSectionKey,
+  type SidebarSectionPrefs,
+} from "./sidebarPrefs";
 import type { AtlasGraphNode } from "./types";
+
+const DEFAULT_VISIBLE = 3;
 
 type Props = {
   entries: EntryOverview<AtlasGraphNode>[];
@@ -12,8 +22,81 @@ type Props = {
   onFolderClick: (folder: FolderOverview) => void;
   onHubClick: (node: AtlasGraphNode) => void;
 };
+
 function folderLabel(folder: string): string {
   return folder.split("/").pop() ?? folder;
+}
+
+type SectionProps<T> = {
+  sectionKey: SidebarSectionKey;
+  title: string;
+  tip: string;
+  items: T[];
+  expanded: boolean;
+  onToggleSection: (key: SidebarSectionKey) => void;
+  renderItem: (item: T) => ReactNode;
+  itemKey: (item: T) => string;
+};
+
+function OverviewSection<T>({
+  sectionKey,
+  title,
+  tip,
+  items,
+  expanded,
+  onToggleSection,
+  renderItem,
+  itemKey,
+}: SectionProps<T>) {
+  const [showAll, setShowAll] = useState(false);
+
+  if (items.length === 0) return null;
+
+  const visibleItems = expanded && (showAll || items.length <= DEFAULT_VISIBLE)
+    ? items
+    : expanded
+      ? items.slice(0, DEFAULT_VISIBLE)
+      : [];
+  const hiddenCount = items.length - DEFAULT_VISIBLE;
+
+  return (
+    <section className="overview-shortcuts__section">
+      <div className="overview-shortcuts__heading">
+        <button
+          type="button"
+          className="overview-shortcuts__heading-toggle"
+          onClick={() => onToggleSection(sectionKey)}
+          aria-expanded={expanded}
+        >
+          <span className="overview-shortcuts__chevron" aria-hidden="true">
+            {expanded ? "▾" : "▸"}
+          </span>
+          <span className="overview-shortcuts__heading-label">{title}</span>
+        </button>
+        <InfoTip text={tip} />
+        <span className="overview-shortcuts__count">{items.length}</span>
+      </div>
+
+      {expanded && (
+        <>
+          <ul className="overview-shortcuts__list">
+            {visibleItems.map((item) => (
+              <li key={itemKey(item)}>{renderItem(item)}</li>
+            ))}
+          </ul>
+          {!showAll && hiddenCount > 0 && (
+            <button
+              type="button"
+              className="overview-shortcuts__more"
+              onClick={() => setShowAll(true)}
+            >
+              Show {hiddenCount} more
+            </button>
+          )}
+        </>
+      )}
+    </section>
+  );
 }
 
 export function OverviewShortcuts({
@@ -24,98 +107,95 @@ export function OverviewShortcuts({
   onEntryClick,
   onFolderClick,
   onHubClick,
-}: Props) {  if (entries.length === 0 && folders.length === 0 && hubs.length === 0) {
+}: Props) {
+  const [sectionPrefs, setSectionPrefs] = useState<SidebarSectionPrefs>(loadSidebarSections);
+
+  const onToggleSection = useCallback((key: SidebarSectionKey) => {
+    setSectionPrefs((prev) => {
+      const next = toggleSidebarSection(prev, key);
+      saveSidebarSections(next);
+      return next;
+    });
+  }, []);
+
+  if (entries.length === 0 && folders.length === 0 && hubs.length === 0) {
     return null;
   }
 
   return (
     <div className="overview-shortcuts">
-      {entries.length > 0 && (
-        <section className="overview-shortcuts__section">
-          <h3 className="overview-shortcuts__title">
-            <span className="field-label">
-              <span className="field-label__text">Entry points</span>
-              <InfoTip text="App boot files and nodes marked as entry in the graph." />
-            </span>
-          </h3>
-          <ul className="overview-shortcuts__list">
-            {entries.map((entry) => {
-              const relativePath = truncatePath(formatRelativePath(entry.file, projectRoot));
-              const exportSuffix =
-                entry.exportCount > 1 ? ` · ${entry.exportCount} exports` : "";
+      <OverviewSection
+        sectionKey="entries"
+        title="Entry points"
+        tip="Where the app starts — main.tsx, createRoot bootstrap, or Next.js root layouts. Test files are excluded."
+        items={entries}
+        expanded={sectionPrefs.entries}
+        onToggleSection={onToggleSection}
+        itemKey={(entry) => entry.node.id}
+        renderItem={(entry) => {
+          const relativePath = truncatePath(formatRelativePath(entry.file, projectRoot));
+          const exportSuffix =
+            entry.exportCount > 1 ? ` · ${entry.exportCount} exports` : "";
 
-              return (
-                <li key={entry.node.id}>
-                  <button
-                    type="button"
-                    className="overview-shortcuts__btn"
-                    onClick={() => onEntryClick(entry.node)}
-                  >
-                    <span className="overview-shortcuts__label">{entry.node.name}</span>
-                    <span className="overview-shortcuts__meta" title={relativePath}>
-                      {relativePath}
-                      {exportSuffix}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>        </section>
-      )}
+          return (
+            <button
+              type="button"
+              className="overview-shortcuts__btn"
+              onClick={() => onEntryClick(entry.node)}
+            >
+              <span className="overview-shortcuts__label">{entry.node.name}</span>
+              <span className="overview-shortcuts__meta" title={relativePath}>
+                {relativePath}
+                {exportSuffix}
+              </span>
+            </button>
+          );
+        }}
+      />
 
-      {folders.length > 0 && (
-        <section className="overview-shortcuts__section">
-          <h3 className="overview-shortcuts__title">
-            <span className="field-label">
-              <span className="field-label__text">Top folders</span>
-              <InfoTip text="Folders with the most nodes — click to expand or focus on the canvas." />
+      <OverviewSection
+        sectionKey="folders"
+        title="Top folders"
+        tip="Folders with the most nodes — click to expand or focus on the canvas."
+        items={folders}
+        expanded={sectionPrefs.folders}
+        onToggleSection={onToggleSection}
+        itemKey={(folder) => folder.folder}
+        renderItem={(folder) => (
+          <button
+            type="button"
+            className="overview-shortcuts__btn"
+            onClick={() => onFolderClick(folder)}
+          >
+            <span className="overview-shortcuts__label">{folderLabel(folder.folder)}</span>
+            <span className="overview-shortcuts__meta" title={folder.folder}>
+              {folder.count} node{folder.count === 1 ? "" : "s"} · {truncatePath(folder.folder)}
             </span>
-          </h3>
-          <ul className="overview-shortcuts__list">
-            {folders.map((folder) => (
-              <li key={folder.folder}>
-                <button
-                  type="button"
-                  className="overview-shortcuts__btn"
-                  onClick={() => onFolderClick(folder)}
-                >
-                  <span className="overview-shortcuts__label">{folderLabel(folder.folder)}</span>
-                  <span className="overview-shortcuts__meta">
-                    {folder.count} node{folder.count === 1 ? "" : "s"} · {folder.folder}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+          </button>
+        )}
+      />
 
-      {hubs.length > 0 && (
-        <section className="overview-shortcuts__section">
-          <h3 className="overview-shortcuts__title">
-            <span className="field-label">
-              <span className="field-label__text">Hub nodes</span>
-              <InfoTip text="Most connected nodes by incoming and outgoing edges." />
+      <OverviewSection
+        sectionKey="hubs"
+        title="Hub nodes"
+        tip="Most connected nodes by incoming and outgoing edges."
+        items={hubs}
+        expanded={sectionPrefs.hubs}
+        onToggleSection={onToggleSection}
+        itemKey={({ node }) => node.id}
+        renderItem={({ node, degree }) => (
+          <button
+            type="button"
+            className="overview-shortcuts__btn"
+            onClick={() => onHubClick(node)}
+          >
+            <span className="overview-shortcuts__label">{node.name}</span>
+            <span className="overview-shortcuts__meta">
+              {degree} connection{degree === 1 ? "" : "s"} · {node.type}
             </span>
-          </h3>
-          <ul className="overview-shortcuts__list">
-            {hubs.map(({ node, degree }) => (
-              <li key={node.id}>
-                <button
-                  type="button"
-                  className="overview-shortcuts__btn"
-                  onClick={() => onHubClick(node)}
-                >
-                  <span className="overview-shortcuts__label">{node.name}</span>
-                  <span className="overview-shortcuts__meta">
-                    {degree} connection{degree === 1 ? "" : "s"} · {node.type}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+          </button>
+        )}
+      />
     </div>
   );
 }

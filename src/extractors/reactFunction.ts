@@ -1,5 +1,5 @@
 import path from "node:path";
-import { isAppEntryFile } from "../entryPoints";
+import { isAppEntryFile, isNonProductionFile } from "../entryPoints";
 import {
   SyntaxKind,
   type CallExpression,
@@ -7,6 +7,7 @@ import {
   type FunctionDeclaration,
   type Identifier,
   type Node,
+  type PropertyAccessExpression,
   type SourceFile,
   type VariableDeclaration,
 } from "ts-morph";
@@ -141,25 +142,91 @@ export function isEntryFileName(filePath: string): boolean {
   return ENTRY_FILE_NAMES.has(base);
 }
 
-function isReactMountCall(call: CallExpression): boolean {
+function isTestingLibraryModule(moduleSpecifier: string): boolean {
+  return (
+    moduleSpecifier === "@testing-library/react" ||
+    moduleSpecifier.startsWith("@testing-library/react/") ||
+    moduleSpecifier === "@testing-library/react-native" ||
+    moduleSpecifier.startsWith("@testing-library/react-native/")
+  );
+}
+
+function collectTestingLibraryRenderBindings(sourceFile: SourceFile): Set<string> {
+  const bindings = new Set<string>();
+
+  for (const importDecl of sourceFile.getImportDeclarations()) {
+    if (!isTestingLibraryModule(importDecl.getModuleSpecifierValue())) continue;
+
+    for (const named of importDecl.getNamedImports()) {
+      if (named.getName() === "render") {
+        bindings.add(named.getName());
+      }
+    }
+
+    const defaultImport = importDecl.getDefaultImport();
+    if (defaultImport?.getText() === "render") {
+      bindings.add("render");
+    }
+  }
+
+  return bindings;
+}
+
+function isCreateRootRenderChain(call: CallExpression): boolean {
   const expression = call.getExpression();
+  if (expression.getKind() !== SyntaxKind.PropertyAccessExpression) return false;
 
-  if (expression.getKind() === SyntaxKind.Identifier) {
-    const name = expression.getText();
-    return name === "createRoot" || name === "hydrateRoot" || name === "render";
+  const access = expression as PropertyAccessExpression;
+  if (access.getName() !== "render") return false;
+
+  const target = access.getExpression();
+  if (target.getKind() !== SyntaxKind.CallExpression) return false;
+
+  const innerExpr = target.getExpression();
+  if (innerExpr.getKind() !== SyntaxKind.Identifier) return false;
+
+  const name = innerExpr.getText();
+  return name === "createRoot" || name === "hydrateRoot";
+}
+
+function isLegacyReactDomMount(call: CallExpression): boolean {
+  const expression = call.getExpression();
+  if (expression.getKind() !== SyntaxKind.PropertyAccessExpression) return false;
+
+  const access = expression as PropertyAccessExpression;
+  const method = access.getName();
+  if (method !== "render" && method !== "hydrate") return false;
+
+  const objectText = access.getExpression().getText();
+  return objectText === "ReactDOM" || objectText.endsWith(".ReactDOM");
+}
+
+function isAppBootstrapMountCall(
+  call: CallExpression,
+  testingLibraryRenderBindings: Set<string>,
+): boolean {
+  if (isCreateRootRenderChain(call) || isLegacyReactDomMount(call)) {
+    return true;
   }
 
-  if (expression.getKind() === SyntaxKind.PropertyAccessExpression) {
-    const name = expression.getName();
-    return name === "render" || name === "hydrate";
-  }
+  const expression = call.getExpression();
+  if (expression.getKind() !== SyntaxKind.Identifier) return false;
 
-  return false;
+  const name = expression.getText();
+  if (name !== "render" && name !== "hydrate") return false;
+
+  return !testingLibraryRenderBindings.has(name);
 }
 
 export function sourceFileBootstrapsReact(sourceFile: SourceFile): boolean {
+  if (isNonProductionFile(sourceFile.getFilePath())) {
+    return false;
+  }
+
+  const testingLibraryRenderBindings = collectTestingLibraryRenderBindings(sourceFile);
+
   for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-    if (isReactMountCall(call)) {
+    if (isAppBootstrapMountCall(call, testingLibraryRenderBindings)) {
       return true;
     }
   }
@@ -176,11 +243,15 @@ export function classifyFileModule(
     return "config";
   }
 
-  if (sourceFileBootstrapsReact(sourceFile)) {
-    return "entry";
+  if (isNonProductionFile(filePath)) {
+    return "utility";
   }
 
   if (isAppEntryFile(filePath)) {
+    return "entry";
+  }
+
+  if (sourceFileBootstrapsReact(sourceFile)) {
     return "entry";
   }
 

@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import ora from "ora";
 import { Command } from "commander";
 import { analyzeProject } from "./analyzeProject";
+import { createAnalyzeProgressReporter } from "./analyzeProgress";
 import { printFocusReport } from "./focus";
 import { printReport, writeReportFile } from "./report";
 import { resolveTarget } from "./resolveTarget";
@@ -50,6 +50,7 @@ program
     "--with-snippets",
     "write truncated source sidecars to .react-atlas/snippets/ in the analyzed project",
   )
+  .option("--reanalyze", "watch mode: show re-analyze progress", false)
   .action(
     (
       inputPath: string,
@@ -64,9 +65,15 @@ program
         maxFiles: string;
         cache?: boolean;
         withSnippets?: boolean;
+        reanalyze?: boolean;
       },
     ) => {
-      const spinner = options.quiet ? null : ora({ color: "cyan" }).start();
+      const progress = createAnalyzeProgressReporter({
+        quiet: options.quiet,
+        verbose: options.verbose,
+        reanalyze: options.reanalyze || Boolean(process.env.REACT_ATLAS_WATCH_TARGET),
+        color: options.color,
+      });
 
       try {
         const targetDir = resolveTarget(inputPath);
@@ -79,9 +86,8 @@ program
         const result = analyzeProject(targetDir, {
           maxFiles,
           cache: options.cache,
-          onProgress: (message) => {
-            if (spinner) spinner.text = message;
-          },
+          verbose: options.verbose,
+          progress,
         });
 
         // Write graph.json by default, unless user only asked for --report-file
@@ -128,8 +134,6 @@ program
           });
         }
 
-        spinner?.stop();
-
         if (options.focus) {
           printFocusReport(result, options.focus, { color: options.color });
         } else {
@@ -143,9 +147,13 @@ program
           });
         }
       } catch (error) {
-        spinner?.stop();
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`react-atlas: ${message}`);
+        if (options.quiet) {
+          progress.stop();
+          console.error(`react-atlas: ${message}`);
+        } else {
+          progress.fail(message);
+        }
         process.exitCode = 1;
       }
     },

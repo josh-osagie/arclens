@@ -5,7 +5,12 @@ while [ "${1:-}" = "--" ]; do
   shift
 done
 
-TARGET="${1:-./samples}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+
+TARGET="$(normalize_target "${1:-./samples}")"
+shift || true
 
 IGNORES=(
   "**/node_modules/**"
@@ -36,8 +41,16 @@ echo "  target:  ${TARGET}"
 echo "  globs:   ${WATCH_GLOBS[*]}"
 echo ""
 
+EXTRA_ARGS=()
+for arg in "$@"; do
+  EXTRA_ARGS+=("$(printf '%q' "$arg")")
+done
+
+export REACT_ATLAS_WATCH_TARGET="$TARGET"
+ensure_chokidar_shell
+
 pnpm exec chokidar "${WATCH_GLOBS[@]}" \
   "${IGNORE_ARGS[@]}" \
   --silent \
-  -c "pnpm react-atlas analyze \"${TARGET}\"" \
+  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${REACT_ATLAS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}" \
   --initial

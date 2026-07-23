@@ -89,6 +89,15 @@ describe("reactFunction", () => {
       expect(classifyFileModule(file)).toBe("entry");
     });
 
+    it("does not classify testing-library render as entry", () => {
+      const project = new Project({ useInMemoryFileSystem: true });
+      const file = project.createSourceFile(
+        "/src/Signin.test.tsx",
+        `import { render } from "@testing-library/react";\nimport App from "./App";\nit("renders", () => { render(<App />); });`,
+      );
+      expect(classifyFileModule(file)).toBe("utility");
+    });
+
     it("does not classify nested barrel index files as entry modules", () => {
       const project = new Project({ useInMemoryFileSystem: true });
       const file = project.createSourceFile(

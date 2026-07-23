@@ -63,4 +63,21 @@ describe("graphOverview", () => {
     expect(entries[0]?.node.id).toBe("main");
     expect(entries[0]?.file).toBe("src/main.tsx");
   });
+
+  it("excludes test files from entry points even when typed as entry", () => {
+    const testGraph: AtlasGraph = {
+      meta: {
+        entryNodeIds: ["main", "signin-test"],
+      },
+      nodes: [
+        { id: "main", name: "bootstrap", file: "src/main.tsx", type: "entry" },
+        { id: "signin-test", name: "SigninTest", file: "src/Signin.test.tsx", type: "entry" },
+      ],
+      edges: [],
+    };
+
+    const entries = computeEntryPoints(testGraph);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.node.id).toBe("main");
+  });
 });

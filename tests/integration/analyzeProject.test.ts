@@ -108,6 +108,17 @@ describe("analyzeProject integration", () => {
     });
   });
 
+  describe("entry-points fixture", () => {
+    const result = analyzeFixture("entry-points");
+
+    it("classifies only main.tsx as entry, not test files or barrels", () => {
+      const entryNodes = result.graph.nodes.filter((node) => node.type === "entry");
+      expect(entryNodes.some((node) => node.file.endsWith("main.tsx"))).toBe(true);
+      expect(entryNodes.some((node) => node.file.endsWith(".test.tsx"))).toBe(false);
+      expect(entryNodes.some((node) => node.file.includes("Button/index.tsx"))).toBe(false);
+    });
+  });
+
   describe("safety guards", () => {
     it("refuses when file count exceeds maxFiles", () => {
       expect(() => analyzeSamples({ maxFiles: 1 })).toThrow(/Refusing to analyze/);

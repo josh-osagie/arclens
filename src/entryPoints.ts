@@ -9,10 +9,31 @@ function fileBaseName(file: string): string {
   return dot >= 0 ? name.slice(0, dot) : name;
 }
 
+const TEST_SETUP_NAMES =
+  /^(setupTests|vitest\.setup|jest\.setup|test-setup|setup\.(test|spec))$/i;
+
 /**
- * React app bootstrap / root mount files — not barrel re-exports in component folders.
+ * Test, story, mock, and setup files are never app entry points.
+ */
+export function isNonProductionFile(file: string): boolean {
+  const normalized = normalizeFilePath(file);
+
+  if (/\.(test|spec)\.(tsx?|jsx?)$/i.test(normalized)) return true;
+  if (/\.stories\.(tsx?|ts)$/i.test(normalized)) return true;
+  if (/(^|\/)(__tests__|__mocks__)(\/|$)/i.test(normalized)) return true;
+
+  const base = fileBaseName(normalized);
+  if (TEST_SETUP_NAMES.test(base)) return true;
+
+  return false;
+}
+
+/**
+ * Known React app bootstrap / root mount file paths — not barrel re-exports in component folders.
  */
 export function isAppEntryFile(file: string): boolean {
+  if (isNonProductionFile(file)) return false;
+
   const normalized = normalizeFilePath(file);
   const base = fileBaseName(normalized);
 
@@ -27,10 +48,37 @@ export function isAppEntryFile(file: string): boolean {
   }
 
   if (/(^|\/)app\/layout\.(tsx|jsx)$/i.test(normalized)) return true;
+  if (/(^|\/)app\/page\.(tsx|jsx)$/i.test(normalized)) return true;
   if (/(^|\/)pages\/_app\.(tsx|jsx)$/i.test(normalized)) return true;
   if (/(^|\/)pages\/_document\.(tsx|jsx)$/i.test(normalized)) return true;
 
   return false;
+}
+
+export type EntryConfidence = "high" | "medium" | "low";
+
+const CONFIDENCE_RANK: Record<EntryConfidence, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+export function entryFileConfidence(file: string, nodeType?: string): EntryConfidence {
+  if (isNonProductionFile(file)) return "low";
+
+  const normalized = normalizeFilePath(file);
+  const base = fileBaseName(normalized);
+
+  if (/^main$/i.test(base) && /\.(tsx|jsx)$/i.test(normalized)) return "high";
+  if (/(^|\/)src\/index\.(tsx|jsx)$/i.test(normalized)) return "high";
+  if (/(^|\/)app\/layout\.(tsx|jsx)$/i.test(normalized)) return "high";
+  if (/(^|\/)pages\/_app\.(tsx|jsx)$/i.test(normalized)) return "high";
+  if (/(^|\/)app\/page\.(tsx|jsx)$/i.test(normalized)) return "high";
+
+  if (isAppEntryFile(file)) return "medium";
+  if (nodeType === "entry") return "medium";
+
+  return "low";
 }
 
 export type EntryNodeLike = {
@@ -41,7 +89,12 @@ export type EntryNodeLike = {
 };
 
 export function isEntryNode(node: EntryNodeLike): boolean {
-  return node.type === "entry" || isAppEntryFile(node.file);
+  if (isNonProductionFile(node.file)) return false;
+
+  if (node.type === "entry") return true;
+  if (isAppEntryFile(node.file)) return true;
+
+  return false;
 }
 
 export function filterEntryNodes<T extends EntryNodeLike>(
@@ -79,7 +132,22 @@ export type EntryOverview<T extends EntryNodeLike = EntryNodeLike> = {
   node: T;
   file: string;
   exportCount: number;
+  confidence: EntryConfidence;
 };
+
+function compareEntryOverviews<T extends EntryNodeLike>(
+  a: EntryOverview<T>,
+  b: EntryOverview<T>,
+): number {
+  const confDiff = CONFIDENCE_RANK[b.confidence] - CONFIDENCE_RANK[a.confidence];
+  if (confDiff !== 0) return confDiff;
+
+  const aIsMain = fileBaseName(a.file).toLowerCase() === "main" ? 0 : 1;
+  const bIsMain = fileBaseName(b.file).toLowerCase() === "main" ? 0 : 1;
+  if (aIsMain !== bIsMain) return aIsMain - bIsMain;
+
+  return a.file.localeCompare(b.file);
+}
 
 export function dedupeEntryPointsByFile<T extends EntryNodeLike>(
   nodes: T[],
@@ -94,12 +162,27 @@ export function dedupeEntryPointsByFile<T extends EntryNodeLike>(
     byFile.set(key, group);
   }
 
-  return [...byFile.entries()]
-    .map(([file, fileNodes]) => ({
-      node: pickPrimaryEntryNode(fileNodes, file),
+  let overviews = [...byFile.entries()].map(([file, fileNodes]) => {
+    const node = pickPrimaryEntryNode(fileNodes, file);
+    return {
+      node,
       file,
       exportCount: fileNodes.length,
-    }))
-    .sort((a, b) => a.file.localeCompare(b.file))
-    .slice(0, limit);
+      confidence: entryFileConfidence(file, node.type),
+    };
+  });
+
+  overviews.sort(compareEntryOverviews);
+
+  const hasClearMain = overviews.some(
+    (entry) =>
+      entry.confidence === "high" && fileBaseName(entry.file).toLowerCase() === "main",
+  );
+  if (hasClearMain) {
+    overviews = overviews.filter(
+      (entry) => fileBaseName(entry.file).toLowerCase() === "main",
+    );
+  }
+
+  return overviews.slice(0, limit);
 }

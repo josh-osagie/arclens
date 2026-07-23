@@ -25,12 +25,25 @@ import { applyModuleClassification, assessReactProject, type ReactAssessment } f
 import type { HookRuleViolation } from "./extractors/hookRules";
 import { findTsConfig, resolveProjectName } from "./resolveTarget";
 import type { Graph } from "./types";
+import {
+  formatBuildGraphPhase,
+  formatCacheLoadPhase,
+  formatEnrichGraphPhase,
+  formatHooksCheckPhase,
+  formatMergePhase,
+  formatParsePhase,
+  runWithPhaseHeartbeat,
+  type AnalyzeProgressReporter,
+} from "./analyzeProgress";
 
 export type { ImportEdge, RenderEdge, UseEdge };
 
 export type AnalyzeOptions = {
   maxFiles?: number;
+  /** @deprecated Prefer `progress` reporter from createAnalyzeProgressReporter */
   onProgress?: (message: string) => void;
+  progress?: AnalyzeProgressReporter;
+  verbose?: boolean;
   cache?: boolean;
 };
 
@@ -73,11 +86,16 @@ export function analyzeProject(
   options: AnalyzeOptions = {},
 ): AnalysisResult {
   const started = Date.now();
-  const progress = options.onProgress ?? (() => undefined);
+  const legacyProgress = options.onProgress;
+  const progress = options.progress;
   const maxFiles = options.maxFiles ?? 3000;
   const useCache = options.cache !== false;
+  const projectName = resolveProjectName(targetDir);
 
-  progress("Discovering TypeScript files…");
+  progress?.start(projectName, targetDir);
+  progress?.discoveryScan(targetDir);
+  legacyProgress?.("Discovering TypeScript files...");
+
   const discoveredFiles = discoverSourceFiles(targetDir);
 
   if (discoveredFiles.length === 0) {
@@ -91,7 +109,8 @@ export function analyzeProject(
     );
   }
 
-  progress(`Found ${discoveredFiles.length} files — parsing…`);
+  progress?.discoveryDone(discoveredFiles.length);
+  legacyProgress?.(`Found ${discoveredFiles.length} files — parsing...`);
 
   const tsConfigPath = findTsConfig(targetDir);
   const tsConfigKey = tsConfigCacheKey(tsConfigPath);
@@ -100,18 +119,37 @@ export function analyzeProject(
   let cacheHits = 0;
   let cacheMisses = discoveredFiles.length;
 
-  const existingCache = useCache ? readFileCache(cachePath) : null;
-  const partition = useCache
-    ? partitionFilesByCache(targetDir, discoveredFiles, existingCache, tsConfigKey)
-    : { cached: [], toParse: discoveredFiles, cacheHits: 0, cacheMisses: discoveredFiles.length };
+  const { existingCache, partition } = runWithPhaseHeartbeat(
+    progress,
+    formatCacheLoadPhase(),
+    () => {
+      const cache = useCache ? readFileCache(cachePath) : null;
+      const part = useCache
+        ? partitionFilesByCache(targetDir, discoveredFiles, cache, tsConfigKey)
+        : {
+            cached: [],
+            toParse: discoveredFiles,
+            cacheHits: 0,
+            cacheMisses: discoveredFiles.length,
+          };
+      return { existingCache: cache, partition: part };
+    },
+  );
 
   cacheHits = partition.cacheHits;
   cacheMisses = partition.cacheMisses;
 
+  progress?.cacheSummary(partition.cacheHits, partition.cacheMisses);
   if (useCache && partition.cacheHits > 0) {
-    progress(
-      `Cache: ${partition.cacheHits} hit(s), ${partition.cacheMisses} miss(es) — parsing ${partition.toParse.length} file(s)…`,
+    legacyProgress?.(
+      `Cache: ${partition.cacheHits} hit(s), ${partition.cacheMisses} miss(es) — parsing ${partition.toParse.length} file(s)...`,
     );
+  }
+
+  if (options.verbose && partition.cached.length > 0) {
+    partition.cached.forEach((payload, index) => {
+      progress?.cachedFile(payload.filePath, index + 1, partition.cached.length, targetDir);
+    });
   }
 
   const project = new Project({
@@ -129,7 +167,26 @@ export function analyzeProject(
     }
   }
 
-  const freshPayloads = project.getSourceFiles().map(extractFileAnalysis);
+  const sourceFiles = project.getSourceFiles().filter((sourceFile) =>
+    isSafeSourceFile(sourceFile.getFilePath()),
+  );
+  const parseTotal = sourceFiles.length;
+  const freshPayloads =
+    parseTotal > 0
+      ? runWithPhaseHeartbeat(
+          progress,
+          formatParsePhase(parseTotal),
+          () =>
+            sourceFiles.map((sourceFile, index) => {
+              const filePath = sourceFile.getFilePath();
+              progress?.parseFile(filePath, index + 1, parseTotal, targetDir);
+              legacyProgress?.(
+                `Parsing ${path.relative(targetDir, filePath) || path.basename(filePath)} (${index + 1}/${parseTotal})...`,
+              );
+              return extractFileAnalysis(sourceFile);
+            }),
+        )
+      : [];
   const payloadByFile = new Map(
     [...partition.cached, ...freshPayloads].map((payload) => [
       normalizePath(payload.filePath),
@@ -141,34 +198,39 @@ export function analyzeProject(
     return payload ? [payload] : [];
   });
 
-  progress(`Extracting relationships from ${allPayloads.length} files…`);
-
-  const merged = mergeFilePayloads(allPayloads);
+  const merged = runWithPhaseHeartbeat(
+    progress,
+    formatMergePhase(allPayloads.length),
+    () => mergeFilePayloads(allPayloads),
+  );
 
   if (useCache) {
     const nextCache = buildCacheFile(targetDir, discoveredFiles, allPayloads, tsConfigKey);
     writeFileCache(cachePath, nextCache);
   }
 
-  progress("Building graph…");
-  const graph = buildGraph(
-    merged.importEdges,
-    merged.exports,
-    merged.renders,
-    merged.uses,
+  const graph = runWithPhaseHeartbeat(progress, formatBuildGraphPhase(), () =>
+    buildGraph(
+      merged.importEdges,
+      merged.exports,
+      merged.renders,
+      merged.uses,
+    ),
   );
   applyModuleClassification(merged.moduleTypeByFile, merged.exports, graph);
-  const enrichedGraph = enrichGraph(graph, merged.exports, merged.propsByNodeId);
+  const enrichedGraph = runWithPhaseHeartbeat(progress, formatEnrichGraphPhase(), () =>
+    enrichGraph(graph, merged.exports, merged.propsByNodeId),
+  );
 
-  progress("Checking Rules of Hooks…");
-
-  const reactAssessment = assessReactProject({
-    graph: enrichedGraph,
-    exports: merged.exports,
-    renders: merged.renders,
-    uses: merged.uses,
-    importEdges: merged.importEdges,
-  });
+  const reactAssessment = runWithPhaseHeartbeat(progress, formatHooksCheckPhase(), () =>
+    assessReactProject({
+      graph: enrichedGraph,
+      exports: merged.exports,
+      renders: merged.renders,
+      uses: merged.uses,
+      importEdges: merged.importEdges,
+    }),
+  );
 
   enrichedGraph.meta = {
     targetDir,
@@ -179,7 +241,8 @@ export function analyzeProject(
   };
 
   const durationMs = Date.now() - started;
-  progress(`Done in ${formatDuration(durationMs)}`);
+  progress?.complete(enrichedGraph.nodes.length, enrichedGraph.edges.length, durationMs);
+  legacyProgress?.(`Done in ${formatDuration(durationMs)}`);
 
   return {
     targetDir,
