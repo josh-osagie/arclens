@@ -1,0 +1,34 @@
+---
+title: React Atlas
+description: Interactive architecture explorer for React and TypeScript applications.
+template: splash
+hero:
+  tagline: Map your React architecture in minutes:static analysis, terminal reports, and an interactive graph viewer.
+  actions:
+    - text: Get started
+      link: /getting-started/
+      icon: right-arrow
+    - text: Introduction
+      link: /introduction/
+      icon: open-book
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What you can do
+
+<CardGrid stagger>
+	<Card title="Analyze" icon="magnifier">
+		Scan a React/TypeScript project and print node counts, relationships, external libraries, and optional architecture insights in the terminal.
+	</Card>
+	<Card title="Visualize" icon="seti:react">
+		Open the bundled viewer to explore components, hooks, contexts, and utilities as an interactive dependency graph.
+	</Card>
+	<Card title="Watch" icon="approve-check">
+		Re-analyze on file changes with `pnpm dev:watch` while the viewer auto-refreshes from `graph.json`.
+	</Card>
+	<Card title="Focus" icon="forward">
+		Use `--focus` in the CLI or search and entry-point shortcuts in the viewer to trace how code connects.
+	</Card>
+</CardGrid>

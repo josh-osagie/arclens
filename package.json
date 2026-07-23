@@ -8,6 +8,8 @@
     "analyze": "tsx src/cli.ts analyze",
     "analyze:watch": "bash scripts/watch.sh",
     "dev:viewer": "pnpm --dir viewer dev",
+    "dev:docs": "pnpm --dir docs dev",
+    "build:docs": "pnpm --dir docs build",
     "dev": "pnpm dev:viewer",
     "dev:watch": "bash scripts/dev-watch.sh",
     "test": "vitest run",
