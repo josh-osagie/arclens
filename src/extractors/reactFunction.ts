@@ -1,10 +1,12 @@
 import path from "node:path";
 import {
   SyntaxKind,
+  type CallExpression,
   type ClassDeclaration,
   type FunctionDeclaration,
   type Identifier,
   type Node,
+  type SourceFile,
   type VariableDeclaration,
 } from "ts-morph";
 
@@ -131,6 +133,59 @@ export function isConfigFile(filePath: string): boolean {
   return /\.config\.(ts|tsx|js|jsx|mts|mjs|cjs)$/i.test(path.basename(filePath));
 }
 
+const ENTRY_FILE_NAMES = new Set(["main", "index"]);
+
+export function isEntryFileName(filePath: string): boolean {
+  const base = path.basename(filePath, path.extname(filePath));
+  return ENTRY_FILE_NAMES.has(base);
+}
+
+function isReactMountCall(call: CallExpression): boolean {
+  const expression = call.getExpression();
+
+  if (expression.getKind() === SyntaxKind.Identifier) {
+    const name = expression.getText();
+    return name === "createRoot" || name === "hydrateRoot" || name === "render";
+  }
+
+  if (expression.getKind() === SyntaxKind.PropertyAccessExpression) {
+    const name = expression.getName();
+    return name === "render" || name === "hydrate";
+  }
+
+  return false;
+}
+
+export function sourceFileBootstrapsReact(sourceFile: SourceFile): boolean {
+  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    if (isReactMountCall(call)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function classifyFileModule(
+  sourceFile: SourceFile,
+): "entry" | "config" | "utility" {
+  const filePath = sourceFile.getFilePath();
+
+  if (isConfigFile(filePath)) {
+    return "config";
+  }
+
+  if (sourceFileBootstrapsReact(sourceFile)) {
+    return "entry";
+  }
+
+  if (isEntryFileName(filePath) && nodeHasJsx(sourceFile)) {
+    return "entry";
+  }
+
+  return "utility";
+}
+
 export function getBoundExportName(fn: Node): string | undefined {
   if (fn.getKind() === SyntaxKind.FunctionDeclaration) {
     return (fn as FunctionDeclaration).getName();
@@ -155,7 +210,12 @@ export function isReactFunctionRoot(fn: Node): boolean {
 export function classifyExport(
   name: string,
   declarations: Node[],
-): "component" | "hook" | "utility" | "context" {
+  filePath?: string,
+): "component" | "hook" | "utility" | "context" | "entry" | "config" {
+  if (filePath && isConfigFile(filePath)) {
+    return "config";
+  }
+
   const node = declarations[0];
   if (!node) return "utility";
 

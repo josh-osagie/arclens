@@ -15,8 +15,9 @@ import type {
   extractImportEdges,
   extractJsxRenders,
 } from "./extractors/exports";
-import { findTsConfig } from "./resolveTarget";
+import { applyModuleClassification, assessReactProject, type ReactAssessment } from "./reactAssessment";
 import { detectHookRuleViolations, type HookRuleViolation } from "./extractors/hookRules";
+import { findTsConfig } from "./resolveTarget";
 import type { Graph } from "./types";
 
 export type ImportEdge = ReturnType<typeof extractImportEdges>[number];
@@ -40,6 +41,7 @@ export type AnalysisResult = {
   renders: RenderEdge[];
   uses: UseEdge[];
   hookRuleViolations: HookRuleViolation[];
+  reactAssessment: ReactAssessment;
 };
 
 const IGNORED_PATH_PARTS = [
@@ -108,10 +110,27 @@ export function analyzeProject(
   const uses = extractHookUsages(project);
 
   progress("Building graph…");
-  const graph = enrichGraph(buildGraph(importEdges, exports, renders, uses), exports);
+  const graph = buildGraph(importEdges, exports, renders, uses);
+  applyModuleClassification(sourceFiles, exports, graph);
+  const enrichedGraph = enrichGraph(graph, exports);
 
   progress("Checking Rules of Hooks…");
   const hookRuleViolations = detectHookRuleViolations(sourceFiles);
+
+  const reactAssessment = assessReactProject({
+    graph: enrichedGraph,
+    exports,
+    renders,
+    uses,
+    importEdges,
+  });
+
+  enrichedGraph.meta = {
+    targetDir,
+    isReactProject: reactAssessment.isReactProject,
+    signals: reactAssessment.signals,
+    ...(reactAssessment.message ? { notice: reactAssessment.message } : {}),
+  };
 
   const durationMs = Date.now() - started;
   progress(`Done in ${formatDuration(durationMs)}`);
@@ -122,11 +141,12 @@ export function analyzeProject(
     fileCount: sourceFiles.length,
     scannedFiles: sourceFiles.map((file) => file.getFilePath()),
     durationMs,
-    graph,
+    graph: enrichedGraph,
     importEdges,
     exports,
     renders,
     uses,
     hookRuleViolations,
+    reactAssessment,
   };
 }

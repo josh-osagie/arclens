@@ -89,7 +89,7 @@ describe("graph output shape (viewer contract)", () => {
 
     for (const node of graph.nodes) {
       expect(node.id).toContain("::");
-      expect(["component", "hook", "utility", "context"]).toContain(node.type);
+      expect(["component", "hook", "utility", "context", "entry", "config"]).toContain(node.type);
     }
 
     for (const edge of graph.edges) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Project, SyntaxKind } from "ts-morph";
 import {
   classifyExport,
+  classifyFileModule,
   isConfigFile,
   isReactFunctionNode,
   nodeCallsHooks,
@@ -70,6 +71,22 @@ describe("reactFunction", () => {
         "ThemeContext",
       );
       expect(classifyExport("ThemeContext", declarations)).toBe("context");
+    });
+
+    it("classifies config file exports as config", () => {
+      const { declarations, file } = parseExport(
+        `export default { plugins: [] };`,
+      );
+      expect(classifyExport("default", declarations, file.getFilePath().replace("test.tsx", "vite.config.ts"))).toBe("config");
+    });
+
+    it("classifies bootstrap files as entry modules", () => {
+      const project = new Project({ useInMemoryFileSystem: true });
+      const file = project.createSourceFile(
+        "/main.tsx",
+        `import { createRoot } from "react-dom/client";\nimport App from "./App";\ncreateRoot(document.getElementById("root")!).render(<App />);`,
+      );
+      expect(classifyFileModule(file)).toBe("entry");
     });
   });
 

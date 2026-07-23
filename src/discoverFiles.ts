@@ -14,6 +14,12 @@ const IGNORED_DIRS = new Set([
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
+function isIgnoredSourceFile(fileName: string): boolean {
+  if (isConfigFile(fileName)) return true;
+  if (/\.d\.ts$/i.test(fileName)) return true;
+  return false;
+}
+
 export function discoverSourceFiles(rootDir: string): string[] {
   const files: string[] = [];
 
@@ -39,7 +45,7 @@ export function discoverSourceFiles(rootDir: string): string[] {
       if (!entry.isFile()) continue;
 
       const ext = path.extname(entry.name);
-      if (SOURCE_EXTENSIONS.has(ext) && !isConfigFile(entry.name)) {
+      if (SOURCE_EXTENSIONS.has(ext) && !isIgnoredSourceFile(entry.name)) {
         files.push(fullPath);
       }
     }

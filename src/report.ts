@@ -35,7 +35,7 @@ export type JsonReport = {
   summary: {
     nodes: number;
     edges: number;
-    types: number;
+    exports: number;
   };
   nodesByType: Record<
     NodeType,
@@ -89,7 +89,7 @@ function countNodesByType(nodes: GraphNode[]): Record<NodeType, number> {
       counts[node.type] += 1;
       return counts;
     },
-    { component: 0, hook: 0, utility: 0, context: 0 },
+    { component: 0, hook: 0, utility: 0, context: 0, entry: 0, config: 0 },
   );
 }
 
@@ -215,8 +215,7 @@ export function formatReport(
   const relTarget = path.relative(process.cwd(), targetDir) || ".";
   const totalNodes = graph.nodes.length;
   const totalEdges = graph.edges.length;
-  const totalTypes =
-    nodeCounts.component + nodeCounts.hook + nodeCounts.utility + nodeCounts.context;
+  const projectExports = graph.nodes.filter((node) => node.file !== "external").length;
 
   if (!options.quiet) {
     lines.push("");
@@ -248,8 +247,14 @@ export function formatReport(
     lines.push("");
     lines.push(colors.bold("Summary"));
     lines.push(
-      `${colors.dim("Nodes:")} ${totalNodes}  ${colors.dim("|")}  ${colors.dim("Edges:")} ${totalEdges}  ${colors.dim("|")}  ${colors.dim("Types:")} ${totalTypes}`,
+      `${colors.dim("Nodes:")} ${totalNodes}  ${colors.dim("|")}  ${colors.dim("Edges:")} ${totalEdges}  ${colors.dim("|")}  ${colors.dim("Exports:")} ${projectExports}`,
     );
+
+    if (!result.reactAssessment.isReactProject && result.reactAssessment.message) {
+      lines.push("");
+      lines.push(colors.yellow(result.reactAssessment.message));
+    }
+
     lines.push("");
     lines.push(colors.bold("Nodes by type"));
     lines.push(
@@ -260,6 +265,12 @@ export function formatReport(
     );
     lines.push(
       `  ${colors.green(String(nodeCounts.utility))} ${colors.dim("utilit")}${nodeCounts.utility === 1 ? "y   " : "ies "}    (${formatNodeList(graph.nodes, "utility")})`,
+    );
+    lines.push(
+      `  ${colors.cyan(String(nodeCounts.entry))} ${colors.dim("entr")}${nodeCounts.entry === 1 ? "y   " : "ies "}      (${formatNodeList(graph.nodes, "entry")})`,
+    );
+    lines.push(
+      `  ${colors.dim(String(nodeCounts.config))} ${colors.dim("config")}${nodeCounts.config === 1 ? "" : "s"}   (${formatNodeList(graph.nodes, "config")})`,
     );
     lines.push(
       `  ${colors.yellow(String(nodeCounts.context))} ${colors.dim("context")}${nodeCounts.context === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "context")})`,
@@ -403,7 +414,9 @@ export function buildJsonReport(
     ? relPath(options.reportOutput)
     : null;
 
-  const nodesByType = (["component", "hook", "utility", "context"] as const).reduce(
+  const nodesByType = (
+    ["component", "hook", "utility", "context", "entry", "config"] as const
+  ).reduce(
     (acc, type) => {
       const names = graph.nodes.filter((node) => node.type === type).map((n) => n.name);
       acc[type] = { count: nodeCounts[type], names };
@@ -411,6 +424,8 @@ export function buildJsonReport(
     },
     {} as JsonReport["nodesByType"],
   );
+
+  const projectExports = graph.nodes.filter((node) => node.file !== "external").length;
 
   const report: JsonReport = {
     meta: {
@@ -424,7 +439,7 @@ export function buildJsonReport(
     summary: {
       nodes: graph.nodes.length,
       edges: graph.edges.length,
-      types: nodeCounts.component + nodeCounts.hook + nodeCounts.utility + nodeCounts.context,
+      exports: projectExports,
     },
     nodesByType,
     relationships: edgeCounts,

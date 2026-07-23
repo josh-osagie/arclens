@@ -13,7 +13,7 @@ describe("discoverFiles", () => {
     expect(files.some((f) => f.endsWith("main.tsx"))).toBe(true);
   });
 
-  it("skips config files", () => {
+  it("skips config and declaration files", () => {
     const files = discoverSourceFiles(path.join(fixturesDir, "with-config"));
     expect(files.some((f) => f.endsWith("vite.config.ts"))).toBe(false);
     expect(files.some((f) => f.endsWith("App.tsx"))).toBe(true);

@@ -10,7 +10,7 @@ export type ExportRecord = {
   name: string;
   exportKind: "default" | "named";
   kind: string | undefined;
-  type: "component" | "hook" | "utility" | "context";
+  type: "component" | "hook" | "utility" | "context" | "entry" | "config";
 };
 
 export function dedupeExports(exports: ExportRecord[]): ExportRecord[] {
@@ -61,7 +61,7 @@ export function extractExportsDeclarations(sourceFile: SourceFile): ExportRecord
       name,
       exportKind: isDefault ? "default" : "named",
       kind: declarations[0]?.getKindName(),
-      type: classifyExport(name, declarations),
+      type: classifyExport(name, declarations, filePath),
     });
   }
 

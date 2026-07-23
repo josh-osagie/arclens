@@ -22,7 +22,7 @@ export type GraphConnection = {
   file: string;
 };
 
-export type GraphNode = {
+export type AtlasGraphNode = {
   id: string;
   name: string;
   file: string;
@@ -39,14 +39,12 @@ export type GraphNode = {
   };
 };
 
-export type GraphEdge = {
-  from: string;
-  to: string;
-  type: GraphEdgeType;
-};
-
-export type Graph = {
+export type AtlasGraph = {
   meta?: GraphMeta;
-  nodes: GraphNode[];
-  edges: GraphEdge[];
+  nodes: AtlasGraphNode[];
+  edges: Array<{
+    from: string;
+    to: string;
+    type: GraphEdgeType;
+  }>;
 };

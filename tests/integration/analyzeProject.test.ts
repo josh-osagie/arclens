@@ -52,15 +52,18 @@ describe("analyzeProject integration", () => {
   describe("default-export-app fixture", () => {
     const result = analyzeFixture("default-export-app");
 
+    it("classifies main.tsx as entry", () => {
+      const main = nodeByName(result, "main");
+      expect(main?.type).toBe("entry");
+    });
+
     it("resolves export default function App to name App", () => {
       expect(nodeByName(result, "App")?.type).toBe("component");
       expect(result.exports.some((e) => e.name === "default")).toBe(false);
     });
 
     it("links default imports to the default export", () => {
-      const fromName = result.exports.find((e) => e.file.endsWith("main.tsx"))?.name;
-      expect(fromName).toBeTruthy();
-      expect(hasEdge(result, fromName!, "App", "imports")).toBe(true);
+      expect(hasEdge(result, "main", "App", "imports")).toBe(true);
     });
 
     it("does not warn about PascalCase default components", () => {
@@ -98,6 +101,7 @@ describe("analyzeProject integration", () => {
 
     it("excludes vite.config.ts from analysis", () => {
       expect(result.scannedFiles.some((f) => f.endsWith("vite.config.ts"))).toBe(false);
+      expect(result.graph.nodes.some((node) => node.type === "config")).toBe(false);
     });
 
     it("does not emit insights for config files", () => {

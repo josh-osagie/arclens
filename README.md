@@ -138,33 +138,40 @@ Each node includes metadata for the viewer and for tooling:
 
 ## Viewer
 
-### Planned (npm package)
-
-The viewer ships inside the `react-atlas` package. You analyze first, then open the UI:
-
-```bash
-react-atlas analyze ./src
-react-atlas view              # serves viewer, loads ./graph.json
-react-atlas view out/graph.json
-```
-
-`view` will start a local static server and open your browser. No separate install.
-
-### Development
-The viewer lives in `viewer/` in this same repository.
+Run an analysis first, then start the viewer:
 
 ```bash
 pnpm analyze ./samples
 pnpm dev:viewer
 ```
 
-Open the URL Vite prints (the url from your terminal). During dev, the viewer reads `graph.json` from the repo root.
+Open the URL Vite prints (usually `http://localhost:5173`).
 
-To re-analyze on file changes while building the viewer:
+### What you can do
+
+- **Search** nodes by name in the top-left panel
+- **Click a node** to open a details panel (file, type, incoming/outgoing connections)
+- **Graph auto-refreshes** when `graph.json` changes (works with `pnpm dev:watch`)
+
+To re-analyze on file changes while developing:
 
 ```bash
+# built-in samples (also re-runs when src/ extractors change)
 pnpm dev:watch
+
+# external project
+pnpm dev:watch -- ../ecommerce/src
+pnpm analyze:watch -- ../ecommerce/src
 ```
+
+### Planned for npm publish
+
+```bash
+react-atlas analyze ./src
+react-atlas view
+```
+
+The viewer ships inside the package as static files served by the `view` command.
 
 ## Packaging layout
 
