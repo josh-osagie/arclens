@@ -16,13 +16,23 @@ import "@xyflow/react/dist/style.css";
 import { AtlasNode } from "./AtlasNode";
 import {
   buildFlowGraph,
-  getConnectedNodeIds,
   nodeTypes as legendTypes,
   type AtlasNodeData,
   typeColors,
 } from "./buildFlowGraph";
+import {
+  buildNodeById,
+  enrichNodeForDetails,
+  getConnectedNodeIdsFromEdges,
+  graphSignature,
+} from "./graphConnections";
 import { NodeDetails } from "./NodeDetails";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
+import {
+  LARGE_GRAPH_THRESHOLD,
+  selectVisibleGraph,
+  type ViewGraphMode,
+} from "./viewGraph";
 import "./graph.css";
 
 const flowNodeTypes = {
@@ -30,13 +40,6 @@ const flowNodeTypes = {
 };
 
 const POLL_MS = 2000;
-
-function graphSignature(graph: AtlasGraph): string {
-  return JSON.stringify({
-    nodes: graph.nodes.map((node) => `${node.id}:${node.type}:${node.name}`),
-    edges: graph.edges.map((edge) => `${edge.from}|${edge.to}|${edge.type}`),
-  });
-}
 
 function mergeNodePositions(
   nextNodes: Node<AtlasNodeData>[],
@@ -54,19 +57,18 @@ function mergeNodePositions(
 function applyNodePresentation(
   nodes: Node<AtlasNodeData>[],
   searchLower: string,
-  selected: AtlasGraphNode | null,
+  selectedId: string | null,
+  connectedIds: Set<string> | null,
 ): Node<AtlasNodeData>[] {
-  const connectedIds = selected ? getConnectedNodeIds(selected) : null;
-
   return nodes.map((node) => {
     const matchesSearch =
       !searchLower || node.data.label.toLowerCase().includes(searchLower);
-    const isSelected = selected?.id === node.id;
+    const isSelected = selectedId === node.id;
     const isConnected = connectedIds?.has(node.id) ?? false;
 
     let opacity = 1;
     if (searchLower && !matchesSearch) opacity = 0.22;
-    if (selected && !isSelected && !isConnected) opacity = 0.28;
+    if (selectedId && !isSelected && !isConnected) opacity = 0.28;
 
     return {
       ...node,
@@ -83,11 +85,10 @@ function applyNodePresentation(
 
 function applyEdgePresentation(
   edges: Edge[],
-  selected: AtlasGraphNode | null,
+  connectedIds: Set<string> | null,
 ): Edge[] {
-  if (!selected) return edges;
+  if (!connectedIds) return edges;
 
-  const connectedIds = getConnectedNodeIds(selected);
   return edges.map((edge) => ({
     ...edge,
     style: {
@@ -98,22 +99,40 @@ function applyEdgePresentation(
   }));
 }
 
-function FitViewOnce({ nodeCount }: { nodeCount: number }) {
+function FitViewOnce({ viewKey, nodeCount }: { viewKey: string; nodeCount: number }) {
   const { fitView } = useReactFlow();
-  const hasFit = useRef(false);
+  const lastKey = useRef("");
 
   useEffect(() => {
-    if (hasFit.current || nodeCount === 0) return;
+    if (nodeCount === 0 || lastKey.current === viewKey) return;
 
     const timer = window.setTimeout(() => {
       fitView({ padding: 0.22, duration: 280 });
-      hasFit.current = true;
+      lastKey.current = viewKey;
     }, 80);
 
     return () => window.clearTimeout(timer);
-  }, [fitView, nodeCount]);
+  }, [fitView, nodeCount, viewKey]);
 
   return null;
+}
+
+function emptyViewMessage(
+  mode: ViewGraphMode,
+  totalNodes: number,
+  matchCount: number,
+  searchLower: string,
+): string {
+  if (mode === "empty" && !searchLower) {
+    return `This graph has ${totalNodes.toLocaleString()} nodes — too large to render at once. Search for a component, hook, or file to explore its neighborhood.`;
+  }
+  if (mode === "empty" && searchLower) {
+    return `No nodes match "${searchLower}". Try another name or file path.`;
+  }
+  if (mode === "search" && matchCount > 0) {
+    return `Showing ${matchCount} match${matchCount === 1 ? "" : "es"} and nearby connections.`;
+  }
+  return "";
 }
 
 export default function App() {
@@ -121,10 +140,37 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AtlasGraphNode | null>(null);
+  const [isBuilding, setIsBuilding] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const graphSigRef = useRef<string>("");
+  const buildSigRef = useRef<string>("");
   const searchLower = search.trim().toLowerCase();
+
+  const isLargeGraph = (graph?.nodes.length ?? 0) > LARGE_GRAPH_THRESHOLD;
+
+  const viewSelection = useMemo(() => {
+    if (!graph) {
+      return {
+        graph: { nodes: [], edges: [] } as AtlasGraph,
+        mode: "full" as ViewGraphMode,
+        matchCount: 0,
+      };
+    }
+    return selectVisibleGraph(graph, searchLower, isLargeGraph);
+  }, [graph, searchLower, isLargeGraph]);
+
+  const displayGraph = viewSelection.graph;
+  const viewKey = `${graphSignature(displayGraph)}:${searchLower}`;
+
+  const nodeById = useMemo(
+    () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
+    [graph],
+  );
+
+  const connectedIds = useMemo(() => {
+    if (!selected || !graph) return null;
+    return getConnectedNodeIdsFromEdges(selected.id, graph.edges);
+  }, [selected, graph]);
 
   const loadGraph = useCallback(async () => {
     try {
@@ -142,44 +188,86 @@ export default function App() {
 
   useEffect(() => {
     loadGraph();
+    if (isLargeGraph) return undefined;
+
     const interval = window.setInterval(loadGraph, POLL_MS);
     return () => window.clearInterval(interval);
-  }, [loadGraph]);
+  }, [loadGraph, isLargeGraph]);
 
   useEffect(() => {
     if (!graph) return;
 
-    const signature = graphSignature(graph);
-    if (signature === graphSigRef.current) return;
+    if (buildSigRef.current === viewKey) return;
 
-    graphSigRef.current = signature;
-    const built = buildFlowGraph(graph);
+    let cancelled = false;
+    setIsBuilding(true);
 
-    setNodes((current) =>
-      applyNodePresentation(mergeNodePositions(built.nodes, current), searchLower, selected),
-    );
-    setEdges(built.edges);
-  }, [graph, searchLower, selected, setNodes, setEdges]);
+    const timer = window.setTimeout(() => {
+      const built = buildFlowGraph(displayGraph, { compact: isLargeGraph });
+      if (cancelled) return;
+
+      buildSigRef.current = viewKey;
+      setNodes((current) =>
+        applyNodePresentation(
+          mergeNodePositions(built.nodes, current),
+          searchLower,
+          selected?.id ?? null,
+          connectedIds,
+        ),
+      );
+      setEdges(built.edges);
+      setIsBuilding(false);
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    graph,
+    displayGraph,
+    viewKey,
+    isLargeGraph,
+    searchLower,
+    selected?.id,
+    connectedIds,
+    setNodes,
+    setEdges,
+  ]);
 
   useEffect(() => {
-    setNodes((current) => applyNodePresentation(current, searchLower, selected));
-  }, [searchLower, selected, setNodes]);
+    setNodes((current) =>
+      applyNodePresentation(current, searchLower, selected?.id ?? null, connectedIds),
+    );
+  }, [searchLower, selected?.id, connectedIds, setNodes]);
 
   const visibleEdges = useMemo(
-    () => applyEdgePresentation(edges, selected),
-    [edges, selected],
+    () => applyEdgePresentation(edges, connectedIds),
+    [edges, connectedIds],
   );
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node<AtlasNodeData>) => {
-      setSelected(node.data.graphNode);
+      if (!graph) return;
+      const base = nodeById.get(node.data.nodeId);
+      if (!base) return;
+      setSelected(enrichNodeForDetails(base, graph, nodeById));
     },
-    [],
+    [graph, nodeById],
   );
 
   const onPaneClick = useCallback(() => {
     setSelected(null);
   }, []);
+
+  const canvasMessage = graph
+    ? emptyViewMessage(
+        viewSelection.mode,
+        graph.nodes.length,
+        viewSelection.matchCount,
+        searchLower,
+      )
+    : "";
 
   if (error) {
     return (
@@ -217,6 +305,7 @@ export default function App() {
         nodesConnectable={false}
         elementsSelectable
         selectNodesOnDrag={false}
+        onlyRenderVisibleElements={isLargeGraph}
         panOnDrag
         panOnScroll
         zoomOnScroll
@@ -224,31 +313,51 @@ export default function App() {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <FitViewOnce nodeCount={nodes.length} />
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#333333" />
+        <FitViewOnce viewKey={viewKey} nodeCount={nodes.length} />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--atlas-canvas-grid)" />
         <Controls showInteractive={false} />
-        <MiniMap
-          nodeColor={(node) =>
-            typeColors[node.data.type as keyof typeof typeColors] ?? "#64748b"
-          }
-          maskColor="rgba(10, 15, 28, 0.82)"
-          style={{ background: "#111827", border: "1px solid #334155", borderRadius: 10 }}
-        />
+        {!isLargeGraph && (
+          <MiniMap
+            nodeColor={(node) =>
+              typeColors[node.data.type as keyof typeof typeColors] ?? "#64748b"
+            }
+            maskColor="rgba(17, 17, 17, 0.85)"
+            style={{
+              background: "var(--atlas-surface)",
+              border: "1px solid var(--atlas-border)",
+              borderRadius: "var(--atlas-radius-xl)",
+            }}
+          />
+        )}
 
-        <Panel position="top-left" className="graph-panel">
-          <h1>React Atlas</h1>
-          <p>
+        {(canvasMessage || isBuilding) && (
+          <Panel position="top-center" className="graph-canvas-notice">
+            {isBuilding ? "Building view…" : canvasMessage}
+          </Panel>
+        )}
+
+        <Panel position="top-left" className="graph-sidebar graph-sidebar--main">
+          <div className="graph-sidebar__header graph-sidebar__header--compact">
+            <h1>React Atlas</h1>
+          </div>
+          <p className="graph-sidebar__stats">
             {graph.nodes.length} nodes · {graph.edges.length} edges
           </p>
+          {isLargeGraph && (
+            <p className="graph-notice">
+              Large graph — search to explore. Edge labels and minimap are off.
+            </p>
+          )}
           {graph.meta?.notice && (
             <p className="graph-notice">{graph.meta.notice}</p>
           )}
           <input
             className="graph-search"
             type="search"
-            placeholder="Search nodes…"
+            placeholder={isLargeGraph ? "Search to explore…" : "Search nodes…"}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            autoFocus={isLargeGraph}
           />
           <div className="graph-legend">
             {legendTypes.map((type) => (
@@ -264,7 +373,7 @@ export default function App() {
         </Panel>
 
         {selected && (
-          <Panel position="top-right" className="graph-details-panel">
+          <Panel position="top-right" className="graph-sidebar-wrap">
             <NodeDetails node={selected} onClose={() => setSelected(null)} />
           </Panel>
         )}

@@ -1,5 +1,5 @@
-import type { AtlasGraphNode } from "./types";
-import { relFile } from "./buildFlowGraph";
+import type { AtlasGraphNode, GraphConnection } from "./types";
+import { relFile, typeColors } from "./buildFlowGraph";
 
 type Props = {
   node: AtlasGraphNode;
@@ -11,7 +11,7 @@ function ConnectionGroup({
   items,
 }: {
   title: string;
-  items: AtlasGraphNode["connections"]["incoming"];
+  items: GraphConnection[];
 }) {
   if (items.length === 0) {
     return (
@@ -41,61 +41,73 @@ function ConnectionGroup({
 
 export function NodeDetails({ node, onClose }: Props) {
   const incoming = {
-    imports: node.connections.incoming.filter((c) => c.edgeType === "imports"),
-    renders: node.connections.incoming.filter((c) => c.edgeType === "renders"),
-    uses: node.connections.incoming.filter((c) => c.edgeType === "uses"),
+    imports: (node.connections?.incoming ?? []).filter((c) => c.edgeType === "imports"),
+    renders: (node.connections?.incoming ?? []).filter((c) => c.edgeType === "renders"),
+    uses: (node.connections?.incoming ?? []).filter((c) => c.edgeType === "uses"),
   };
 
   const outgoing = {
-    imports: node.connections.outgoing.filter((c) => c.edgeType === "imports"),
-    renders: node.connections.outgoing.filter((c) => c.edgeType === "renders"),
-    uses: node.connections.outgoing.filter((c) => c.edgeType === "uses"),
+    imports: (node.connections?.outgoing ?? []).filter((c) => c.edgeType === "imports"),
+    renders: (node.connections?.outgoing ?? []).filter((c) => c.edgeType === "renders"),
+    uses: (node.connections?.outgoing ?? []).filter((c) => c.edgeType === "uses"),
   };
 
+  const accent = typeColors[node.type] ?? typeColors.utility;
+
   return (
-    <div className="graph-panel graph-details">
-      <div className="graph-details__header">
-        <h2>{node.name}</h2>
-        <button type="button" className="graph-details__close" onClick={onClose}>
+    <div className="graph-sidebar graph-sidebar--details">
+      <div className="graph-sidebar__header">
+        <div className="graph-sidebar__title-row">
+          <span
+            className="graph-sidebar__type-dot"
+            style={{ background: accent }}
+            aria-hidden="true"
+          />
+          <h2>{node.name}</h2>
+        </div>
+        <button type="button" className="graph-sidebar__close" onClick={onClose}>
           ×
         </button>
       </div>
 
-      <dl className="details-meta">
-        <div>
-          <dt>Type</dt>
-          <dd>{node.type}</dd>
-        </div>
-        <div>
-          <dt>File</dt>
-          <dd>{relFile(node.file)}</dd>
-        </div>
-        {node.exportKind && (
+      <div className="graph-sidebar__scroll atlas-scroll">
+        <dl className="details-meta">
           <div>
-            <dt>Export</dt>
-            <dd>{node.exportKind}</dd>
+            <dt>Type</dt>
+            <dd>{node.type}</dd>
           </div>
-        )}
-        {node.kind && (
           <div>
-            <dt>AST kind</dt>
-            <dd>{node.kind}</dd>
+            <dt>File</dt>
+            <dd>{relFile(node.file)}</dd>
           </div>
-        )}
+          {node.exportKind && (
+            <div>
+              <dt>Export</dt>
+              <dd>{node.exportKind}</dd>
+            </div>
+          )}
+          {node.kind && (
+            <div>
+              <dt>AST kind</dt>
+              <dd>{node.kind}</dd>
+            </div>
+          )}
         <div>
           <dt>Usage</dt>
           <dd>
-            {node.stats.incoming} incoming · {node.stats.outgoing} outgoing
+            {node.stats?.incoming ?? node.connections?.incoming.length ?? 0} incoming ·{" "}
+            {node.stats?.outgoing ?? node.connections?.outgoing.length ?? 0} outgoing
           </dd>
         </div>
-      </dl>
+        </dl>
 
-      <ConnectionGroup title="Imported by" items={incoming.imports} />
-      <ConnectionGroup title="Rendered by" items={incoming.renders} />
-      <ConnectionGroup title="Hook-used by" items={incoming.uses} />
-      <ConnectionGroup title="Imports" items={outgoing.imports} />
-      <ConnectionGroup title="Renders" items={outgoing.renders} />
-      <ConnectionGroup title="Uses hooks" items={outgoing.uses} />
+        <ConnectionGroup title="Imported by" items={incoming.imports} />
+        <ConnectionGroup title="Rendered by" items={incoming.renders} />
+        <ConnectionGroup title="Hook-used by" items={incoming.uses} />
+        <ConnectionGroup title="Imports" items={outgoing.imports} />
+        <ConnectionGroup title="Renders" items={outgoing.renders} />
+        <ConnectionGroup title="Uses hooks" items={outgoing.uses} />
+      </div>
     </div>
   );
 }

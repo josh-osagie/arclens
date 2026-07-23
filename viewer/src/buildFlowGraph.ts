@@ -1,54 +1,30 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
+import { edgeColors } from "./design/tokens";
+import { DAGRE_LAYOUT_THRESHOLD } from "./viewGraph";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 
-export const typeColors = {
-  component: "#60a5fa",
-  hook: "#c084fc",
-  utility: "#34d399",
-  context: "#fbbf24",
-  entry: "#22d3ee",
-  config: "#94a3b8",
-} as const;
-
-export const typeLabels = {
-  component: "Component",
-  hook: "Hook",
-  utility: "Utility",
-  context: "Context",
-  entry: "Entry",
-  config: "Config",
-} as const;
-
-export const nodeTypes = [
-  "component",
-  "hook",
-  "utility",
-  "context",
-  "entry",
-  "config",
-] as const;
-
-const edgeColors: Record<"imports" | "renders" | "uses", string> = {
-  imports: "#64748b",
-  renders: "#3b82f6",
-  uses: "#8b5cf6",
-};
+export { edgeColors, nodeTypes, typeColors, typeLabels } from "./design/tokens";
 
 export type AtlasNodeData = {
   label: string;
   type: AtlasGraphNode["type"];
   fileLabel?: string;
-  graphNode: AtlasGraphNode;
+  nodeId: string;
 };
 
-function layoutGraph(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
+const NODE_W = 196;
+const NODE_H = 88;
+const GRID_GAP_X = 24;
+const GRID_GAP_Y = 24;
+
+function dagreLayout(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: "TB", nodesep: 70, ranksep: 90, marginx: 40, marginy: 40 });
 
   for (const node of nodes) {
-    g.setNode(node.id, { width: 196, height: 88 });
+    g.setNode(node.id, { width: NODE_W, height: NODE_H });
   }
 
   for (const edge of edges) {
@@ -62,17 +38,43 @@ function layoutGraph(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
     return {
       ...node,
       position: {
-        x: position.x - 98,
-        y: position.y - 44,
+        x: position.x - NODE_W / 2,
+        y: position.y - NODE_H / 2,
       },
     };
   });
 }
 
-export function buildFlowGraph(graph: AtlasGraph): {
+function gridLayout(nodes: Node<AtlasNodeData>[]) {
+  const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
+  const cellW = NODE_W + GRID_GAP_X;
+  const cellH = NODE_H + GRID_GAP_Y;
+
+  return nodes.map((node, index) => ({
+    ...node,
+    position: {
+      x: (index % cols) * cellW,
+      y: Math.floor(index / cols) * cellH,
+    },
+  }));
+}
+
+function layoutNodes(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
+  if (nodes.length === 0) return nodes;
+  if (nodes.length <= DAGRE_LAYOUT_THRESHOLD) {
+    return dagreLayout(nodes, edges);
+  }
+  return gridLayout(nodes);
+}
+
+export function buildFlowGraph(
+  graph: AtlasGraph,
+  options: { compact?: boolean } = {},
+): {
   nodes: Node<AtlasNodeData>[];
   edges: Edge[];
 } {
+  const compact = options.compact ?? false;
   const initialNodes: Node<AtlasNodeData>[] = graph.nodes.map((node) => ({
     id: node.id,
     type: "atlas",
@@ -82,7 +84,7 @@ export function buildFlowGraph(graph: AtlasGraph): {
       label: node.name,
       type: node.type,
       fileLabel: node.file === "external" ? undefined : relFile(node.file),
-      graphNode: node,
+      nodeId: node.id,
     },
   }));
 
@@ -98,21 +100,25 @@ export function buildFlowGraph(graph: AtlasGraph): {
       id: `e${i}`,
       source: edge.from,
       target: edge.to,
-      label: edge.type,
+      label: compact ? undefined : edge.type,
       type: "default",
-      animated: edge.type === "uses",
-      style: { stroke: edgeColors[edge.type], strokeWidth: 2 },
-      labelStyle: {
-        fill: "#e2e8f0",
-        fontSize: 11,
-        fontWeight: 600,
-      },
-      labelBgStyle: {
-        fill: "#1e293b",
-        fillOpacity: 0.9,
-      },
-      labelBgPadding: [6, 4] as [number, number],
-      labelBgBorderRadius: 4,
+      animated: !compact && edge.type === "uses",
+      style: { stroke: edgeColors[edge.type], strokeWidth: compact ? 1.5 : 2 },
+      ...(compact
+        ? {}
+        : {
+            labelStyle: {
+              fill: "#e2e8f0",
+              fontSize: 11,
+              fontWeight: 600,
+            },
+            labelBgStyle: {
+              fill: "#1e293b",
+              fillOpacity: 0.9,
+            },
+            labelBgPadding: [6, 4] as [number, number],
+            labelBgBorderRadius: 4,
+          }),
       markerEnd: {
         type: "arrowclosed" as const,
         color: edgeColors[edge.type],
@@ -120,22 +126,9 @@ export function buildFlowGraph(graph: AtlasGraph): {
     }));
 
   return {
-    nodes: layoutGraph(initialNodes, initialEdges),
+    nodes: layoutNodes(initialNodes, initialEdges),
     edges: initialEdges,
   };
-}
-
-export function getConnectedNodeIds(
-  graphNode: AtlasGraphNode,
-): Set<string> {
-  const ids = new Set<string>([graphNode.id]);
-  for (const conn of graphNode.connections.incoming) {
-    ids.add(conn.nodeId);
-  }
-  for (const conn of graphNode.connections.outgoing) {
-    ids.add(conn.nodeId);
-  }
-  return ids;
 }
 
 export function relFile(filePath: string): string {

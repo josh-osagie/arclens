@@ -29,11 +29,11 @@ export type AtlasGraphNode = {
   type: GraphNodeType;
   exportKind?: "default" | "named";
   kind?: string;
-  connections: {
+  connections?: {
     incoming: GraphConnection[];
     outgoing: GraphConnection[];
   };
-  stats: {
+  stats?: {
     incoming: number;
     outgoing: number;
   };
