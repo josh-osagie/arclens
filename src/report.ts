@@ -123,7 +123,7 @@ function getTopConnections(edges: GraphEdge[], limit = 5) {
   const grouped = new Map<string, { from: string; to: string; types: Set<string> }>();
 
   for (const edge of edges) {
-    const key = `${edge.from}→${edge.to}`;
+    const key = `${edge.from}->${edge.to}`;
     const existing = grouped.get(key);
 
     if (existing) {
@@ -158,7 +158,7 @@ function getMostUsedNodes(edges: GraphEdge[], limit = 5) {
 
 function formatNodeList(nodes: GraphNode[], type: NodeType): string {
   const names = nodes.filter((n) => n.type === type).map((n) => n.name);
-  return names.length > 0 ? names.join(", ") : "—";
+  return names.length > 0 ? names.join(", ") : "(none)";
 }
 
 function severityColor(
@@ -292,7 +292,7 @@ export function formatReport(
     lines.push("");
     lines.push(colors.bold("External libraries"));
     if (externalLibs.length === 0) {
-      lines.push(`  ${colors.dim("—")}`);
+      lines.push(`  ${colors.dim("(none)")}`);
     } else {
       for (const lib of externalLibs) {
         lines.push(`  ${colors.yellow(lib)}`);
@@ -301,18 +301,18 @@ export function formatReport(
     lines.push("");
     lines.push(colors.bold("Top connections"));
     if (topConnections.length === 0) {
-      lines.push(`  ${colors.dim("—")}`);
+      lines.push(`  ${colors.dim("(none)")}`);
     } else {
       for (const connection of topConnections) {
         lines.push(
-          `  ${colors.cyan(connection.from)} ${colors.dim("→")} ${colors.cyan(connection.to)}  ${colors.dim(`[${[...connection.types].join(", ")}]`)}`,
+          `  ${colors.cyan(connection.from)} ${colors.dim("->")} ${colors.cyan(connection.to)}  ${colors.dim(`[${[...connection.types].join(", ")}]`)}`,
         );
       }
     }
     lines.push("");
     lines.push(colors.bold("Most referenced"));
     if (mostUsed.length === 0) {
-      lines.push(`  ${colors.dim("—")}`);
+      lines.push(`  ${colors.dim("(none)")}`);
     } else {
       for (const entry of mostUsed) {
         lines.push(
@@ -325,7 +325,7 @@ export function formatReport(
       lines.push("");
       lines.push(
         colors.yellow(
-          "⚠ Large scan — next time try a subfolder: pnpm react-atlas analyze ./src",
+          "Warning: Large scan - next time try a subfolder: pnpm react-atlas analyze ./src",
         ),
       );
     } else if (fileCount >= FILE_COUNT_WARNING) {
@@ -376,7 +376,7 @@ export function formatReport(
 
   if (!options.quiet) {
     lines.push("");
-    lines.push(colors.dim("Static analysis only — code is parsed, never executed."));
+    lines.push(colors.dim("Static analysis only - code is parsed, never executed."));
     lines.push("");
   }
 

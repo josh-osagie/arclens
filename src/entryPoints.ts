@@ -86,7 +86,75 @@ export type EntryNodeLike = {
   name: string;
   file: string;
   type: string;
+  stats?: { incoming?: number; outgoing?: number };
 };
+
+export type EntryEdgeLike = { from: string; to: string };
+
+const FALLBACK_TYPE_RANK: Record<string, number> = {
+  entry: 0,
+  component: 1,
+  hook: 2,
+  context: 3,
+  utility: 4,
+  config: 5,
+};
+
+function nodeIncomingCount(
+  node: EntryNodeLike,
+  incoming?: Map<string, number>,
+): number {
+  if (node.stats?.incoming !== undefined) return node.stats.incoming;
+  return incoming?.get(node.id) ?? 0;
+}
+
+function nodeOutgoingCount(
+  node: EntryNodeLike,
+  outgoing?: Map<string, number>,
+): number {
+  if (node.stats?.outgoing !== undefined) return node.stats.outgoing;
+  return outgoing?.get(node.id) ?? 0;
+}
+
+function buildEdgeCounts(edges: EntryEdgeLike[]): {
+  incoming: Map<string, number>;
+  outgoing: Map<string, number>;
+} {
+  const incoming = new Map<string, number>();
+  const outgoing = new Map<string, number>();
+  for (const edge of edges) {
+    incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1);
+    outgoing.set(edge.from, (outgoing.get(edge.from) ?? 0) + 1);
+  }
+  return { incoming, outgoing };
+}
+
+/**
+ * When no bootstrap entry file exists, treat graph roots (zero incoming, some outgoing)
+ * as entry points. Prefers components over hooks and utilities.
+ */
+export function findFallbackEntryNodes<T extends EntryNodeLike>(
+  nodes: T[],
+  edges: EntryEdgeLike[] = [],
+): T[] {
+  const counts = edges.length > 0 ? buildEdgeCounts(edges) : null;
+
+  const roots = nodes.filter((node) => {
+    if (node.file === "external") return false;
+    if (isNonProductionFile(node.file)) return false;
+
+    const incoming = nodeIncomingCount(node, counts?.incoming);
+    const outgoing = nodeOutgoingCount(node, counts?.outgoing);
+    return incoming === 0 && outgoing > 0;
+  });
+
+  return roots.sort((a, b) => {
+    const rankA = FALLBACK_TYPE_RANK[a.type] ?? 99;
+    const rankB = FALLBACK_TYPE_RANK[b.type] ?? 99;
+    if (rankA !== rankB) return rankA - rankB;
+    return a.name.localeCompare(b.name);
+  });
+}
 
 export function isEntryNode(node: EntryNodeLike): boolean {
   if (isNonProductionFile(node.file)) return false;
@@ -100,6 +168,7 @@ export function isEntryNode(node: EntryNodeLike): boolean {
 export function filterEntryNodes<T extends EntryNodeLike>(
   nodes: T[],
   metaEntryIds?: string[],
+  edges: EntryEdgeLike[] = [],
 ): T[] {
   if (metaEntryIds && metaEntryIds.length > 0) {
     const idSet = new Set(metaEntryIds);
@@ -107,14 +176,18 @@ export function filterEntryNodes<T extends EntryNodeLike>(
     if (fromMeta.length > 0) return fromMeta;
   }
 
-  return nodes.filter(isEntryNode);
+  const fromHeuristic = nodes.filter(isEntryNode);
+  if (fromHeuristic.length > 0) return fromHeuristic;
+
+  return findFallbackEntryNodes(nodes, edges);
 }
 
 export function findEntryNodeIds<T extends EntryNodeLike>(
   nodes: T[],
   metaEntryIds?: string[],
+  edges: EntryEdgeLike[] = [],
 ): string[] {
-  return filterEntryNodes(nodes, metaEntryIds).map((node) => node.id);
+  return filterEntryNodes(nodes, metaEntryIds, edges).map((node) => node.id);
 }
 
 export function pickPrimaryEntryNode<T extends EntryNodeLike>(nodes: T[], file: string): T {

@@ -115,7 +115,7 @@ export function analyzeProject(
   }
 
   progress?.discoveryDone(discoveredFiles.length);
-  legacyProgress?.(`Found ${discoveredFiles.length} files — parsing...`);
+  legacyProgress?.(`Found ${discoveredFiles.length} files - parsing...`);
 
   const tsConfigPath = findTsConfig(targetDir);
   const tsConfigKey = tsConfigCacheKey(tsConfigPath);
@@ -147,7 +147,7 @@ export function analyzeProject(
   progress?.cacheSummary(partition.cacheHits, partition.cacheMisses);
   if (useCache && partition.cacheHits > 0) {
     legacyProgress?.(
-      `Cache: ${partition.cacheHits} hit(s), ${partition.cacheMisses} miss(es) — parsing ${partition.toParse.length} file(s)...`,
+      `Cache: ${partition.cacheHits} hit(s), ${partition.cacheMisses} miss(es) - parsing ${partition.toParse.length} file(s)...`,
     );
   }
 

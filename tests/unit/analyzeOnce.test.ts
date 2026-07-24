@@ -72,6 +72,7 @@ describe("analyze-once.sh", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/still watching/i);
+    expect(result.stderr).toMatch(/Press q to exit/i);
     expect(result.stderr).not.toMatch(/initial analysis failed/i);
   });
 });

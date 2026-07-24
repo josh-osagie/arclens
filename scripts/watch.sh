@@ -57,7 +57,51 @@ fi
 
 export REACT_ATLAS_WATCH_TARGET="$TARGET"
 
+CHOKIDAR_PID=""
+cleanup_watch() {
+  if [ -n "$CHOKIDAR_PID" ] && kill -0 "$CHOKIDAR_PID" 2>/dev/null; then
+    kill "$CHOKIDAR_PID" 2>/dev/null || true
+    wait "$CHOKIDAR_PID" 2>/dev/null || true
+  fi
+}
+
+run_watch_reanalyze() {
+  bash "${SCRIPT_DIR}/analyze-once.sh" "${TARGET}" ${EXTRA_ARGS[*]+"${EXTRA_ARGS[@]}"} || true
+}
+
 pnpm exec chokidar "${WATCH_GLOBS[@]}" \
   "${IGNORE_ARGS[@]}" \
   --silent \
-  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${REACT_ATLAS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}"
+  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${REACT_ATLAS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}" &
+CHOKIDAR_PID=$!
+
+trap cleanup_watch EXIT INT TERM
+
+if [ -t 0 ]; then
+  echo ""
+  print_watch_help
+  echo ""
+  while kill -0 "$CHOKIDAR_PID" 2>/dev/null; do
+    if IFS= read -rsn1 -t 1 key 2>/dev/null; then
+      case "$key" in
+        r|R)
+          echo ""
+          run_watch_reanalyze
+          ;;
+        q|Q)
+          echo ""
+          cleanup_watch
+          trap - EXIT INT TERM
+          exit 0
+          ;;
+        h|H|\?)
+          echo ""
+          print_watch_help
+          echo ""
+          ;;
+      esac
+    fi
+  done
+fi
+
+wait "$CHOKIDAR_PID"

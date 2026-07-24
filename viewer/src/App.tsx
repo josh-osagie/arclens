@@ -78,6 +78,12 @@ import { OverviewShortcuts } from "./OverviewShortcuts";
 import { NodeToolbarActions } from "./NodeToolbarActions";
 import { defaultDetailsPanelRect, defaultMainPanelRect } from "./panelStorage";
 import {
+  loadNodePositions,
+  mergeNodePositions,
+  nodePositionsFromNodes,
+  saveNodePositions,
+} from "./nodePositionStorage";
+import {
   findPathFromEntries,
   pathEdgeKeys,
 } from "./pathHighlight";
@@ -114,18 +120,6 @@ const COMPACT_EDGE_DEFAULTS = {
   animated: false,
   type: "default" as const,
 } as const;
-
-function mergeNodePositions(
-  nextNodes: Node<AtlasNodeData>[],
-  currentNodes: Node<AtlasNodeData>[],
-): Node<AtlasNodeData>[] {
-  const positions = new Map(currentNodes.map((node) => [node.id, node.position]));
-  return nextNodes.map((node) => ({
-    ...node,
-    position: positions.get(node.id) ?? node.position,
-    draggable: true,
-  }));
-}
 
 function nodeOpacity(
   nodeId: string,
@@ -303,6 +297,7 @@ export default function App() {
   const buildSigRef = useRef<string>("");
   const baseEdgesRef = useRef<Edge[]>([]);
   const hasSavedViewportRef = useRef(false);
+  const savedNodePositionsRef = useRef<ReturnType<typeof loadNodePositions>>(null);
   const prevSearchRef = useRef("");
   const neighborhoodFocusTouchedRef = useRef(false);
 
@@ -357,7 +352,7 @@ export default function App() {
   );
 
   const entryIds = useMemo(
-    () => graph?.meta?.entryNodeIds ?? findEntryNodes(graph ?? { nodes: [], edges: [] }).map((n) => n.id),
+    () => (graph ? findEntryNodes(graph).map((node) => node.id) : []),
     [graph],
   );
 
@@ -411,7 +406,7 @@ export default function App() {
   const loadGraph = useCallback(async () => {
     try {
       const res = await fetch("/graph.json");
-      if (!res.ok) throw new Error("graph.json not found. Run pnpm analyze first.");
+      if (!res.ok) throw new Error("graph.json not found. Run `pnpm analyze` first.");
       const data: unknown = await res.json();
       const validated = validateGraphData(data);
       if (!validated.ok) {
@@ -432,6 +427,7 @@ export default function App() {
 
   useEffect(() => {
     hasSavedViewportRef.current = Boolean(graphKey && loadViewport(graphKey));
+    savedNodePositionsRef.current = graphKey ? loadNodePositions(graphKey) : null;
   }, [graphKey]);
 
   useEffect(() => {
@@ -464,7 +460,7 @@ export default function App() {
 
       setNodes((current) =>
         patchNodePresentation(
-          mergeNodePositions(built.nodes, current),
+          mergeNodePositions(built.nodes, current, savedNodePositionsRef.current),
           searchLower,
           selected?.id ?? null,
           highlightIds,
@@ -637,23 +633,30 @@ export default function App() {
     (_event, dragged) => {
       setNodes((current) => {
         const { snapX, snapY } = computeHelperLines(dragged as Node<AtlasNodeData>, current);
-        if (snapX === undefined && snapY === undefined) return current;
+        const next =
+          snapX === undefined && snapY === undefined
+            ? current
+            : current.map((node) =>
+                node.id === dragged.id
+                  ? {
+                      ...node,
+                      position: {
+                        x: snapX ?? node.position.x,
+                        y: snapY ?? node.position.y,
+                      },
+                    }
+                  : node,
+              );
 
-        return current.map((node) =>
-          node.id === dragged.id
-            ? {
-                ...node,
-                position: {
-                  x: snapX ?? node.position.x,
-                  y: snapY ?? node.position.y,
-                },
-              }
-            : node,
-        );
+        if (graphKey) {
+          saveNodePositions(graphKey, nodePositionsFromNodes(next));
+        }
+
+        return next;
       });
       setHelperLines([]);
     },
-    [setNodes],
+    [setNodes, graphKey],
   );
 
   const showFromEntry = useCallback(() => {
@@ -661,14 +664,19 @@ export default function App() {
     const entries = findEntryNodes(graph);
     if (entries.length === 0) return;
 
+    const entry = entries[0]!;
     setClusterMode(false);
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
-    setSearch("");
-    setSelected(enrichNodeForDetails(entries[0], graph, nodeById));
+    if (isLargeGraph && !FORCE_FULL_GRAPH) {
+      setSearch(entry.name);
+    } else {
+      setSearch("");
+    }
+    setSelected(enrichNodeForDetails(entry, graph, nodeById));
     setFocusOnSelect(true);
     setCanvasFocusId(null);
-  }, [graph, nodeById]);
+  }, [graph, nodeById, isLargeGraph]);
 
   const compactLayout = useCallback(() => {
     setNodes((current) => relayoutFlowNodes(current, baseEdgesRef.current));

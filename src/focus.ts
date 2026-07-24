@@ -103,7 +103,7 @@ export function formatFocusReport(
 
   const sections = matches.map((node, index) => {
     if (matches.length > 1 && index > 0) {
-      return ["", colors.dim("─".repeat(40)), "", ...formatNodeFocus(node, colors)].join("\n");
+      return ["", colors.dim("-".repeat(40)), "", ...formatNodeFocus(node, colors)].join("\n");
     }
     return formatNodeFocus(node, colors).join("\n");
   });

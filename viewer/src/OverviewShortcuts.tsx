@@ -73,7 +73,7 @@ function OverviewSection<T>({
           </span>
           <span className="field-label">
             <span className="overview-shortcuts__heading-label">{title}</span>
-            <InfoTip text={tip} />
+            <InfoTip text={tip} nested />
           </span>
         </button>
         <span className="overview-shortcuts__count">{items.length}</span>

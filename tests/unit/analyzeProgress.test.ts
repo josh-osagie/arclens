@@ -97,7 +97,7 @@ describe("analyzeProgress helpers", () => {
   });
 
   it("formats completion with node and edge counts", () => {
-    expect(formatComplete(12, 8, 450)).toBe("Done — 12 nodes, 8 edges in 450ms");
+    expect(formatComplete(12, 8, 450)).toBe("Done - 12 nodes, 8 edges in 450ms");
   });
 
   it("batches parse updates for large projects", () => {

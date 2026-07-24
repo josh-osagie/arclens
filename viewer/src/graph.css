@@ -1125,15 +1125,12 @@
   gap: var(--atlas-space-3);
 }
 
-.graph-toggle--expanded .graph-toggle__main {
-  align-self: flex-start;
-  max-width: 100%;
-}
-
 .graph-toggle__main {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--atlas-space-4);
+  width: 100%;
 }
 
 .graph-toggle__label {
@@ -1142,10 +1139,6 @@
   font-size: var(--atlas-text-xs);
   color: var(--atlas-text-muted);
   text-transform: lowercase;
-}
-
-.graph-toggle__main .graph-toggle__label {
-  flex: 0 1 auto;
 }
 
 .graph-toggle__sub {

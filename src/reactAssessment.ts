@@ -70,7 +70,7 @@ export function assessReactProject(
       signals,
       message:
         "No React components, JSX, hooks, or entry files detected. " +
-        "This folder may not be a React app — try pointing at src/ or a package that uses React.",
+        "This folder may not be a React app - try pointing at src/ or a package that uses React.",
     };
   }
 

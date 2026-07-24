@@ -15,11 +15,17 @@ export function normalizeSlashes(filePath: string): string {
   return filePath.replace(/\\/g, "/");
 }
 
-export function isPathWithinRoot(rootDir: string, candidatePath: string): boolean {
+export function isPathWithinRoot(
+  rootDir: string,
+  candidatePath: string,
+): boolean {
   const root = path.resolve(rootDir);
   const candidate = path.resolve(candidatePath);
   const relative = path.relative(root, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
 }
 
 /**
@@ -95,7 +101,10 @@ export function readSnippetFromDisk(
   throw new Error(`File not found: ${relativeFile}`);
 }
 
-export function snippetSidecarPath(projectRoot: string, relativeFile: string): string {
+export function snippetSidecarPath(
+  projectRoot: string,
+  relativeFile: string,
+): string {
   return path.join(projectRoot, SNIPPETS_DIR, ...relativeFile.split("/"));
 }
 
@@ -114,13 +123,19 @@ export function writeSnippetSidecar(
     return null;
   }
 
-  const { content } = truncateLines(fs.readFileSync(sourcePath, "utf8"), maxLines);
+  const { content } = truncateLines(
+    fs.readFileSync(sourcePath, "utf8"),
+    maxLines,
+  );
   const outPath = snippetSidecarPath(projectRoot, relativeFile);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, content, "utf8");
   return outPath;
 }
 
+/**
+ * Write snippet sidecars for a list of file paths.
+ */
 export function writeSnippetSidecars(
   projectRoot: string,
   filePaths: Iterable<string>,
@@ -142,7 +157,9 @@ export function writeSnippetSidecars(
   return written;
 }
 
-export function parseSnippetLinesParam(value: string | null | undefined): number {
+export function parseSnippetLinesParam(
+  value: string | null | undefined,
+): number {
   const parsed = Number.parseInt(value ?? "", 10);
   if (Number.isNaN(parsed) || parsed <= 0) {
     return DEFAULT_SNIPPET_LINES;
@@ -150,7 +167,10 @@ export function parseSnippetLinesParam(value: string | null | undefined): number
   return Math.min(parsed, 500);
 }
 
-export function buildSnippetApiUrl(relativeFile: string, maxLines: number): string {
+export function buildSnippetApiUrl(
+  relativeFile: string,
+  maxLines: number,
+): string {
   const params = new URLSearchParams({
     file: relativeFile,
     lines: String(maxLines),

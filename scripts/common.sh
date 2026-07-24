@@ -25,3 +25,14 @@ ensure_chokidar_shell() {
   export SHELL="${SHELL:-$(command -v bash 2>/dev/null || echo /usr/bin/bash)}"
   export MSYS2_ARG_CONV_EXCL='*'
 }
+
+print_watch_help() {
+  cat <<'EOF'
+Watching for .ts/.tsx changes. Interactive commands:
+  r  restart — re-run analyze now
+  q  exit     — stop watching
+  ?  help     — show this message
+
+Ctrl+C also stops watch.
+EOF
+}

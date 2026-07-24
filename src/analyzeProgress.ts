@@ -195,7 +195,7 @@ export function shouldUpdateFileProgress(
 }
 
 export function formatComplete(nodes: number, edges: number, durationMs: number): string {
-  return `Done — ${nodes} node${nodes === 1 ? "" : "s"}, ${edges} edge${edges === 1 ? "" : "s"} in ${formatDuration(durationMs)}`;
+  return `Done - ${nodes} node${nodes === 1 ? "" : "s"}, ${edges} edge${edges === 1 ? "" : "s"} in ${formatDuration(durationMs)}`;
 }
 
 export function formatStartMessage(
@@ -322,11 +322,11 @@ function createLineReporter(options: AnalyzeProgressReporterOptions): AnalyzePro
     },
 
     complete(nodes, edges, durationMs) {
-      writeln(colors.green(`✔ ${formatComplete(nodes, edges, durationMs)}`));
+      writeln(colors.green(`[ok] ${formatComplete(nodes, edges, durationMs)}`));
     },
 
     fail(message) {
-      writeln(colors.red(`✖ ${message}`));
+      writeln(colors.red(`[fail] ${message}`));
     },
 
     stop() {
@@ -350,7 +350,7 @@ function createSpinnerReporter(options: AnalyzeProgressReporterOptions): Analyze
       lastParseUpdate = 0;
       lastCachedUpdate = 0;
       if (!spinner) {
-        spinner = ora({ color: "cyan", stream: process.stderr }).start();
+        spinner = ora({ color: "cyan", stream: process.stderr, spinner: "line" }).start();
       }
       setText(formatStartMessage(projectName, targetDir, Boolean(options.reanalyze)));
     },
@@ -386,14 +386,20 @@ function createSpinnerReporter(options: AnalyzeProgressReporterOptions): Analyze
 
     complete(nodes, edges, durationMs) {
       if (spinner) {
-        spinner.succeed(colors.green(formatComplete(nodes, edges, durationMs)));
+        spinner.stopAndPersist({
+          symbol: "[ok]",
+          text: colors.green(formatComplete(nodes, edges, durationMs)),
+        });
         spinner = null;
       }
     },
 
     fail(message) {
       if (spinner) {
-        spinner.fail(colors.red(message));
+        spinner.stopAndPersist({
+          symbol: "[fail]",
+          text: colors.red(message),
+        });
         spinner = null;
       }
     },

@@ -97,7 +97,7 @@ describe("commandRegistry", () => {
         ctrlKey: false,
         shiftKey: true,
         altKey: false,
-        target: document.body,
+        target: null,
       } as KeyboardEvent,
       built,
     );

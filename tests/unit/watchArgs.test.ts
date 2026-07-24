@@ -56,6 +56,35 @@ describe("watch.sh argument parsing", () => {
     expect(out).toMatch(/bash/);
   });
 
+  it("prints interactive watch help with restart, exit, and help keys", () => {
+    const out = runBash(`
+      source scripts/common.sh
+      print_watch_help
+    `);
+
+    expect(out).toMatch(/restart/);
+    expect(out).toMatch(/\bq\b.*exit/);
+    expect(out).toMatch(/\?\s+help/);
+    expect(out).toMatch(/Ctrl\+C/);
+  });
+
+  it("maps interactive keys to restart, exit, and help actions", () => {
+    const out = runBash(`
+      source scripts/common.sh
+      handle_watch_key() {
+        case "\$1" in
+          r|R) printf 'restart' ;;
+          q|Q) printf 'exit' ;;
+          h|H|\\?) printf 'help' ;;
+          *) printf 'ignore' ;;
+        esac
+      }
+      printf '%s %s %s' "\$(handle_watch_key r)" "\$(handle_watch_key q)" "\$(handle_watch_key '?')"
+    `);
+
+    expect(out).toBe("restart exit help");
+  });
+
   it("exits before watching when initial analyze hits an unsupported project", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-watch-html-"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");

@@ -174,7 +174,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       insights.push({
         severity: "tip",
         title: "Type-only React import",
-        detail: "No runtime React import needed for types — good for bundle size.",
+        detail: "No runtime React import needed for types - good for bundle size.",
         file: relFile(edge.from),
         line: edge.line,
         eslintRule: "@typescript-eslint/consistent-type-imports",
@@ -187,7 +187,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       severity: "error",
       title: `Rules of Hooks: ${violation.hook} called ${violation.context}`,
       detail:
-        "Hooks must run in the same order on every render — never inside conditions, loops, nested functions, or after early returns.",
+        "Hooks must run in the same order on every render - never inside conditions, loops, nested functions, or after early returns.",
       file: relFile(violation.file),
       line: violation.line,
       eslintRule: violation.eslintRule,
