@@ -1,4 +1,33 @@
+@import "tailwindcss";
 @import "./design/tokens.css";
+
+@theme inline {
+  --color-background: var(--atlas-canvas);
+  --color-foreground: var(--atlas-text);
+  --color-card: var(--atlas-surface);
+  --color-card-foreground: var(--atlas-text-body);
+  --color-popover: var(--atlas-surface);
+  --color-popover-foreground: var(--atlas-text-body);
+  --color-primary: var(--atlas-text);
+  --color-primary-foreground: var(--atlas-canvas);
+  --color-secondary: var(--atlas-surface-raised);
+  --color-secondary-foreground: var(--atlas-text-secondary);
+  --color-muted: var(--atlas-surface);
+  --color-muted-foreground: var(--atlas-text-muted);
+  --color-accent: var(--atlas-surface-hover);
+  --color-accent-foreground: var(--atlas-text);
+  --color-destructive: var(--atlas-error);
+  --color-destructive-foreground: var(--atlas-text);
+  --color-border: var(--atlas-border);
+  --color-input: var(--atlas-border-strong);
+  --color-ring: var(--atlas-border-focus);
+  --radius-sm: var(--atlas-radius-sm);
+  --radius-md: var(--atlas-radius-md);
+  --radius-lg: var(--atlas-radius-lg);
+  --radius-xl: var(--atlas-radius-xl);
+  --font-sans: var(--atlas-font);
+  --font-mono: var(--atlas-font);
+}
 
 #root {
   width: 100%;

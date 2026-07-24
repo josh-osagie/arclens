@@ -46,6 +46,13 @@ import {
 } from "./clusterGraph";
 import { FocusOnSelect } from "./FocusOnSelect";
 import { GraphActions } from "./GraphActions";
+import { CommandPalette } from "./features/command-palette/CommandPalette";
+import {
+  FitViewBridge,
+  triggerFitView,
+} from "./features/command-palette/fitViewBridge";
+import type { CommandPaletteActions } from "./features/command-palette/commandRegistry";
+import { MobileBanner } from "./features/mobile-banner/MobileBanner";
 import { FloatingPanel } from "./FloatingPanel";
 import {
   buildNodeById,
@@ -669,6 +676,61 @@ export default function App() {
     setFocusOnSelect(true);
   }, [setNodes]);
 
+  const copyText = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // ignore clipboard failures
+    }
+  }, []);
+
+  const commandPaletteState = useMemo(
+    () => ({
+      nodes: graph?.nodes ?? [],
+      clusterMode,
+      neighborhoodFocus,
+      compactLayoutDisabled: nodes.length === 0,
+      selected,
+      hasEntryNodes: graph ? findEntryNodes(graph).length > 0 : false,
+    }),
+    [graph, clusterMode, neighborhoodFocus, nodes.length, selected],
+  );
+
+  const commandPaletteActions = useMemo<CommandPaletteActions>(
+    () => ({
+      onJumpToNode: focusGraphNode,
+      onShowFromEntry: showFromEntry,
+      onCompactLayout: compactLayout,
+      onToggleClusterMode: () => {
+        setClusterMode((enabled) => {
+          const next = !enabled;
+          if (!next) {
+            setFullyExpandedFolders(new Set());
+            setPartialReveals(new Map());
+          }
+          return next;
+        });
+      },
+      onToggleNeighborhoodFocus: () => {
+        neighborhoodFocusTouchedRef.current = true;
+        setNeighborhoodFocus((enabled) => !enabled);
+      },
+      onFitView: () => triggerFitView(),
+      onFocusSelected: () => {
+        if (!selected) return;
+        setFocusOnSelect(true);
+        setCanvasFocusId(selected.id);
+      },
+      onCopySelectedName: () => {
+        if (selected?.name) void copyText(selected.name);
+      },
+      onCopySelectedPath: () => {
+        if (selected?.file && selected.file !== "external") void copyText(selected.file);
+      },
+    }),
+    [focusGraphNode, showFromEntry, compactLayout, selected, copyText],
+  );
+
   const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
   const detailsPanelDefault = useMemo(() => defaultDetailsPanelRect(), []);
 
@@ -710,6 +772,8 @@ export default function App() {
 
   return (
     <div className="graph-shell">
+      <MobileBanner />
+      <CommandPalette state={commandPaletteState} actions={commandPaletteActions} />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -738,6 +802,7 @@ export default function App() {
         proOptions={PRO_OPTIONS}
       >
         <ViewportPersistence graphKey={graphKey} enabled={Boolean(graphKey)} />
+        <FitViewBridge />
         <FitViewOnce
           viewKey={`${viewKey}:r${relayoutNonce}`}
           nodeCount={nodes.length}

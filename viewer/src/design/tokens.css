@@ -1,7 +1,4 @@
-/**
- * React Atlas viewer design tokens.
- * JS color maps live in tokens.ts — keep --atlas-type-* in sync.
- */
+/* JS color maps live in tokens.ts — keep --atlas-type-* in sync. */
 :root {
   /* Canvas */
   --atlas-canvas: #111111;

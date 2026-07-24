@@ -1,32 +1,23 @@
-# React + TypeScript + Vite
+# React Atlas Viewer
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Interactive graph viewer for React Atlas analysis output.
 
-Currently, two official plugins are available:
+## shadcn/ui
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Add components from `viewer/`:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm dlx shadcn@latest add <component>
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Command palette
+
+Press **Cmd+K** (macOS) or **Ctrl+K** (Windows/Linux) to open the command palette:
+
+- Jump to a node by name or file path
+- Run graph actions (from entry, fit view, compact layout, cluster folders, dim distant nodes)
+- Selection actions when a node is selected (focus, copy name, copy path)
+
+## Mobile banner
+
+On viewports ≤768px wide, a dismissible banner explains that React Atlas works best on desktop. Users can dismiss for the session or choose **Don't show again** (stored in `localStorage`).

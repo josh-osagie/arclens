@@ -11,9 +11,18 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
+    "@radix-ui/react-dialog": "^1.1.21",
+    "@radix-ui/react-slot": "^1.3.1",
+    "@tailwindcss/vite": "^4.3.3",
     "@xyflow/react": "^12.11.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.26.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/dagre": "^0.7.54",
