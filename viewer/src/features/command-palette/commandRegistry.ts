@@ -54,10 +54,12 @@ export function matchesCommandShortcut(
 }
 
 export function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
+  if (!target || typeof target !== "object") return false;
+  const element = target as { tagName?: string; isContentEditable?: boolean };
+  if (typeof element.tagName !== "string") return false;
+  const tag = element.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  return target.isContentEditable;
+  return Boolean(element.isContentEditable);
 }
 
 export function findBoundCommandAction(

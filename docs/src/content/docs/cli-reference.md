@@ -60,6 +60,16 @@ There is no separate `watch` subcommand in the CLI. Watch mode is provided by sh
 
 When watch runs, `REACT_ATLAS_WATCH_TARGET` is set so progress output behaves like `--reanalyze`.
 
+While watching (interactive terminal), use:
+
+| Key | Action |
+| --- | ------ |
+| `r` | Re-run analyze immediately |
+| `q` | Stop watching and exit |
+| `?` | Show available commands |
+
+Ctrl+C also stops watch. In non-interactive environments (CI, piped stdin), watch runs without the keyboard loop.
+
 Examples:
 
 ```bash
