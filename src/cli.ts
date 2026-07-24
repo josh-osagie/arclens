@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Command } from "commander";
 import { analyzeProject } from "./analyzeProject";
+import { UnsupportedProjectError } from "./discoverFiles";
 import { createAnalyzeProgressReporter } from "./analyzeProgress";
 import { printFocusReport } from "./focus";
 import { printReport, writeReportFile } from "./report";
@@ -148,7 +149,14 @@ program
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (options.quiet) {
+        if (error instanceof UnsupportedProjectError) {
+          progress.stop();
+          if (options.quiet) {
+            console.error(`react-atlas: ${message.split("\n")[0]}`);
+          } else {
+            console.error(message);
+          }
+        } else if (options.quiet) {
           progress.stop();
           console.error(`react-atlas: ${message}`);
         } else {
