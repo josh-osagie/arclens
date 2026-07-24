@@ -1,6 +1,13 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
 import { edgeColors } from "./design/tokens";
+import {
+  layoutNodesByPreset,
+  NODE_H,
+  NODE_W,
+  type LayoutContext,
+  type LayoutPreset,
+} from "./layoutPresets";
 import { DAGRE_LAYOUT_THRESHOLD } from "./viewerConfig";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 
@@ -24,8 +31,6 @@ export type ClusterNodeData = {
   dimmed?: boolean;
 };
 
-const NODE_W = 196;
-const NODE_H = 88;
 const GRID_GAP_X = 24;
 const GRID_GAP_Y = 24;
 const COMPACT_GRID_GAP_X = 12;
@@ -152,19 +157,27 @@ function layoutNodes(
   return applyNodePositions(nodes, positions);
 }
 
-/** Re-layout visible nodes with tighter spacing; ignores saved graph.json positions. */
+export type RelayoutOptions = LayoutContext & {
+  mode?: LayoutPreset;
+  /** @deprecated Use mode: "compact" instead */
+  compact?: boolean;
+};
+
+/** Re-layout visible nodes; ignores saved graph.json positions. */
 export function relayoutFlowNodes(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
-  options: { compact?: boolean } = {},
+  options: RelayoutOptions = {},
 ): Node<AtlasNodeData>[] {
   if (nodes.length === 0) return nodes;
 
-  const compact = options.compact ?? true;
+  const mode = options.mode ?? (options.compact ? "compact" : "tree-down");
+  const compact = mode === "compact";
   const layoutTargets = nodes.filter((node) => node.type !== "cluster");
-  const laidOut = layoutTargets.length <= DAGRE_LAYOUT_THRESHOLD
-    ? dagreLayout(layoutTargets, edges, compact)
-    : gridLayout(layoutTargets, compact);
+  const laidOut = layoutNodesByPreset(layoutTargets, edges, mode, {
+    entryIds: options.entryIds,
+    graph: options.graph,
+  });
 
   const positions = new Map(laidOut.map((node) => [node.id, node.position]));
   return applyNodePositions(nodes, positions, compact);

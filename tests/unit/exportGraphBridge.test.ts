@@ -15,7 +15,16 @@ describe("exportGraphBridge", () => {
 
     await triggerExport("png");
 
-    expect(handler).toHaveBeenCalledWith("png");
+    expect(handler).toHaveBeenCalledWith("png", undefined);
+  });
+
+  it("passes export scope options to the handler", async () => {
+    const handler = vi.fn(async () => undefined);
+    registerExportHandler(handler);
+
+    await triggerExport("svg", { scope: "full" });
+
+    expect(handler).toHaveBeenCalledWith("svg", { scope: "full" });
   });
 
   it("no-ops when no handler is registered", async () => {

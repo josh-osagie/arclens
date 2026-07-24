@@ -28,6 +28,13 @@
   touch-action: none;
 }
 
+.floating-panel--minimized {
+  min-width: 220px;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
 .floating-panel--drag,
 .floating-panel--resize {
   user-select: none;
@@ -43,6 +50,8 @@
   width: 100%;
   height: 100%;
   max-height: none;
+  background: color-mix(in srgb, var(--atlas-surface) 92%, transparent);
+  backdrop-filter: blur(10px);
 }
 
 .floating-panel .graph-sidebar--main {
@@ -56,12 +65,18 @@
   padding: var(--atlas-space-5) var(--atlas-space-6) var(--atlas-space-3);
   border-bottom: none;
   cursor: grab;
+  gap: var(--atlas-space-4);
+}
+
+.floating-panel .graph-sidebar--main .graph-sidebar__title-row {
+  flex: 1;
+  min-width: 0;
 }
 
 .floating-panel .graph-sidebar--main .graph-sidebar__sticky {
   flex-shrink: 0;
   border-bottom: 1px solid var(--atlas-border-subtle);
-  background: var(--atlas-surface);
+  background: color-mix(in srgb, var(--atlas-surface) 92%, transparent);
 }
 
 .floating-panel .graph-sidebar--main .graph-sidebar__search-wrap {
@@ -89,6 +104,12 @@
   padding: var(--atlas-space-5) var(--atlas-space-6) var(--atlas-space-3);
   border-bottom: 1px solid var(--atlas-border-subtle);
   z-index: 2;
+  gap: var(--atlas-space-4);
+}
+
+.floating-panel .graph-sidebar--details .graph-sidebar__title-row {
+  flex: 1;
+  min-width: 0;
 }
 
 .floating-panel .graph-sidebar--details .graph-sidebar__scroll {
@@ -129,6 +150,83 @@
 .floating-panel:hover .floating-panel__resize-handle,
 .floating-panel--resize .floating-panel__resize-handle {
   opacity: 0.85;
+}
+
+.floating-panel__minimize {
+  flex-shrink: 0;
+}
+
+.floating-panel__chip {
+  display: flex;
+  align-items: center;
+  gap: var(--atlas-space-3);
+  width: 100%;
+  height: 100%;
+  min-height: 42px;
+  padding: 0 var(--atlas-space-3) 0 var(--atlas-space-4);
+  border-radius: var(--atlas-radius-xl);
+  border: 1px solid var(--atlas-border);
+  background: color-mix(in srgb, var(--atlas-surface) 94%, transparent);
+  box-shadow: var(--atlas-shadow-lg);
+  backdrop-filter: blur(10px);
+  cursor: grab;
+}
+
+.floating-panel--drag .floating-panel__chip {
+  cursor: grabbing;
+}
+
+.floating-panel__chip-grip {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  color: var(--atlas-text-faint);
+  opacity: 0.75;
+  user-select: none;
+}
+
+.floating-panel__chip-label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--atlas-text-sm);
+  font-weight: var(--atlas-weight-medium);
+  color: var(--atlas-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.floating-panel__chip-restore {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--atlas-space-2);
+  height: 30px;
+  padding: 0 var(--atlas-space-3);
+  border: 1px solid var(--atlas-border-faint);
+  border-radius: var(--atlas-radius-md);
+  background: var(--atlas-surface-raised);
+  color: var(--atlas-text-muted);
+  font-size: var(--atlas-text-xs);
+  font-family: inherit;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition:
+    background var(--atlas-duration-fast) var(--atlas-ease),
+    color var(--atlas-duration-fast) var(--atlas-ease),
+    border-color var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.floating-panel__chip-restore-text {
+  line-height: 1;
+}
+
+.floating-panel__chip-restore:hover {
+  background: var(--atlas-surface-hover);
+  border-color: var(--atlas-border);
+  color: var(--atlas-text);
 }
 
 .graph-shell--empty {
@@ -437,6 +535,28 @@
   align-items: center;
   gap: var(--atlas-space-2);
   flex-shrink: 0;
+}
+
+.graph-sidebar__toolbar-btn {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--atlas-radius-lg);
+  background: var(--atlas-surface-hover);
+  color: var(--atlas-text-muted);
+  cursor: pointer;
+  transition:
+    background var(--atlas-duration-fast) var(--atlas-ease),
+    color var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.graph-sidebar__toolbar-btn:hover {
+  background: var(--atlas-surface-active);
+  color: var(--atlas-text);
 }
 
 .details-field-menu {
@@ -1187,6 +1307,15 @@
   color: var(--atlas-text);
 }
 
+.graph-layout__chips {
+  flex-wrap: wrap;
+}
+
+.graph-toggle__chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .toggle-switch {
   flex-shrink: 0;
   position: relative;
@@ -1813,13 +1942,56 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 148px;
+  min-width: 196px;
   padding: 4px;
   border-radius: var(--atlas-radius-lg);
   border: 1px solid var(--atlas-border);
   background: color-mix(in srgb, var(--atlas-surface) 94%, transparent);
   box-shadow: var(--atlas-shadow-sm);
   backdrop-filter: blur(10px);
+}
+
+.export-controls__scope {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--atlas-radius-md);
+  cursor: pointer;
+  user-select: none;
+}
+
+.export-controls__scope:hover {
+  background: var(--atlas-surface-hover);
+}
+
+.export-controls__scope input {
+  margin-top: 2px;
+  accent-color: var(--atlas-accent);
+}
+
+.export-controls__scope-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.export-controls__scope-label {
+  font-size: var(--atlas-text-sm);
+  color: var(--atlas-text-body);
+}
+
+.export-controls__scope-hint {
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-faint);
+  line-height: var(--atlas-leading-normal);
+}
+
+.export-controls__divider {
+  height: 1px;
+  margin: 2px 6px;
+  background: var(--atlas-border-subtle);
 }
 
 .export-controls__item {

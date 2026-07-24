@@ -1,4 +1,5 @@
 import { InfoTip } from "./InfoTip";
+import { LAYOUT_PRESETS, type LayoutPreset } from "./layoutPresets";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 type Props = {
@@ -13,8 +14,9 @@ type Props = {
   expandedFolders: string[];
   onShowFromEntry: () => void;
   onCollapseFolders: () => void;
-  onCompactLayout: () => void;
-  compactLayoutDisabled: boolean;
+  layoutPreset: LayoutPreset;
+  onLayoutPresetChange: (preset: LayoutPreset) => void;
+  layoutDisabled: boolean;
 };
 
 export function GraphActions({
@@ -29,8 +31,9 @@ export function GraphActions({
   expandedFolders,
   onShowFromEntry,
   onCollapseFolders,
-  onCompactLayout,
-  compactLayoutDisabled,
+  layoutPreset,
+  onLayoutPresetChange,
+  layoutDisabled,
 }: Props) {
   const collapseLabel =
     expandedFolders.length === 1
@@ -48,17 +51,38 @@ export function GraphActions({
             {collapseLabel}
           </button>
         )}
-        <button
-          type="button"
-          className="graph-actions__btn"
-          onClick={onCompactLayout}
-          disabled={compactLayoutDisabled}
-        >
-          Compact layout
-        </button>
       </div>
 
       <div className="graph-toggles">
+        <div className="graph-toggle graph-toggle--expanded">
+          <div className="graph-toggle__main">
+            <span className="graph-toggle__label">
+              <span className="field-label">
+                <span className="field-label__text">Layout</span>
+                <InfoTip text="Choose how nodes are arranged on the canvas. Fit view runs automatically after changing layout." />
+              </span>
+            </span>
+          </div>
+          <div
+            className="graph-toggle__chips graph-layout__chips"
+            role="group"
+            aria-label="Layout preset"
+          >
+            {LAYOUT_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className="graph-toggle__chip"
+                aria-pressed={layoutPreset === preset.id}
+                disabled={layoutDisabled}
+                onClick={() => onLayoutPresetChange(preset.id)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="graph-toggle">
           <span className="graph-toggle__label">
             <span className="field-label">

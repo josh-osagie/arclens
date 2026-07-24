@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Panel, useReactFlow, useViewport } from "@xyflow/react";
 import { triggerExport } from "./exportGraphBridge";
+import { loadExportScope, saveExportScope, type ExportScope } from "./exportPrefs";
 
 function FitViewIcon() {
   return (
@@ -41,18 +42,28 @@ export function ZoomControls() {
   const percent = Math.round(zoom * 100);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportScope, setExportScope] = useState<ExportScope>(() => loadExportScope());
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const runExport = useCallback(async (format: "png" | "svg") => {
-    setExporting(true);
-    try {
-      await triggerExport(format);
-    } catch (error) {
-      console.error("Graph export failed", error);
-    } finally {
-      setExporting(false);
-      setMenuOpen(false);
-    }
+  const runExport = useCallback(
+    async (format: "png" | "svg") => {
+      setExporting(true);
+      try {
+        await triggerExport(format, { scope: exportScope });
+      } catch (error) {
+        console.error("Graph export failed", error);
+      } finally {
+        setExporting(false);
+        setMenuOpen(false);
+      }
+    },
+    [exportScope],
+  );
+
+  const onScopeChange = useCallback((fullGraph: boolean) => {
+    const scope: ExportScope = fullGraph ? "full" : "viewport";
+    setExportScope(scope);
+    saveExportScope(scope);
   }, []);
 
   useEffect(() => {
@@ -73,6 +84,24 @@ export function ZoomControls() {
       <div ref={wrapRef} className="export-controls">
         {menuOpen && (
           <div className="export-controls__menu" role="menu" aria-label="Export graph">
+            <label className="export-controls__scope">
+              <input
+                type="checkbox"
+                checked={exportScope === "full"}
+                disabled={exporting}
+                onChange={(event) => onScopeChange(event.target.checked)}
+                onPointerDown={(event) => event.stopPropagation()}
+              />
+              <span className="export-controls__scope-text">
+                <span className="export-controls__scope-label">Export full graph</span>
+                <span className="export-controls__scope-hint">
+                  {exportScope === "full"
+                    ? "Fits all nodes, then captures"
+                    : "Captures current view (default)"}
+                </span>
+              </span>
+            </label>
+            <div className="export-controls__divider" aria-hidden="true" />
             <button
               type="button"
               className="export-controls__item"

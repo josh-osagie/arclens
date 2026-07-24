@@ -55,7 +55,7 @@ import {
 } from "./features/command-palette/fitViewBridge";
 import type { CommandPaletteActions } from "./features/command-palette/commandRegistry";
 import { MobileBanner } from "./features/mobile-banner/MobileBanner";
-import { FloatingPanel } from "./FloatingPanel";
+import { FloatingPanel, PanelMinimizeButton } from "./FloatingPanel";
 import {
   buildNodeById,
   enrichNodeForDetails,
@@ -112,8 +112,14 @@ import {
   OVERVIEW_TOP_FOLDERS,
   VIRTUALIZE_THRESHOLD,
 } from "./viewerConfig";
-import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
 import "./graph.css";
+import {
+  loadLayoutPreset,
+  nextLayoutPreset,
+  saveLayoutPreset,
+  type LayoutPreset,
+} from "./layoutPresets";
+import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
 
 const flowNodeTypes = { atlas: AtlasNode, cluster: AtlasClusterNode };
 
@@ -295,6 +301,7 @@ export default function App() {
   const [spotlightFolder, setSpotlightFolder] = useState<string | null>(null);
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
   const [relayoutNonce, setRelayoutNonce] = useState(0);
+  const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() => loadLayoutPreset());
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
@@ -718,11 +725,26 @@ export default function App() {
     setCanvasFocusId(null);
   }, [graph, nodeById, isLargeGraph]);
 
-  const compactLayout = useCallback(() => {
-    setNodes((current) => relayoutFlowNodes(current, baseEdgesRef.current));
-    setRelayoutNonce((value) => value + 1);
-    setFocusOnSelect(true);
-  }, [setNodes]);
+  const applyLayout = useCallback(
+    (preset: LayoutPreset) => {
+      setLayoutPreset(preset);
+      saveLayoutPreset(preset);
+      setNodes((current) =>
+        relayoutFlowNodes(current, baseEdgesRef.current, {
+          mode: preset,
+          entryIds,
+          graph: graph ?? undefined,
+        }),
+      );
+      setRelayoutNonce((value) => value + 1);
+      setFocusOnSelect(true);
+    },
+    [setNodes, entryIds, graph],
+  );
+
+  const cycleLayout = useCallback(() => {
+    applyLayout(nextLayoutPreset(layoutPreset));
+  }, [applyLayout, layoutPreset]);
 
   const copyText = useCallback(async (text: string) => {
     try {
@@ -737,18 +759,20 @@ export default function App() {
       nodes: graph?.nodes ?? [],
       clusterMode,
       neighborhoodFocus,
-      compactLayoutDisabled: nodes.length === 0,
+      layoutPreset,
+      layoutDisabled: nodes.length === 0,
       selected,
       hasEntryNodes: graph ? findEntryNodes(graph).length > 0 : false,
     }),
-    [graph, clusterMode, neighborhoodFocus, nodes.length, selected],
+    [graph, clusterMode, neighborhoodFocus, nodes.length, selected, layoutPreset],
   );
 
   const commandPaletteActions = useMemo<CommandPaletteActions>(
     () => ({
       onJumpToNode: focusGraphNode,
       onShowFromEntry: showFromEntry,
-      onCompactLayout: compactLayout,
+      onApplyLayout: applyLayout,
+      onCycleLayout: cycleLayout,
       onToggleClusterMode: () => {
         setClusterMode((enabled) => {
           const next = !enabled;
@@ -782,7 +806,7 @@ export default function App() {
         if (selected?.file && selected.file !== "external") void copyText(selected.file);
       },
     }),
-    [focusGraphNode, showFromEntry, compactLayout, selected, copyText],
+    [focusGraphNode, showFromEntry, applyLayout, cycleLayout, selected, copyText],
   );
 
   const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
@@ -905,17 +929,26 @@ export default function App() {
         <InsightsBadge insights={graph.meta.insights} />
       )}
 
-      <FloatingPanel id="main" defaultRect={mainPanelDefault}>
+      <FloatingPanel
+        id="main"
+        defaultRect={mainPanelDefault}
+        minimizedLabel={graph.meta?.projectName ?? "Explorer"}
+      >
         <div className="graph-sidebar graph-sidebar--main">
           <div className="graph-sidebar__sticky">
             <div className="graph-sidebar__header graph-sidebar__header--compact">
-              <div>
-                {graph.meta?.projectName && (
-                  <p className="graph-sidebar__project">{graph.meta.projectName}</p>
-                )}
-                <p className="graph-sidebar__stats graph-sidebar__stats--inline">
-                  {graph.nodes.length} nodes · {graph.edges.length} edges
-                </p>
+              <div className="graph-sidebar__title-row">
+                <div>
+                  {graph.meta?.projectName && (
+                    <p className="graph-sidebar__project">{graph.meta.projectName}</p>
+                  )}
+                  <p className="graph-sidebar__stats graph-sidebar__stats--inline">
+                    {graph.nodes.length} nodes · {graph.edges.length} edges
+                  </p>
+                </div>
+              </div>
+              <div className="graph-sidebar__header-actions">
+                <PanelMinimizeButton />
               </div>
             </div>
             <div className="graph-sidebar__search-wrap">
@@ -965,8 +998,9 @@ export default function App() {
                   collapseAllClusterFolders();
                 }
               }}
-              onCompactLayout={compactLayout}
-              compactLayoutDisabled={nodes.length === 0}
+              onLayoutPresetChange={applyLayout}
+              layoutPreset={layoutPreset}
+              layoutDisabled={nodes.length === 0}
             />
 
             {isLargeGraph && (
@@ -1032,7 +1066,12 @@ export default function App() {
       </FloatingPanel>
 
       {selected && !selected.cluster && (
-        <FloatingPanel id="details" defaultRect={detailsPanelDefault}>
+        <FloatingPanel
+          id="details"
+          className="floating-panel--details"
+          defaultRect={detailsPanelDefault}
+          minimizedLabel={selected.name}
+        >
           <NodeDetails
             node={selected}
             projectRoot={graph.meta?.targetDir}

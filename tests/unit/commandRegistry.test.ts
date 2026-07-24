@@ -26,7 +26,8 @@ const sampleNodes: AtlasGraphNode[] = [
 const paletteActions = {
   onJumpToNode: vi.fn(),
   onShowFromEntry: vi.fn(),
-  onCompactLayout: vi.fn(),
+  onApplyLayout: vi.fn(),
+  onCycleLayout: vi.fn(),
   onToggleClusterMode: vi.fn(),
   onToggleNeighborhoodFocus: vi.fn(),
   onFitView: vi.fn(),
@@ -41,7 +42,8 @@ const paletteState = {
   nodes: sampleNodes,
   clusterMode: false,
   neighborhoodFocus: true,
-  compactLayoutDisabled: false,
+  layoutDisabled: false,
+  layoutPreset: "tree-down" as const,
   selected: sampleNodes[0]!,
   hasEntryNodes: true,
 };
@@ -58,7 +60,7 @@ describe("commandRegistry", () => {
 
     const grouped = groupCommandActions(built);
     expect(grouped.get("navigate")).toHaveLength(1);
-    expect(grouped.get("graph")).toHaveLength(6);
+    expect(grouped.get("graph")).toHaveLength(12);
     expect(grouped.get("selection")).toHaveLength(3);
 
     const dimAction = built.find((action) => action.id === "toggle-dim-distant");

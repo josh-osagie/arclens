@@ -1,4 +1,8 @@
 import type { AtlasGraphNode } from "@/types";
+import {
+  LAYOUT_PRESETS,
+  type LayoutPreset,
+} from "../../layoutPresets";
 
 export type CommandGroupId = "navigate" | "graph" | "selection";
 
@@ -27,7 +31,7 @@ const IS_MAC =
 export const COMMAND_SHORTCUTS: Record<string, CommandShortcutSpec> = {
   "show-from-entry": { key: "E" },
   "fit-view": { shift: true, key: "F", global: true },
-  "compact-layout": { shift: true, key: "L", global: true },
+  "cycle-layout": { shift: true, key: "L", global: true },
   "toggle-cluster-folders": { shift: true, key: "C", global: true },
   "toggle-dim-distant": { shift: true, key: "D", global: true },
   "focus-selected": { key: "F", global: true },
@@ -78,7 +82,8 @@ export function findBoundCommandAction(
 export type CommandPaletteActions = {
   onJumpToNode: (node: AtlasGraphNode) => void;
   onShowFromEntry: () => void;
-  onCompactLayout: () => void;
+  onApplyLayout: (preset: LayoutPreset) => void;
+  onCycleLayout: () => void;
   onToggleClusterMode: () => void;
   onToggleNeighborhoodFocus: () => void;
   onFitView: () => void;
@@ -93,7 +98,8 @@ export type CommandPaletteState = {
   nodes: AtlasGraphNode[];
   clusterMode: boolean;
   neighborhoodFocus: boolean;
-  compactLayoutDisabled: boolean;
+  layoutDisabled: boolean;
+  layoutPreset: LayoutPreset;
   selected: AtlasGraphNode | null;
   hasEntryNodes: boolean;
 };
@@ -142,6 +148,17 @@ export function buildCommandActions(
     };
   };
 
+  const layoutActions: CommandAction[] = LAYOUT_PRESETS.map((preset) => ({
+    id: `layout-${preset.id}`,
+    group: "graph" as const,
+    label: `Layout: ${preset.label}`,
+    keywords: ["layout", "relayout", "dagre", preset.id, preset.label.toLowerCase()],
+    disabled: state.layoutDisabled,
+    run: () => actions.onApplyLayout(preset.id),
+  }));
+
+  const activeLayout = LAYOUT_PRESETS.find((preset) => preset.id === state.layoutPreset);
+
   return [
     withShortcut({
       id: "show-from-entry",
@@ -159,13 +176,16 @@ export function buildCommandActions(
       run: actions.onFitView,
     }),
     withShortcut({
-      id: "compact-layout",
+      id: "cycle-layout",
       group: "graph",
-      label: "Compact layout",
-      keywords: ["relayout", "dagre"],
-      disabled: state.compactLayoutDisabled,
-      run: actions.onCompactLayout,
+      label: activeLayout
+        ? `Cycle layout (current: ${activeLayout.label})`
+        : "Cycle layout preset",
+      keywords: ["layout", "relayout", "compact", "dagre", "cycle"],
+      disabled: state.layoutDisabled,
+      run: actions.onCycleLayout,
     }),
+    ...layoutActions,
     {
       id: "export-png",
       group: "graph",

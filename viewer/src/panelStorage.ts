@@ -11,6 +11,31 @@ export function panelStorageKey(id: string): string {
   return `${STORAGE_PREFIX}${id}`;
 }
 
+export function panelMinimizedKey(id: string): string {
+  return `${STORAGE_PREFIX}${id}:minimized`;
+}
+
+export function loadPanelMinimized(id: string): boolean {
+  try {
+    return localStorage.getItem(panelMinimizedKey(id)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function savePanelMinimized(id: string, minimized: boolean): void {
+  try {
+    const key = panelMinimizedKey(id);
+    if (minimized) {
+      localStorage.setItem(key, "1");
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore quota errors
+  }
+}
+
 export function loadPanelRect(id: string): PanelRect | null {
   try {
     const raw = localStorage.getItem(panelStorageKey(id));

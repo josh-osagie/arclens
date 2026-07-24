@@ -1,4 +1,5 @@
 import { DetailsFieldMenu, useDetailsFieldPrefs } from "./DetailsFieldMenu";
+import { PanelMinimizeButton } from "./FloatingPanel";
 import { FileSnippetPreview } from "./FileSnippetPreview";
 import { InfoTip } from "./InfoTip";
 import type { DetailsFieldPrefs } from "./detailsPanelPrefs";
@@ -103,6 +104,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
         </div>
         <div className="graph-sidebar__header-actions">
           <DetailsFieldMenu prefs={fieldPrefs} onChange={setFieldPrefs} />
+          <PanelMinimizeButton />
           <button type="button" className="graph-sidebar__close" onClick={onClose}>
             ×
           </button>
