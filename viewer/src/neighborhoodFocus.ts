@@ -2,6 +2,20 @@ import type { AtlasGraph } from "./types";
 
 export const DEFAULT_NEIGHBORHOOD_HOPS = 2;
 
+/** Default when the user has not explicitly toggled dim-distant-nodes. */
+export function defaultNeighborhoodFocusEnabled(isLargeGraph: boolean): boolean {
+  return isLargeGraph;
+}
+
+/** Auto-enable on node select only before the user has set a preference. */
+export function shouldAutoEnableNeighborhoodFocus(
+  isLargeGraph: boolean,
+  userHasToggled: boolean,
+  currentlyEnabled: boolean,
+): boolean {
+  return isLargeGraph && !userHasToggled && !currentlyEnabled;
+}
+
 /**
  * BFS over undirected adjacency: selected node plus nodes within `hops` edges.
  */

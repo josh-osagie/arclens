@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   computeNeighborhoodIds,
+  defaultNeighborhoodFocusEnabled,
   resolveHighlightIds,
+  shouldAutoEnableNeighborhoodFocus,
 } from "../../viewer/src/neighborhoodFocus";
 import type { AtlasGraph } from "../../viewer/src/types";
 
@@ -60,5 +62,17 @@ describe("neighborhoodFocus", () => {
       neighborhoodHops: 2,
     });
     expect(result).toEqual(connected);
+  });
+
+  it("defaults dim-distant-nodes on for large graphs only", () => {
+    expect(defaultNeighborhoodFocusEnabled(true)).toBe(true);
+    expect(defaultNeighborhoodFocusEnabled(false)).toBe(false);
+  });
+
+  it("auto-enables neighborhood focus on large graph select before user toggles", () => {
+    expect(shouldAutoEnableNeighborhoodFocus(true, false, false)).toBe(true);
+    expect(shouldAutoEnableNeighborhoodFocus(true, false, true)).toBe(false);
+    expect(shouldAutoEnableNeighborhoodFocus(false, false, false)).toBe(false);
+    expect(shouldAutoEnableNeighborhoodFocus(true, true, false)).toBe(false);
   });
 });

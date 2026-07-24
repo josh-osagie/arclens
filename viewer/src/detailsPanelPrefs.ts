@@ -61,3 +61,24 @@ export function saveDetailsFields(prefs: DetailsFieldPrefs): void {
     // ignore quota errors
   }
 }
+
+const SOURCE_PREVIEW_KEY = "react-atlas-source-preview-expanded";
+
+/** `true` = source preview section expanded */
+export function loadSourcePreviewExpanded(): boolean {
+  try {
+    const raw = localStorage.getItem(SOURCE_PREVIEW_KEY);
+    if (raw === null) return true;
+    return raw === "true";
+  } catch {
+    return true;
+  }
+}
+
+export function saveSourcePreviewExpanded(expanded: boolean): void {
+  try {
+    localStorage.setItem(SOURCE_PREVIEW_KEY, String(expanded));
+  } catch {
+    // ignore quota errors
+  }
+}

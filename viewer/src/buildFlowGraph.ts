@@ -28,11 +28,20 @@ const NODE_W = 196;
 const NODE_H = 88;
 const GRID_GAP_X = 24;
 const GRID_GAP_Y = 24;
+const COMPACT_GRID_GAP_X = 12;
+const COMPACT_GRID_GAP_Y = 12;
 
-function dagreLayout(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
+const DAGRE_DEFAULT = { nodesep: 70, ranksep: 90, marginx: 40, marginy: 40 };
+const DAGRE_COMPACT = { nodesep: 35, ranksep: 45, marginx: 20, marginy: 20 };
+
+function dagreLayout(
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  compact = false,
+) {
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 70, ranksep: 90, marginx: 40, marginy: 40 });
+  g.setGraph({ rankdir: "TB", ...(compact ? DAGRE_COMPACT : DAGRE_DEFAULT) });
 
   for (const node of nodes) {
     g.setNode(node.id, { width: NODE_W, height: NODE_H });
@@ -60,10 +69,12 @@ function dagreLayout(nodes: Node<AtlasNodeData>[], edges: Edge[]) {
   });
 }
 
-function gridLayout(nodes: Node<AtlasNodeData>[]) {
+function gridLayout(nodes: Node<AtlasNodeData>[], compact = false) {
   const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
-  const cellW = NODE_W + GRID_GAP_X;
-  const cellH = NODE_H + GRID_GAP_Y;
+  const gapX = compact ? COMPACT_GRID_GAP_X : GRID_GAP_X;
+  const gapY = compact ? COMPACT_GRID_GAP_Y : GRID_GAP_Y;
+  const cellW = NODE_W + gapX;
+  const cellH = NODE_H + gapY;
 
   return nodes.map((node, index) => ({
     ...node,
@@ -96,6 +107,34 @@ function layoutFromSaved(graph: AtlasGraph, nodes: Node<AtlasNodeData>[]) {
   });
 }
 
+function applyNodePositions(
+  nodes: Node<AtlasNodeData>[],
+  positions: Map<string, { x: number; y: number }>,
+  compact = false,
+) {
+  const gapX = compact ? COMPACT_GRID_GAP_X : GRID_GAP_X;
+  const gapY = compact ? COMPACT_GRID_GAP_Y : GRID_GAP_Y;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
+  const cellW = NODE_W + gapX;
+  const cellH = NODE_H + gapY;
+
+  return nodes.map((node, index) => {
+    if (node.type === "cluster") {
+      return {
+        ...node,
+        position: {
+          x: (index % cols) * cellW,
+          y: Math.floor(index / cols) * cellH,
+        },
+      };
+    }
+    return {
+      ...node,
+      position: positions.get(node.id) ?? node.position,
+    };
+  });
+}
+
 function layoutNodes(
   graph: AtlasGraph,
   nodes: Node<AtlasNodeData>[],
@@ -110,25 +149,25 @@ function layoutNodes(
     : gridLayout(layoutTargets));
 
   const positions = new Map(laidOut.map((node) => [node.id, node.position]));
+  return applyNodePositions(nodes, positions);
+}
 
-  return nodes.map((node, index) => {
-    if (node.type === "cluster") {
-      const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
-      const cellW = NODE_W + GRID_GAP_X;
-      const cellH = NODE_H + GRID_GAP_Y;
-      return {
-        ...node,
-        position: {
-          x: (index % cols) * cellW,
-          y: Math.floor(index / cols) * cellH,
-        },
-      };
-    }
-    return {
-      ...node,
-      position: positions.get(node.id) ?? node.position,
-    };
-  });
+/** Re-layout visible nodes with tighter spacing; ignores saved graph.json positions. */
+export function relayoutFlowNodes(
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  options: { compact?: boolean } = {},
+): Node<AtlasNodeData>[] {
+  if (nodes.length === 0) return nodes;
+
+  const compact = options.compact ?? true;
+  const layoutTargets = nodes.filter((node) => node.type !== "cluster");
+  const laidOut = layoutTargets.length <= DAGRE_LAYOUT_THRESHOLD
+    ? dagreLayout(layoutTargets, edges, compact)
+    : gridLayout(layoutTargets, compact);
+
+  const positions = new Map(laidOut.map((node) => [node.id, node.position]));
+  return applyNodePositions(nodes, positions, compact);
 }
 
 export function buildFlowGraph(

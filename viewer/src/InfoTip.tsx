@@ -5,7 +5,12 @@ type Props = {
 export function InfoTip({ text }: Props) {
   return (
     <span className="info-tip">
-      <button type="button" className="info-tip__trigger" aria-label={text}>
+      <button
+        type="button"
+        className="info-tip__trigger"
+        aria-label={text}
+        onClick={(event) => event.stopPropagation()}
+      >
         i
       </button>
       <span className="info-tip__tooltip" role="tooltip">

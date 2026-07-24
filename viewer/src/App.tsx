@@ -26,6 +26,7 @@ import { AtlasNode } from "./AtlasNode";
 import {
   buildFlowGraph,
   nodeTypes as legendTypes,
+  relayoutFlowNodes,
   type AtlasNodeData,
   typeColors,
 } from "./buildFlowGraph";
@@ -44,6 +45,7 @@ import {
   nextClusterReveal,
 } from "./clusterGraph";
 import { FocusOnSelect } from "./FocusOnSelect";
+import { GraphActions } from "./GraphActions";
 import { FloatingPanel } from "./FloatingPanel";
 import {
   buildNodeById,
@@ -74,7 +76,9 @@ import {
 } from "./pathHighlight";
 import {
   DEFAULT_NEIGHBORHOOD_HOPS,
+  defaultNeighborhoodFocusEnabled,
   resolveHighlightIds,
+  shouldAutoEnableNeighborhoodFocus,
 } from "./neighborhoodFocus";
 import {
   emptyGraphPresentation,
@@ -286,12 +290,14 @@ export default function App() {
   const [neighborhoodFocus, setNeighborhoodFocus] = useState(false);
   const [neighborhoodHops, setNeighborhoodHops] = useState(DEFAULT_NEIGHBORHOOD_HOPS);
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
+  const [relayoutNonce, setRelayoutNonce] = useState(0);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
   const baseEdgesRef = useRef<Edge[]>([]);
   const hasSavedViewportRef = useRef(false);
   const prevSearchRef = useRef("");
+  const neighborhoodFocusTouchedRef = useRef(false);
 
   const deferredSearch = useDeferredValue(search);
   const searchLower = deferredSearch.trim().toLowerCase();
@@ -302,11 +308,13 @@ export default function App() {
 
   useEffect(() => {
     if (!graph) return;
-    setClusterMode(graph.nodes.length > LARGE_GRAPH_THRESHOLD);
+    neighborhoodFocusTouchedRef.current = false;
+    const large = graph.nodes.length > LARGE_GRAPH_THRESHOLD;
+    setClusterMode(large);
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
-    setNeighborhoodFocus(graph.nodes.length > LARGE_GRAPH_THRESHOLD);
-  }, [graphKey, graph]);
+    setNeighborhoodFocus(defaultNeighborhoodFocusEnabled(large));
+  }, [graphKey]);
 
   const viewSelection = useMemo(() => {
     if (!graph) {
@@ -586,13 +594,24 @@ export default function App() {
       const base = nodeById.get(node.data.nodeId ?? node.id);
       if (!base) return;
       setCanvasFocusId(null);
-      if (isLargeGraph && neighborhoodFocus === false) {
+      if (
+        shouldAutoEnableNeighborhoodFocus(
+          isLargeGraph,
+          neighborhoodFocusTouchedRef.current,
+          neighborhoodFocus,
+        )
+      ) {
         setNeighborhoodFocus(true);
       }
       setSelected(enrichNodeForDetails(base, graph, nodeById));
     },
     [graph, nodeById, expandClusterFolder, collapseClusterFolder, expandedFolders, isLargeGraph, neighborhoodFocus],
   );
+
+  const onNeighborhoodFocusChange = useCallback((enabled: boolean) => {
+    neighborhoodFocusTouchedRef.current = true;
+    setNeighborhoodFocus(enabled);
+  }, []);
 
   const onPaneClick = useCallback(() => {
     setSelected(null);
@@ -643,6 +662,12 @@ export default function App() {
     setFocusOnSelect(true);
     setCanvasFocusId(null);
   }, [graph, nodeById]);
+
+  const compactLayout = useCallback(() => {
+    setNodes((current) => relayoutFlowNodes(current, baseEdgesRef.current));
+    setRelayoutNonce((value) => value + 1);
+    setFocusOnSelect(true);
+  }, [setNodes]);
 
   const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
   const detailsPanelDefault = useMemo(() => defaultDetailsPanelRect(), []);
@@ -714,9 +739,9 @@ export default function App() {
       >
         <ViewportPersistence graphKey={graphKey} enabled={Boolean(graphKey)} />
         <FitViewOnce
-          viewKey={viewKey}
+          viewKey={`${viewKey}:r${relayoutNonce}`}
           nodeCount={nodes.length}
-          skip={hasSavedViewportRef.current}
+          skip={hasSavedViewportRef.current && relayoutNonce === 0}
         />
         <FocusOnSelect
           nodeId={canvasFocusId ?? selected?.id ?? null}
@@ -794,67 +819,33 @@ export default function App() {
               onHubClick={onOverviewHubClick}
             />
 
-            <div className="graph-actions">
-              <button type="button" className="graph-actions__btn" onClick={showFromEntry}>
-                From entry
-              </button>
-              <button
-                type="button"
-                className="graph-actions__btn"
-                onClick={() => {
-                  setClusterMode((value) => {
-                    const next = !value;
-                    if (!next) {
-                      setFullyExpandedFolders(new Set());
-                      setPartialReveals(new Map());
-                    }
-                    return next;
-                  });
-                }}
-              >
-                {clusterMode ? "Uncluster" : "Cluster folders"}
-              </button>
-              {expandedFolders.length > 0 && (
-                <button
-                  type="button"
-                  className="graph-actions__btn"
-                  onClick={() => {
-                    if (expandedFolders.length === 1) {
-                      collapseClusterFolder(expandedFolders[0]!);
-                    } else {
-                      collapseAllClusterFolders();
-                    }
-                  }}
-                >
-                  {expandedFolders.length === 1
-                    ? `Collapse ${expandedFolders[0]!.split("/").pop() ?? expandedFolders[0]}`
-                    : `Collapse ${expandedFolders.length} folders`}
-                </button>
-              )}
-              <button
-                type="button"
-                className="graph-actions__btn"
-                onClick={() => setNeighborhoodFocus((value) => !value)}
-              >
-                {neighborhoodFocus ? "Neighborhood on" : "Neighborhood off"}
-              </button>
-              {neighborhoodFocus && (
-                <button
-                  type="button"
-                  className="graph-actions__btn"
-                  onClick={() => setNeighborhoodHops((hops) => (hops === 1 ? 2 : 1))}
-                >
-                  {neighborhoodHops} hop{neighborhoodHops === 1 ? "" : "s"}
-                </button>
-              )}
-              <button
-                type="button"
-                className="graph-actions__btn"
-                onClick={() => setFocusOnSelect((value) => !value)}
-              >
-                {focusOnSelect ? "Focus on" : "Focus off"}
-              </button>
-            </div>
+            <GraphActions
+              clusterMode={clusterMode}
+              onClusterModeChange={(enabled) => {
+                setClusterMode(enabled);
+                if (!enabled) {
+                  setFullyExpandedFolders(new Set());
+                  setPartialReveals(new Map());
+                }
+              }}
+              neighborhoodFocus={neighborhoodFocus}
+              onNeighborhoodFocusChange={onNeighborhoodFocusChange}
+              neighborhoodHops={neighborhoodHops}
+              onNeighborhoodHopsChange={setNeighborhoodHops}
+              focusOnSelect={focusOnSelect}
+              onFocusOnSelectChange={setFocusOnSelect}
+              expandedFolders={expandedFolders}
+              onShowFromEntry={showFromEntry}
+              onCollapseFolders={() => {
+                if (expandedFolders.length === 1) {
+                  collapseClusterFolder(expandedFolders[0]!);
+                } else {
+                  collapseAllClusterFolders();
+                }
+              }}
+              onCompactLayout={compactLayout}
+              compactLayoutDisabled={nodes.length === 0}
+            />
 
             {isLargeGraph && (
               <p className="graph-notice">
@@ -892,9 +883,14 @@ export default function App() {
             )}
             {selected && neighborhoodFocus && pathIds.length === 0 && (
               <p className="graph-sidebar__hint">
-                <span className="graph-sidebar__hint-label">Neighborhood</span>
+                <span className="graph-sidebar__hint-label">
+                  <span className="field-label">
+                    <span className="field-label__text">Nearby focus</span>
+                    <InfoTip text="Only the selected node and its connections within the chosen depth stay fully visible." />
+                  </span>
+                </span>
                 Showing {highlightIds?.size ?? 0} nodes within {neighborhoodHops} hop
-                {neighborhoodHops === 1 ? "" : "s"} — others are dimmed.
+                {neighborhoodHops === 1 ? "" : "s"} — everything else is dimmed.
               </p>
             )}
           </div>

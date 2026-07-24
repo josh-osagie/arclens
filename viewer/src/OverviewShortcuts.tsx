@@ -71,9 +71,11 @@ function OverviewSection<T>({
           <span className="overview-shortcuts__chevron" aria-hidden="true">
             {expanded ? "▾" : "▸"}
           </span>
-          <span className="overview-shortcuts__heading-label">{title}</span>
+          <span className="field-label">
+            <span className="overview-shortcuts__heading-label">{title}</span>
+            <InfoTip text={tip} />
+          </span>
         </button>
-        <InfoTip text={tip} />
         <span className="overview-shortcuts__count">{items.length}</span>
       </div>
 
