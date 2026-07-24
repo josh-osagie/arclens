@@ -158,6 +158,8 @@ pnpm analyze:watch -- ./samples --insights
 pnpm dev:watch -- ../my-app/src --no-cache
 ```
 
+While `analyze:watch` is running in an interactive terminal, press `r` to re-analyze immediately, `q` to stop, or `?` for help.
+
 ## Viewer
 
 The viewer is a Vite + React Flow app in `viewer/`. It reads `graph.json` from the repo root and auto-refreshes when the file changes.
