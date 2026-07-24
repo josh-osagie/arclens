@@ -167,7 +167,7 @@ export function applyClusterView(
 }
 
 export function findEntryNodes(graph: AtlasGraph): AtlasGraphNode[] {
-  return filterEntryNodes(graph.nodes, graph.meta?.entryNodeIds);
+  return filterEntryNodes(graph.nodes, graph.meta?.entryNodeIds, graph.edges);
 }
 
 export function buildClusteredVisibleIds(

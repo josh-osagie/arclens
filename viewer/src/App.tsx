@@ -45,6 +45,7 @@ import {
   nextClusterReveal,
 } from "./clusterGraph";
 import { FocusOnSelect } from "./FocusOnSelect";
+import { computeFolderSpotlightIds } from "./folderSpotlight";
 import { GraphActions } from "./GraphActions";
 import { CommandPalette } from "./features/command-palette/CommandPalette";
 import {
@@ -290,6 +291,7 @@ export default function App() {
   const [focusOnSelect, setFocusOnSelect] = useState(true);
   const [neighborhoodFocus, setNeighborhoodFocus] = useState(false);
   const [neighborhoodHops, setNeighborhoodHops] = useState(DEFAULT_NEIGHBORHOOD_HOPS);
+  const [spotlightFolder, setSpotlightFolder] = useState<string | null>(null);
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
   const [relayoutNonce, setRelayoutNonce] = useState(0);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
@@ -315,6 +317,7 @@ export default function App() {
     setClusterMode(large);
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
+    setSpotlightFolder(null);
     setNeighborhoodFocus(defaultNeighborhoodFocusEnabled(large));
   }, [graphKey]);
 
@@ -371,7 +374,12 @@ export default function App() {
     [graph, pathIds],
   );
 
-  const highlightIds = useMemo(
+  const folderSpotlightIds = useMemo(() => {
+    if (!spotlightFolder || !graph) return null;
+    return computeFolderSpotlightIds(spotlightFolder, graph.nodes, clusteredGraph.nodes);
+  }, [spotlightFolder, graph, clusteredGraph.nodes]);
+
+  const selectionHighlightIds = useMemo(
     () =>
       resolveHighlightIds(
         pathIds,
@@ -381,6 +389,23 @@ export default function App() {
         { neighborhoodFocus, neighborhoodHops },
       ),
     [pathIds, connectedIds, selected?.id, graph?.edges, neighborhoodFocus, neighborhoodHops],
+  );
+
+  const highlightIds = useMemo(() => {
+    if (selectionHighlightIds && selectionHighlightIds.size > 0) {
+      return selectionHighlightIds;
+    }
+    if (folderSpotlightIds && folderSpotlightIds.size > 0) {
+      return folderSpotlightIds;
+    }
+    return selectionHighlightIds;
+  }, [selectionHighlightIds, folderSpotlightIds]);
+
+  const shouldHighlightEdges = Boolean(selected) || Boolean(spotlightFolder);
+
+  const spotlightFitIds = useMemo(
+    () => (folderSpotlightIds ? [...folderSpotlightIds] : null),
+    [folderSpotlightIds],
   );
 
   const expandedFolders = useMemo(
@@ -433,6 +458,7 @@ export default function App() {
   useEffect(() => {
     if (prevSearchRef.current && !searchLower) {
       setSelected(null);
+      setSpotlightFolder(null);
     }
     prevSearchRef.current = searchLower;
   }, [searchLower]);
@@ -466,7 +492,7 @@ export default function App() {
           highlightIds,
         ),
       );
-      setEdges(patchEdgePresentation(built.edges, highlightIds, pathEdges, Boolean(selected)));
+      setEdges(patchEdgePresentation(built.edges, highlightIds, pathEdges, shouldHighlightEdges));
       setIsBuilding(false);
     }, 0);
 
@@ -485,10 +511,10 @@ export default function App() {
         current.length > 0 ? current : baseEdgesRef.current,
         highlightIds,
         pathEdges,
-        Boolean(selected),
+        shouldHighlightEdges,
       ),
     );
-  }, [searchLower, selected?.id, highlightIds, pathEdges, setNodes, setEdges]);
+  }, [searchLower, selected?.id, highlightIds, pathEdges, shouldHighlightEdges, setNodes, setEdges]);
 
   const expandClusterFolder = useCallback(
     (folder: string) => {
@@ -544,6 +570,7 @@ export default function App() {
     setFullyExpandedFolders(next.fullyExpandedFolders);
     setPartialReveals(next.partialReveals);
     setSelected(null);
+    setSpotlightFolder(null);
     setCanvasFocusId(null);
   }, []);
 
@@ -556,6 +583,7 @@ export default function App() {
       }
 
       setSelected(enrichNodeForDetails(node, graph, nodeById));
+      setSpotlightFolder(null);
       setFocusOnSelect(true);
       setCanvasFocusId(null);
     },
@@ -564,11 +592,19 @@ export default function App() {
 
   const onOverviewFolderClick = useCallback(
     (folder: FolderOverview) => {
+      if (spotlightFolder === folder.folder) {
+        setSpotlightFolder(null);
+        return;
+      }
+
+      setSpotlightFolder(folder.folder);
+      setSelected(null);
       if (!clusterMode) setClusterMode(true);
       expandClusterFolder(folder.folder);
+      setCanvasFocusId(null);
       setFocusOnSelect(true);
     },
-    [expandClusterFolder, clusterMode],
+    [expandClusterFolder, clusterMode, spotlightFolder],
   );
 
   const onOverviewEntryClick = useCallback(
@@ -597,6 +633,7 @@ export default function App() {
       const base = nodeById.get(node.data.nodeId ?? node.id);
       if (!base) return;
       setCanvasFocusId(null);
+      setSpotlightFolder(null);
       if (
         shouldAutoEnableNeighborhoodFocus(
           isLargeGraph,
@@ -618,6 +655,7 @@ export default function App() {
 
   const onPaneClick = useCallback(() => {
     setSelected(null);
+    setSpotlightFolder(null);
     setHelperLines([]);
   }, []);
 
@@ -674,6 +712,7 @@ export default function App() {
       setSearch("");
     }
     setSelected(enrichNodeForDetails(entry, graph, nodeById));
+    setSpotlightFolder(null);
     setFocusOnSelect(true);
     setCanvasFocusId(null);
   }, [graph, nodeById, isLargeGraph]);
@@ -817,7 +856,8 @@ export default function App() {
           skip={hasSavedViewportRef.current && relayoutNonce === 0}
         />
         <FocusOnSelect
-          nodeId={canvasFocusId ?? selected?.id ?? null}
+          nodeId={spotlightFolder ? null : canvasFocusId ?? selected?.id ?? null}
+          nodeIds={spotlightFolder ? spotlightFitIds : null}
           enabled={focusOnSelect}
         />
         {selected && !selected.cluster && (
@@ -887,6 +927,7 @@ export default function App() {
               projectRoot={graph.meta?.targetDir}
               folders={overviewFolders}
               hubs={overviewHubs}
+              spotlightFolder={spotlightFolder}
               onEntryClick={onOverviewEntryClick}
               onFolderClick={onOverviewFolderClick}
               onHubClick={onOverviewHubClick}
@@ -943,6 +984,18 @@ export default function App() {
               ))}
             </div>
 
+            {spotlightFolder && !selected && (
+              <p className="graph-sidebar__hint">
+                <span className="graph-sidebar__hint-label">
+                  <span className="field-label">
+                    <span className="field-label__text">Folder spotlight</span>
+                    <InfoTip text="Nodes in this folder stay fully visible; everything else is dimmed. Click the canvas or the same folder again to clear." />
+                  </span>
+                </span>
+                {spotlightFolder} · {highlightIds?.size ?? 0} node
+                {(highlightIds?.size ?? 0) === 1 ? "" : "s"} highlighted
+              </p>
+            )}
             {selected && pathIds.length > 0 && (
               <p className="graph-sidebar__hint">
                 <span className="graph-sidebar__hint-label">

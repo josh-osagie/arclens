@@ -18,6 +18,7 @@ type Props = {
   projectRoot?: string;
   folders: FolderOverview[];
   hubs: HubOverview[];
+  spotlightFolder?: string | null;
   onEntryClick: (node: AtlasGraphNode) => void;
   onFolderClick: (folder: FolderOverview) => void;
   onHubClick: (node: AtlasGraphNode) => void;
@@ -106,6 +107,7 @@ export function OverviewShortcuts({
   projectRoot,
   folders,
   hubs,
+  spotlightFolder,
   onEntryClick,
   onFolderClick,
   onHubClick,
@@ -158,7 +160,7 @@ export function OverviewShortcuts({
       <OverviewSection
         sectionKey="folders"
         title="Top folders"
-        tip="Folders with the most nodes — click to expand or focus on the canvas."
+        tip="Folders with the most nodes — click to spotlight that folder on the canvas."
         items={folders}
         expanded={sectionPrefs.folders}
         onToggleSection={onToggleSection}
@@ -166,8 +168,9 @@ export function OverviewShortcuts({
         renderItem={(folder) => (
           <button
             type="button"
-            className="overview-shortcuts__btn"
+            className={`overview-shortcuts__btn${spotlightFolder === folder.folder ? " overview-shortcuts__btn--active" : ""}`}
             onClick={() => onFolderClick(folder)}
+            aria-pressed={spotlightFolder === folder.folder}
           >
             <span className="overview-shortcuts__label">{folderLabel(folder.folder)}</span>
             <span className="overview-shortcuts__meta" title={folder.folder}>

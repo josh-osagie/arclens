@@ -11,7 +11,7 @@ export type GraphExportOptions = {
 };
 
 export function findEntryNodeIds(graph: Graph): string[] {
-  return resolveEntryNodeIds(graph.nodes, graph.meta?.entryNodeIds);
+  return resolveEntryNodeIds(graph.nodes, graph.meta?.entryNodeIds, graph.edges);
 }
 
 /**

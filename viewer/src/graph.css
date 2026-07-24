@@ -1585,6 +1585,15 @@
   border-color: var(--atlas-border);
 }
 
+.overview-shortcuts__btn--active {
+  background: color-mix(in srgb, var(--atlas-accent) 14%, var(--atlas-surface-raised));
+  border-color: color-mix(in srgb, var(--atlas-accent) 45%, var(--atlas-border));
+}
+
+.overview-shortcuts__btn--active:hover {
+  background: color-mix(in srgb, var(--atlas-accent) 20%, var(--atlas-surface-raised));
+}
+
 .overview-shortcuts__label {
   font-size: var(--atlas-text-sm);
   font-weight: var(--atlas-weight-semibold);

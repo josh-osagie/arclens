@@ -80,4 +80,40 @@ describe("graphOverview", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]?.node.id).toBe("main");
   });
+
+  it("falls back to graph roots for sample-sized graphs without bootstrap files", () => {
+    const samplesGraph: AtlasGraph = {
+      meta: { entryNodeIds: [] },
+      nodes: [
+        {
+          id: "counter",
+          name: "Counter",
+          file: "samples/Counter.tsx",
+          type: "component",
+          stats: { incoming: 0, outgoing: 4 },
+        },
+        {
+          id: "button",
+          name: "Button",
+          file: "samples/Button.tsx",
+          type: "component",
+          stats: { incoming: 3, outgoing: 0 },
+        },
+        {
+          id: "orphan",
+          name: "ThemeContext",
+          file: "samples/ThemeContext.tsx",
+          type: "context",
+          stats: { incoming: 0, outgoing: 0 },
+        },
+      ],
+      edges: [
+        { from: "counter", to: "button", type: "renders" },
+      ],
+    };
+
+    const entries = computeEntryPoints(samplesGraph);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.node.id).toBe("counter");
+  });
 });

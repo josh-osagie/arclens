@@ -3,6 +3,7 @@ import {
   dedupeEntryPointsByFile,
   entryFileConfidence,
   filterEntryNodes,
+  findFallbackEntryNodes,
   isAppEntryFile,
   isEntryNode,
   isNonProductionFile,
@@ -80,6 +81,58 @@ describe("entryPoints", () => {
     it("falls back to typed entry nodes when meta is empty", () => {
       const entries = filterEntryNodes(nodes);
       expect(entries.map((node) => node.id)).toEqual(["main"]);
+    });
+
+    it("falls back to graph roots when no bootstrap entry exists", () => {
+      const sampleNodes = [
+        {
+          id: "counter",
+          name: "Counter",
+          file: "samples/Counter.tsx",
+          type: "component",
+          stats: { incoming: 0, outgoing: 4 },
+        },
+        {
+          id: "button",
+          name: "Button",
+          file: "samples/Button.tsx",
+          type: "component",
+          stats: { incoming: 3, outgoing: 0 },
+        },
+        {
+          id: "orphan",
+          name: "ThemeContext",
+          file: "samples/ThemeContext.tsx",
+          type: "context",
+          stats: { incoming: 0, outgoing: 0 },
+        },
+        {
+          id: "hook",
+          name: "useCounter",
+          file: "samples/useCounter.ts",
+          type: "hook",
+          stats: { incoming: 0, outgoing: 1 },
+        },
+      ];
+
+      const entries = filterEntryNodes(sampleNodes, []);
+      expect(entries.map((node) => node.id)).toEqual(["counter", "hook"]);
+    });
+  });
+
+  describe("findFallbackEntryNodes", () => {
+    it("prefers components over hooks among graph roots", () => {
+      const nodes = [
+        { id: "hook", name: "useCounter", file: "src/useCounter.ts", type: "hook" },
+        { id: "app", name: "Counter", file: "src/Counter.tsx", type: "component" },
+      ];
+      const edges = [
+        { from: "app", to: "hook", type: "imports" },
+        { from: "app", to: "external", type: "uses" },
+      ];
+
+      const roots = findFallbackEntryNodes(nodes, edges);
+      expect(roots.map((node) => node.id)).toEqual(["app"]);
     });
   });
 
