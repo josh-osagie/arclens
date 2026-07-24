@@ -33,10 +33,14 @@ import {
   applyClusterView,
   buildClusteredVisibleIds,
   clusterNodeId,
+  collapseAllClusterFoldersState,
+  collapseClusterFolderState,
   findEntryNodes,
   folderFromClusterId,
+  folderKey,
   groupNodesByFolder,
   isClusterId,
+  listExpandedFolders,
   nextClusterReveal,
 } from "./clusterGraph";
 import { FocusOnSelect } from "./FocusOnSelect";
@@ -66,9 +70,12 @@ import { NodeToolbarActions } from "./NodeToolbarActions";
 import { defaultDetailsPanelRect, defaultMainPanelRect } from "./panelStorage";
 import {
   findPathFromEntries,
-  mergeHighlightIds,
   pathEdgeKeys,
 } from "./pathHighlight";
+import {
+  DEFAULT_NEIGHBORHOOD_HOPS,
+  resolveHighlightIds,
+} from "./neighborhoodFocus";
 import {
   emptyGraphPresentation,
   validateGraphData,
@@ -276,12 +283,15 @@ export default function App() {
   );
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
   const [focusOnSelect, setFocusOnSelect] = useState(true);
+  const [neighborhoodFocus, setNeighborhoodFocus] = useState(false);
+  const [neighborhoodHops, setNeighborhoodHops] = useState(DEFAULT_NEIGHBORHOOD_HOPS);
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
   const baseEdgesRef = useRef<Edge[]>([]);
   const hasSavedViewportRef = useRef(false);
+  const prevSearchRef = useRef("");
 
   const deferredSearch = useDeferredValue(search);
   const searchLower = deferredSearch.trim().toLowerCase();
@@ -295,6 +305,7 @@ export default function App() {
     setClusterMode(graph.nodes.length > LARGE_GRAPH_THRESHOLD);
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
+    setNeighborhoodFocus(graph.nodes.length > LARGE_GRAPH_THRESHOLD);
   }, [graphKey, graph]);
 
   const viewSelection = useMemo(() => {
@@ -351,8 +362,20 @@ export default function App() {
   );
 
   const highlightIds = useMemo(
-    () => mergeHighlightIds(pathIds, connectedIds, selected?.id ?? null),
-    [pathIds, connectedIds, selected?.id],
+    () =>
+      resolveHighlightIds(
+        pathIds,
+        selected?.id ?? null,
+        graph?.edges ?? [],
+        connectedIds,
+        { neighborhoodFocus, neighborhoodHops },
+      ),
+    [pathIds, connectedIds, selected?.id, graph?.edges, neighborhoodFocus, neighborhoodHops],
+  );
+
+  const expandedFolders = useMemo(
+    () => listExpandedFolders(fullyExpandedFolders, partialReveals),
+    [fullyExpandedFolders, partialReveals],
   );
 
   const overviewEntries = useMemo(
@@ -395,6 +418,13 @@ export default function App() {
   useEffect(() => {
     hasSavedViewportRef.current = Boolean(graphKey && loadViewport(graphKey));
   }, [graphKey]);
+
+  useEffect(() => {
+    if (prevSearchRef.current && !searchLower) {
+      setSelected(null);
+    }
+    prevSearchRef.current = searchLower;
+  }, [searchLower]);
 
   useEffect(() => {
     loadGraph();
@@ -480,6 +510,32 @@ export default function App() {
     [graph, isLargeGraph, clusterMode, viewSelection.graph, fullyExpandedFolders],
   );
 
+  const collapseClusterFolder = useCallback(
+    (folder: string) => {
+      const next = collapseClusterFolderState(
+        folder,
+        fullyExpandedFolders,
+        partialReveals,
+      );
+      setFullyExpandedFolders(next.fullyExpandedFolders);
+      setPartialReveals(next.partialReveals);
+      setCanvasFocusId(clusterNodeId(folder));
+      setSelected((current) => {
+        if (!current || current.file === "external") return current;
+        return folderKey(current.file) === folder ? null : current;
+      });
+    },
+    [fullyExpandedFolders, partialReveals],
+  );
+
+  const collapseAllClusterFolders = useCallback(() => {
+    const next = collapseAllClusterFoldersState();
+    setFullyExpandedFolders(next.fullyExpandedFolders);
+    setPartialReveals(next.partialReveals);
+    setSelected(null);
+    setCanvasFocusId(null);
+  }, []);
+
   const focusGraphNode = useCallback(
     (node: AtlasGraphNode) => {
       if (!graph) return;
@@ -517,7 +573,12 @@ export default function App() {
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node<AtlasNodeData>) => {
       if (isClusterId(node.id)) {
-        expandClusterFolder(folderFromClusterId(node.id));
+        const folder = folderFromClusterId(node.id);
+        if (_event.shiftKey && expandedFolders.includes(folder)) {
+          collapseClusterFolder(folder);
+          return;
+        }
+        expandClusterFolder(folder);
         return;
       }
 
@@ -525,9 +586,12 @@ export default function App() {
       const base = nodeById.get(node.data.nodeId ?? node.id);
       if (!base) return;
       setCanvasFocusId(null);
+      if (isLargeGraph && neighborhoodFocus === false) {
+        setNeighborhoodFocus(true);
+      }
       setSelected(enrichNodeForDetails(base, graph, nodeById));
     },
-    [graph, nodeById, expandClusterFolder],
+    [graph, nodeById, expandClusterFolder, collapseClusterFolder, expandedFolders, isLargeGraph, neighborhoodFocus],
   );
 
   const onPaneClick = useCallback(() => {
@@ -750,6 +814,39 @@ export default function App() {
               >
                 {clusterMode ? "Uncluster" : "Cluster folders"}
               </button>
+              {expandedFolders.length > 0 && (
+                <button
+                  type="button"
+                  className="graph-actions__btn"
+                  onClick={() => {
+                    if (expandedFolders.length === 1) {
+                      collapseClusterFolder(expandedFolders[0]!);
+                    } else {
+                      collapseAllClusterFolders();
+                    }
+                  }}
+                >
+                  {expandedFolders.length === 1
+                    ? `Collapse ${expandedFolders[0]!.split("/").pop() ?? expandedFolders[0]}`
+                    : `Collapse ${expandedFolders.length} folders`}
+                </button>
+              )}
+              <button
+                type="button"
+                className="graph-actions__btn"
+                onClick={() => setNeighborhoodFocus((value) => !value)}
+              >
+                {neighborhoodFocus ? "Neighborhood on" : "Neighborhood off"}
+              </button>
+              {neighborhoodFocus && (
+                <button
+                  type="button"
+                  className="graph-actions__btn"
+                  onClick={() => setNeighborhoodHops((hops) => (hops === 1 ? 2 : 1))}
+                >
+                  {neighborhoodHops} hop{neighborhoodHops === 1 ? "" : "s"}
+                </button>
+              )}
               <button
                 type="button"
                 className="graph-actions__btn"
@@ -791,6 +888,13 @@ export default function App() {
                   </span>
                 </span>
                 {pathIds.map((id) => nodeById.get(id)?.name ?? id).join(" → ")}
+              </p>
+            )}
+            {selected && neighborhoodFocus && pathIds.length === 0 && (
+              <p className="graph-sidebar__hint">
+                <span className="graph-sidebar__hint-label">Neighborhood</span>
+                Showing {highlightIds?.size ?? 0} nodes within {neighborhoodHops} hop
+                {neighborhoodHops === 1 ? "" : "s"} — others are dimmed.
               </p>
             )}
           </div>

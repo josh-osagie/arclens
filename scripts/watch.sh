@@ -39,6 +39,7 @@ fi
 echo "React Atlas watch"
 echo "  target:  ${TARGET}"
 echo "  globs:   ${WATCH_GLOBS[*]}"
+echo "  note:    watches .ts/.tsx only (React/TypeScript projects)"
 echo ""
 
 EXTRA_ARGS=()
@@ -46,11 +47,17 @@ for arg in "$@"; do
   EXTRA_ARGS+=("$(printf '%q' "$arg")")
 done
 
-export REACT_ATLAS_WATCH_TARGET="$TARGET"
 ensure_chokidar_shell
+
+# Run initial analysis before starting the watcher. Exit immediately on failure
+# (e.g. unsupported non-React/TS project) instead of continuing to watch.
+if ! bash "${SCRIPT_DIR}/analyze-once.sh" "${TARGET}" --reanalyze ${EXTRA_ARGS[*]+"${EXTRA_ARGS[@]}"}; then
+  exit 1
+fi
+
+export REACT_ATLAS_WATCH_TARGET="$TARGET"
 
 pnpm exec chokidar "${WATCH_GLOBS[@]}" \
   "${IGNORE_ARGS[@]}" \
   --silent \
-  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${REACT_ATLAS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}" \
-  --initial
+  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${REACT_ATLAS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}"

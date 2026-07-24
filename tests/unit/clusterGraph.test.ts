@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   applyClusterView,
   clusterNodeId,
+  collapseAllClusterFoldersState,
+  collapseClusterFolderState,
   folderKey,
   folderFromClusterId,
   isClusterId,
+  listExpandedFolders,
 } from "../../viewer/src/clusterGraph";
 import type { AtlasGraph } from "../../viewer/src/types";
 
@@ -53,5 +56,29 @@ describe("clusterGraph", () => {
     const id = clusterNodeId("src/components");
     expect(isClusterId(id)).toBe(true);
     expect(folderFromClusterId(id)).toBe("src/components");
+  });
+
+  it("lists expanded folders from full and partial state", () => {
+    const partial = new Map([["src/components", new Set(["n1"])]]);
+    expect(listExpandedFolders(new Set(["src"]), partial)).toEqual([
+      "src",
+      "src/components",
+    ]);
+  });
+
+  it("collapses a folder from expansion state", () => {
+    const partial = new Map([["src/components", new Set(["n1"])]]);
+    const next = collapseClusterFolderState("src/components", new Set(["src"]), partial);
+
+    expect(next.fullyExpandedFolders.has("src/components")).toBe(false);
+    expect(next.fullyExpandedFolders.has("src")).toBe(true);
+    expect(next.partialReveals.has("src/components")).toBe(false);
+  });
+
+  it("collapses all expanded folders", () => {
+    const next = collapseAllClusterFoldersState();
+
+    expect(next.fullyExpandedFolders.size).toBe(0);
+    expect(next.partialReveals.size).toBe(0);
   });
 });

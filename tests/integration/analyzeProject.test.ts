@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {
   analyzeFixture,
   analyzeSamples,
@@ -8,6 +11,8 @@ import {
   nodeByName,
   outgoingEdges,
 } from "../helpers";
+import { UnsupportedProjectError } from "../../src/discoverFiles";
+import { analyzeProject } from "../../src/analyzeProject";
 
 describe("analyzeProject integration", () => {
   describe("samples/ (dev workflow fixture)", () => {
@@ -122,6 +127,20 @@ describe("analyzeProject integration", () => {
   describe("safety guards", () => {
     it("refuses when file count exceeds maxFiles", () => {
       expect(() => analyzeSamples({ maxFiles: 1 })).toThrow(/Refusing to analyze/);
+    });
+
+    it("throws UnsupportedProjectError for HTML-only folders", () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-html-only-"));
+      fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
+
+      expect(() => analyzeProject(dir, { cache: false })).toThrow(UnsupportedProjectError);
+      try {
+        analyzeProject(dir, { cache: false });
+      } catch (error) {
+        expect(error).toBeInstanceOf(UnsupportedProjectError);
+        expect((error as UnsupportedProjectError).message).toMatch(/HTML file/);
+        expect((error as UnsupportedProjectError).message).toMatch(/not supported yet/);
+      }
     });
   });
 });

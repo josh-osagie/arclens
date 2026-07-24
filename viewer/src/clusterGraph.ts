@@ -182,3 +182,39 @@ export function buildClusteredVisibleIds(
     ),
   );
 }
+
+/** Folders that are fully expanded or have partial reveals. */
+export function listExpandedFolders(
+  fullyExpandedFolders: Set<string>,
+  partialReveals: Map<string, Set<string>>,
+): string[] {
+  const folders = new Set(fullyExpandedFolders);
+  for (const [folder, revealed] of partialReveals) {
+    if (revealed.size > 0) folders.add(folder);
+  }
+  return [...folders].sort();
+}
+
+export function collapseClusterFolderState(
+  folder: string,
+  fullyExpandedFolders: Set<string>,
+  partialReveals: Map<string, Set<string>>,
+): {
+  fullyExpandedFolders: Set<string>;
+  partialReveals: Map<string, Set<string>>;
+} {
+  const nextFully = new Set(fullyExpandedFolders);
+  nextFully.delete(folder);
+
+  const nextPartial = new Map(partialReveals);
+  nextPartial.delete(folder);
+
+  return { fullyExpandedFolders: nextFully, partialReveals: nextPartial };
+}
+
+export function collapseAllClusterFoldersState(): {
+  fullyExpandedFolders: Set<string>;
+  partialReveals: Map<string, Set<string>>;
+} {
+  return { fullyExpandedFolders: new Set(), partialReveals: new Map() };
+}

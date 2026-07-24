@@ -10,7 +10,12 @@ import {
   tsConfigCacheKey,
   writeFileCache,
 } from "./cache/fileCache";
-import { discoverSourceFiles, formatDuration } from "./discoverFiles";
+import {
+  detectUnsupportedProjectHint,
+  discoverSourceFiles,
+  formatDuration,
+  UnsupportedProjectError,
+} from "./discoverFiles";
 import { buildGraph } from "./buildGraph";
 import { enrichGraph } from "./enrichGraph";
 import {
@@ -99,7 +104,7 @@ export function analyzeProject(
   const discoveredFiles = discoverSourceFiles(targetDir);
 
   if (discoveredFiles.length === 0) {
-    throw new Error(`No .ts/.tsx files found under ${targetDir}`);
+    throw new UnsupportedProjectError(targetDir, detectUnsupportedProjectHint(targetDir));
   }
 
   if (discoveredFiles.length > maxFiles) {

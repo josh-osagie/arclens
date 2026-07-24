@@ -2,7 +2,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { discoverSourceFiles } from "../../src/discoverFiles";
+import {
+  detectUnsupportedProjectHint,
+  discoverSourceFiles,
+  formatUnsupportedProjectMessage,
+  UnsupportedProjectError,
+} from "../../src/discoverFiles";
 import { findTsConfig, resolveProjectName, resolveTarget } from "../../src/resolveTarget";
 import { fixturesDir } from "../helpers";
 
@@ -30,6 +35,36 @@ describe("discoverFiles", () => {
     expect(files).toHaveLength(1);
     expect(files[0]).toMatch(/App\.tsx$/);
     expect(files[0]).not.toContain(".react-atlas");
+  });
+
+  it("detects HTML-only folders for unsupported project hints", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-html-"));
+    fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
+
+    expect(discoverSourceFiles(dir)).toHaveLength(0);
+    expect(detectUnsupportedProjectHint(dir)).toMatch(/HTML file/);
+  });
+
+  it("formats a helpful unsupported project message", () => {
+    const dir = path.join(os.tmpdir(), "manuelhub");
+    const message = formatUnsupportedProjectMessage(
+      dir,
+      "Found 3 HTML files, but no TypeScript (.ts/.tsx) sources.",
+      "/workspace",
+    );
+
+    expect(message).toContain("React/TypeScript projects only");
+    expect(message).toContain("HTML-only");
+    expect(message).toContain("Found 3 HTML files");
+    expect(message).toContain("./src");
+  });
+
+  it("throws UnsupportedProjectError with hint details", () => {
+    const error = new UnsupportedProjectError("/tmp/app", "Found 1 HTML file, but no TypeScript (.ts/.tsx) sources.");
+
+    expect(error).toBeInstanceOf(UnsupportedProjectError);
+    expect(error.message).toContain("not supported yet");
+    expect(error.message).toContain("Found 1 HTML file");
   });
 });
 

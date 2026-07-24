@@ -8,17 +8,31 @@ const root = process.cwd();
 const cli = path.join(root, "src", "cli.ts");
 const tsxCli = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
 
-function runCli(args: string[]): string {
-  return execFileSync(process.execPath, [tsxCli, cli, ...args], {
-    cwd: root,
-    encoding: "utf8",
-    env: { ...process.env, FORCE_COLOR: "0" },
-  });
+function runCli(
+  args: string[],
+  options: { expectFailure?: boolean } = {},
+): { output: string; status: number } {
+  try {
+    const output = execFileSync(process.execPath, [tsxCli, cli, ...args], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, FORCE_COLOR: "0" },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return { output, status: 0 };
+  } catch (error) {
+    if (!options.expectFailure) throw error;
+    const execError = error as { status?: number; stdout?: string; stderr?: string };
+    return {
+      output: `${execError.stdout ?? ""}${execError.stderr ?? ""}`,
+      status: execError.status ?? 1,
+    };
+  }
 }
 
 describe("CLI (developer workflow)", () => {
   it("analyze ./samples prints architecture summary to terminal", () => {
-    const output = runCli(["analyze", "./samples", "--insights", "--no-color"]);
+    const { output } = runCli(["analyze", "./samples", "--insights", "--no-color"]);
 
     expect(output).toContain("React Atlas");
     expect(output).toContain("Project:");
@@ -57,5 +71,20 @@ describe("CLI (developer workflow)", () => {
 
   it("exits non-zero for invalid path", () => {
     expect(() => runCli(["analyze", "./not-a-real-path"])).toThrow();
+  });
+
+  it("explains when the target has no TypeScript sources", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-cli-html-"));
+    fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
+
+    const { output, status } = runCli(["analyze", dir, "--no-color"], {
+      expectFailure: true,
+    });
+
+    expect(status).toBe(1);
+    expect(output).toMatch(/No TypeScript sources/);
+    expect(output).toMatch(/HTML-only/);
+    expect(output).toMatch(/not supported yet/);
+    expect(output).toMatch(/HTML file/);
   });
 });
