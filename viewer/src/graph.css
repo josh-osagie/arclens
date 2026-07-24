@@ -1799,3 +1799,48 @@
   text-align: center;
   user-select: none;
 }
+
+/* ── Export controls ──────────────────────────────────── */
+
+.export-controls {
+  position: relative;
+}
+
+.export-controls__menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 148px;
+  padding: 4px;
+  border-radius: var(--atlas-radius-lg);
+  border: 1px solid var(--atlas-border);
+  background: color-mix(in srgb, var(--atlas-surface) 94%, transparent);
+  box-shadow: var(--atlas-shadow-sm);
+  backdrop-filter: blur(10px);
+}
+
+.export-controls__item {
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--atlas-radius-md);
+  background: transparent;
+  color: var(--atlas-text-body);
+  font: inherit;
+  font-size: var(--atlas-text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.export-controls__item:hover:not(:disabled) {
+  background: var(--atlas-surface-hover);
+  color: var(--atlas-text);
+}
+
+.export-controls__item:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

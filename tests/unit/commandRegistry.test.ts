@@ -30,6 +30,8 @@ const paletteActions = {
   onToggleClusterMode: vi.fn(),
   onToggleNeighborhoodFocus: vi.fn(),
   onFitView: vi.fn(),
+  onExportPng: vi.fn(),
+  onExportSvg: vi.fn(),
   onFocusSelected: vi.fn(),
   onCopySelectedName: vi.fn(),
   onCopySelectedPath: vi.fn(),
@@ -56,20 +58,20 @@ describe("commandRegistry", () => {
 
     const grouped = groupCommandActions(built);
     expect(grouped.get("navigate")).toHaveLength(1);
-    expect(grouped.get("graph")).toHaveLength(4);
+    expect(grouped.get("graph")).toHaveLength(6);
     expect(grouped.get("selection")).toHaveLength(3);
 
     const dimAction = built.find((action) => action.id === "toggle-dim-distant");
     expect(dimAction?.label).toContain("Disable");
   });
 
-  it("assigns shortcut labels to every command action", () => {
+  it("assigns shortcut labels when a binding exists", () => {
     const built = buildCommandActions(paletteState, paletteActions);
 
     for (const action of built) {
       const spec = COMMAND_SHORTCUTS[action.id];
-      expect(spec).toBeDefined();
-      expect(action.shortcut).toBe(formatCommandShortcut(spec!));
+      if (!spec) continue;
+      expect(action.shortcut).toBe(formatCommandShortcut(spec));
       expect(action.shortcutBinding).toEqual(spec);
     }
   });

@@ -48,6 +48,7 @@ import { FocusOnSelect } from "./FocusOnSelect";
 import { computeFolderSpotlightIds } from "./folderSpotlight";
 import { GraphActions } from "./GraphActions";
 import { CommandPalette } from "./features/command-palette/CommandPalette";
+import { ExportBridge, triggerExport } from "./exportGraphBridge";
 import {
   FitViewBridge,
   triggerFitView,
@@ -763,6 +764,12 @@ export default function App() {
         setNeighborhoodFocus((enabled) => !enabled);
       },
       onFitView: () => triggerFitView(),
+      onExportPng: () => {
+        void triggerExport("png");
+      },
+      onExportSvg: () => {
+        void triggerExport("svg");
+      },
       onFocusSelected: () => {
         if (!selected) return;
         setFocusOnSelect(true);
@@ -849,6 +856,7 @@ export default function App() {
         proOptions={PRO_OPTIONS}
       >
         <ViewportPersistence graphKey={graphKey} enabled={Boolean(graphKey)} />
+        <ExportBridge projectName={graph.meta?.projectName} graphKey={graphKey} />
         <FitViewBridge />
         <FitViewOnce
           viewKey={`${viewKey}:r${relayoutNonce}`}

@@ -82,6 +82,8 @@ export type CommandPaletteActions = {
   onToggleClusterMode: () => void;
   onToggleNeighborhoodFocus: () => void;
   onFitView: () => void;
+  onExportPng: () => void;
+  onExportSvg: () => void;
   onFocusSelected: () => void;
   onCopySelectedName: () => void;
   onCopySelectedPath: () => void;
@@ -164,6 +166,20 @@ export function buildCommandActions(
       disabled: state.compactLayoutDisabled,
       run: actions.onCompactLayout,
     }),
+    {
+      id: "export-png",
+      group: "graph",
+      label: "Export graph as PNG",
+      keywords: ["export", "download", "snapshot", "png", "image"],
+      run: actions.onExportPng,
+    },
+    {
+      id: "export-svg",
+      group: "graph",
+      label: "Export graph as SVG",
+      keywords: ["export", "download", "snapshot", "svg", "vector"],
+      run: actions.onExportSvg,
+    },
     withShortcut({
       id: "toggle-cluster-folders",
       group: "graph",

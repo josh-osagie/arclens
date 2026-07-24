@@ -1,4 +1,6 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Panel, useReactFlow, useViewport } from "@xyflow/react";
+import { triggerExport } from "./exportGraphBridge";
 
 function FitViewIcon() {
   return (
@@ -18,39 +20,120 @@ function FitViewIcon() {
   );
 }
 
+function ExportIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path
+        d="M8 2.25v7.5M5.25 6.75 8 9.5l2.75-2.75M3.5 11.75v1.25c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25v-1.25"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function ZoomControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { zoom } = useViewport();
   const percent = Math.round(zoom * 100);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const runExport = useCallback(async (format: "png" | "svg") => {
+    setExporting(true);
+    try {
+      await triggerExport(format);
+    } catch (error) {
+      console.error("Graph export failed", error);
+    } finally {
+      setExporting(false);
+      setMenuOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [menuOpen]);
 
   return (
     <Panel position="bottom-left" className="zoom-controls-wrap">
-      <div className="zoom-controls">
-        <button
-          type="button"
-          className="zoom-controls__btn"
-          onClick={() => zoomIn({ duration: 180 })}
-          aria-label="Zoom in"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="zoom-controls__btn"
-          onClick={() => zoomOut({ duration: 180 })}
-          aria-label="Zoom out"
-        >
-          −
-        </button>
-        <button
-          type="button"
-          className="zoom-controls__btn"
-          onClick={() => fitView({ padding: 0.22, duration: 280 })}
-          aria-label="Fit view"
-        >
-          <FitViewIcon />
-        </button>
-        <span className="zoom-controls__label">{percent}%</span>
+      <div ref={wrapRef} className="export-controls">
+        {menuOpen && (
+          <div className="export-controls__menu" role="menu" aria-label="Export graph">
+            <button
+              type="button"
+              className="export-controls__item"
+              role="menuitem"
+              disabled={exporting}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => void runExport("png")}
+            >
+              Export PNG
+            </button>
+            <button
+              type="button"
+              className="export-controls__item"
+              role="menuitem"
+              disabled={exporting}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => void runExport("svg")}
+            >
+              Export SVG
+            </button>
+          </div>
+        )}
+
+        <div className="zoom-controls">
+          <button
+            type="button"
+            className="zoom-controls__btn"
+            onClick={() => zoomIn({ duration: 180 })}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="zoom-controls__btn"
+            onClick={() => zoomOut({ duration: 180 })}
+            aria-label="Zoom out"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="zoom-controls__btn"
+            onClick={() => fitView({ padding: 0.22, duration: 280 })}
+            aria-label="Fit view"
+          >
+            <FitViewIcon />
+          </button>
+          <button
+            type="button"
+            className="zoom-controls__btn"
+            aria-label="Export graph"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            disabled={exporting}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <ExportIcon />
+          </button>
+          <span className="zoom-controls__label">{percent}%</span>
+        </div>
       </div>
     </Panel>
   );
