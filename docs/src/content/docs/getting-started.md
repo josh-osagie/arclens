@@ -89,5 +89,5 @@ pnpm analyze:watch -- ./samples --insights --no-cache
 ## Next steps
 
 - [CLI reference](/cli-reference/): all flags and commands
-- [Viewer guide](/viewer-guide/):search, entry points, insights badge
+- [Viewer guide](/viewer-guide/): search, entry points, insights badge
 - [Concepts](/concepts/): nodes, edges, and insight criteria
