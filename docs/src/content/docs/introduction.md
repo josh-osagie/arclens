@@ -24,7 +24,6 @@ Existing IDE navigation is file-centric. Arclens provides **architecture-centric
 ## Who it is for
 
 - Frontend and full-stack engineers
-- Staff engineers reviewing unfamiliar code
 - Open source maintainers onboarding contributors
 - Engineering managers mapping feature ownership
 - New team members ramping on large codebases
