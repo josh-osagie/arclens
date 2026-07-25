@@ -55,6 +55,7 @@ import {
   type EdgeVisibilityPrefs,
 } from "./edgeVisibilityPrefs";
 import { GraphActions } from "./GraphActions";
+import { GraphLegend } from "./GraphLegend";
 import { CommandPalette } from "./features/command-palette/CommandPalette";
 import { ExportBridge, triggerExport } from "./exportGraphBridge";
 import {
@@ -1082,17 +1083,7 @@ export default function App() {
             )}
             {graph.meta?.notice && <p className="graph-notice">{graph.meta.notice}</p>}
 
-            <div className="graph-legend">
-              {legendTypes.map((type) => (
-                <span key={type} className="graph-legend__item">
-                  <span
-                    className="graph-legend__swatch"
-                    style={{ background: typeColors[type] }}
-                  />
-                  {type}
-                </span>
-              ))}
-            </div>
+            <GraphLegend types={legendTypes} typeColors={typeColors} />
 
             {spotlightFolder && !selected && (
               <p className="graph-sidebar__hint">

@@ -1203,8 +1203,65 @@
 .graph-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--atlas-space-4);
-  margin-bottom: var(--atlas-space-5);
+  gap: var(--atlas-space-1);
+  margin-bottom: var(--atlas-space-4);
+}
+
+.graph-actions__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--atlas-space-3);
+  padding-top: var(--atlas-space-1);
+}
+
+.graph-controls__field {
+  display: grid;
+  gap: var(--atlas-space-2);
+}
+
+.graph-controls__field-label {
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-muted);
+  text-transform: lowercase;
+}
+
+.graph-controls__subheading {
+  padding-top: var(--atlas-space-2);
+  font-size: var(--atlas-text-xs);
+  color: var(--atlas-text-muted);
+  text-transform: lowercase;
+}
+
+.graph-select {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: var(--atlas-radius-lg);
+  border: 1px solid var(--atlas-border);
+  background: var(--atlas-surface-raised);
+  color: var(--atlas-text);
+  font-size: var(--atlas-text-sm);
+  font-family: inherit;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: border-color var(--atlas-duration-fast) var(--atlas-ease);
+}
+
+.graph-select:focus {
+  outline: none;
+  border-color: var(--atlas-border-focus);
+}
+
+.graph-select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.graph-legend-section {
+  margin-bottom: var(--atlas-space-4);
+}
+
+.graph-legend-section .graph-legend {
+  padding-top: var(--atlas-space-1);
 }
 
 .graph-actions__buttons {

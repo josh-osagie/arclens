@@ -1,4 +1,9 @@
-export type SidebarSectionKey = "entries" | "folders" | "hubs";
+export type SidebarSectionKey =
+  | "entries"
+  | "folders"
+  | "hubs"
+  | "graphControls"
+  | "legend";
 
 export type SidebarSectionPrefs = Record<SidebarSectionKey, boolean>;
 
@@ -7,6 +12,8 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSectionPrefs = {
   entries: true,
   folders: true,
   hubs: false,
+  graphControls: true,
+  legend: false,
 };
 
 const STORAGE_KEY = "react-atlas-sidebar-sections";

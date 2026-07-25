@@ -1,6 +1,5 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
-import { edgeColors } from "./design/tokens";
 import {
   layoutNodesByPreset,
   NODE_H,
@@ -8,6 +7,12 @@ import {
   type LayoutContext,
   type LayoutPreset,
 } from "./layoutPresets";
+import {
+  formatEdgeTypeLabel,
+  mergeSameDirectionEdges,
+  primaryEdgeType,
+  strokeColorForEdgeTypes,
+} from "./mergeFlowEdges";
 import { DAGRE_LAYOUT_THRESHOLD } from "./viewerConfig";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 
@@ -221,25 +226,25 @@ export function buildFlowGraph(
     };
   });
 
-  const seenEdges = new Set<string>();
-  const initialEdges: Edge[] = graph.edges
-    .filter((edge) => {
-      const key = `${edge.from}|${edge.to}|${edge.type}`;
-      if (seenEdges.has(key)) return false;
-      seenEdges.add(key);
-      return true;
-    })
-    .map((edge, i) => ({
+  const mergedEdges = mergeSameDirectionEdges(graph.edges);
+  const initialEdges: Edge[] = mergedEdges.map((edge, i) => {
+    const stroke = strokeColorForEdgeTypes(edge.types);
+    const primaryType = primaryEdgeType(edge.types);
+
+    return {
       id: `e${i}`,
       source: edge.from,
       target: edge.to,
-      data: { edgeType: edge.type },
-      label: compact ? undefined : edge.type,
+      data: {
+        edgeType: primaryType,
+        edgeTypes: edge.types,
+      },
+      label: compact ? undefined : formatEdgeTypeLabel(edge.types),
       type: "default",
       // Never use stroke-dasharray bulk animation — costly at scale (see Liam ERD).
       animated: false,
       style: {
-        stroke: edgeColors[edge.type],
+        stroke,
         strokeWidth: compact ? 1.25 : 2,
       },
       ...(compact
@@ -259,9 +264,10 @@ export function buildFlowGraph(
           }),
       markerEnd: {
         type: "arrowclosed" as const,
-        color: edgeColors[edge.type],
+        color: stroke,
       },
-    }));
+    };
+  });
 
   return {
     nodes: layoutNodes(graph, initialNodes, initialEdges),

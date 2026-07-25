@@ -3,6 +3,7 @@ import type { Edge } from "@xyflow/react";
 import {
   filterEdgesByVisibility,
   getFlowEdgeType,
+  getFlowEdgeTypes,
 } from "../../viewer/src/edgeVisibility";
 import {
   DEFAULT_EDGE_VISIBILITY,
@@ -34,6 +35,18 @@ describe("edgeVisibility", () => {
     expect(getFlowEdgeType(edge("e1", "imports"))).toBe("imports");
   });
 
+  it("reads merged edge types from data.edgeTypes", () => {
+    const merged = {
+      id: "e1",
+      source: "a",
+      target: "b",
+      data: { edgeType: "renders", edgeTypes: ["renders", "imports"] },
+      label: "renders · imports",
+    } as Edge;
+
+    expect(getFlowEdgeTypes(merged)).toEqual(["renders", "imports"]);
+  });
+
   it("falls back to label when data is missing", () => {
     expect(getFlowEdgeType({ id: "e1", source: "a", target: "b", label: "renders" })).toBe(
       "renders",
@@ -41,13 +54,15 @@ describe("edgeVisibility", () => {
   });
 
   it("keeps edges whose type is enabled", () => {
-    expect(
-      filterEdgesByVisibility(sampleEdges, {
-        imports: true,
-        renders: false,
-        uses: true,
-      }),
-    ).toEqual([sampleEdges[0], sampleEdges[2]]);
+    const filtered = filterEdgesByVisibility(sampleEdges, {
+      imports: true,
+      renders: false,
+      uses: true,
+    });
+
+    expect(filtered.map((edge) => edge.id)).toEqual(["e1", "e3"]);
+    expect(filtered[0]?.data?.edgeTypes).toEqual(["imports"]);
+    expect(filtered[1]?.data?.edgeTypes).toEqual(["uses"]);
   });
 
   it("returns no edges when every type is hidden", () => {

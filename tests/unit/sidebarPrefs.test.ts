@@ -42,4 +42,9 @@ describe("sidebarPrefs", () => {
     expect(raw).toBeTruthy();
     expect(loadSidebarSections().entries).toBe(false);
   });
+
+  it("defaults graph controls expanded and legend collapsed", () => {
+    expect(loadSidebarSections().graphControls).toBe(true);
+    expect(loadSidebarSections().legend).toBe(false);
+  });
 });
