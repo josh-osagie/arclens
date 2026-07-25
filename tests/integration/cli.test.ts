@@ -87,4 +87,14 @@ describe("CLI (developer workflow)", () => {
     expect(output).toMatch(/not supported yet/);
     expect(output).toMatch(/HTML file/);
   });
+
+  it("registers watch and view subcommands", () => {
+    const { output: watchHelp } = runCli(["watch", "-h"]);
+    expect(watchHelp).toContain("Re-run analyze when .ts/.tsx files change");
+    expect(watchHelp).toContain("--insights");
+
+    const { output: viewHelp } = runCli(["view", "-h"]);
+    expect(viewHelp).toContain("Open the architecture graph viewer");
+    expect(viewHelp).toContain("--graph");
+  });
 });

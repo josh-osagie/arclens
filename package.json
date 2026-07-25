@@ -1,13 +1,24 @@
 {
   "name": "react-atlas",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Interactive architecture explorer for React and TypeScript codebases",
+  "main": "dist/cli.js",
+  "bin": {
+    "react-atlas": "./bin/react-atlas.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "react-atlas": "tsx src/cli.ts",
     "analyze": "tsx src/cli.ts analyze",
-    "analyze:watch": "bash scripts/watch.sh",
-    "dev:viewer": "pnpm --dir viewer dev",
+    "analyze:watch": "tsx src/cli.ts watch",
+    "build": "tsc && node scripts/copy-viewer.mjs",
+    "build:viewer": "pnpm --dir viewer build",
+    "prebuild": "pnpm build:viewer",
+    "dev:viewer": "tsx src/cli.ts view",
     "dev:docs": "pnpm --dir docs dev",
     "build:docs": "pnpm --dir docs build",
     "dev": "pnpm dev:viewer",
@@ -21,6 +32,7 @@
   "packageManager": "pnpm@10.24.0",
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
+    "chokidar": "^4.0.3",
     "commander": "^15.0.0",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1",
