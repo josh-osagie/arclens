@@ -279,6 +279,74 @@ export function isReactFunctionRoot(fn: Node): boolean {
   return isReactFunctionNode(fn);
 }
 
+const REACT_COMPONENT_WRAPPERS = new Set(["memo", "forwardRef", "lazy"]);
+
+function unwrapReactWrapperCall(node: Node): Node | undefined {
+  if (node.getKind() !== SyntaxKind.CallExpression) return undefined;
+
+  const call = node as CallExpression;
+  const expression = call.getExpression();
+  let calleeName: string | undefined;
+
+  if (expression.getKind() === SyntaxKind.Identifier) {
+    calleeName = expression.getText();
+  } else if (expression.getKind() === SyntaxKind.PropertyAccessExpression) {
+    calleeName = (expression as PropertyAccessExpression).getName();
+  }
+
+  if (!calleeName || !REACT_COMPONENT_WRAPPERS.has(calleeName)) {
+    return undefined;
+  }
+
+  const inner = call.getArguments()[0];
+  if (!inner) return undefined;
+
+  if (FUNCTION_KINDS.has(inner.getKind())) {
+    return inner;
+  }
+
+  if (inner.getKind() === SyntaxKind.FunctionDeclaration) {
+    return inner;
+  }
+
+  return undefined;
+}
+
+/**
+ * The function/class wrapped by an export — not nested callbacks inside config objects.
+ * Column defs and similar const exports stay utility even when a nested cell renderer has JSX.
+ */
+export function getComponentRoot(node: Node): Node | undefined {
+  if (
+    node.getKind() === SyntaxKind.FunctionDeclaration ||
+    node.getKind() === SyntaxKind.ClassDeclaration
+  ) {
+    return node;
+  }
+
+  const fn = getExportFunctionNode(node);
+  if (fn) return fn;
+
+  if (node.getKind() === SyntaxKind.VariableDeclaration) {
+    const init = (node as VariableDeclaration).getInitializer();
+    if (!init) return undefined;
+    if (FUNCTION_KINDS.has(init.getKind())) return init;
+    return unwrapReactWrapperCall(init);
+  }
+
+  if (FUNCTION_KINDS.has(node.getKind())) {
+    return node;
+  }
+
+  return undefined;
+}
+
+export function isComponentExport(node: Node): boolean {
+  const root = getComponentRoot(node);
+  if (!root) return false;
+  return nodeHasJsx(root);
+}
+
 export function classifyExport(
   name: string,
   declarations: Node[],
@@ -291,16 +359,17 @@ export function classifyExport(
   const node = declarations[0];
   if (!node) return "utility";
 
-  const fn = getExportFunctionNode(node) ?? node;
-  const hasJsx = nodeHasJsx(fn);
-  const callsHooks = nodeCallsHooks(fn);
-  const createsContext = nodeCreatesContext(fn) || nodeCreatesContext(node);
+  const componentRoot = getComponentRoot(node);
+  const hookCheckNode = componentRoot ?? getExportFunctionNode(node) ?? node;
+  const createsContext =
+    nodeCreatesContext(node) ||
+    (componentRoot ? nodeCreatesContext(componentRoot) : false);
 
-  if (hasJsx) return "component";
+  if (componentRoot && nodeHasJsx(componentRoot)) return "component";
 
   if (createsContext) return "context";
 
-  if (isCustomHookName(name) || callsHooks) return "hook";
+  if (isCustomHookName(name) || nodeCallsHooks(hookCheckNode)) return "hook";
 
   return "utility";
 }

@@ -2,7 +2,7 @@ import path from "node:path";
 import type { ExportRecord } from "./extractors/exports";
 import type { AnalysisResult } from "./analyzeProject";
 import type { GraphEdge, GraphNode } from "./types";
-import { isConfigFile } from "./extractors/reactFunction";
+import { isConfigFile, isPascalCase } from "./extractors/reactFunction";
 
 export type InsightSeverity = "error" | "warning" | "info" | "tip";
 
@@ -62,6 +62,19 @@ function getOutgoingRenderTargets(
   }
 
   return targets;
+}
+
+/**
+ * Import-without-render insight gate (Layers 1 + 3):
+ * - Layer 1: export must be classified as `component` (not utility/hook/context).
+ * - Layer 2: render edges only come from PascalCase JSX tags.
+ * - Layer 3: camelCase bindings (column defs, hooks, config) are never JSX tags,
+ *   so we skip them even when classification is wrong — but correct classification
+ *   at analyze time is what keeps false positives out of other insights too.
+ */
+function shouldFlagImportWithoutRender(target: GraphNode, symbolName: string): boolean {
+  if (target.type !== "component") return false;
+  return isPascalCase(symbolName);
 }
 
 export function buildInsights(result: AnalysisResult): Insight[] {
@@ -125,13 +138,16 @@ export function buildInsights(result: AnalysisResult): Insight[] {
 
     for (const targetId of imports) {
       const target = nodeById.get(targetId);
-      if (target?.type !== "component") continue;
+      if (!target) continue;
+
+      const targetName = nodeNameFromId(targetId);
+      if (!shouldFlagImportWithoutRender(target, targetName)) continue;
+
       if (!renders.has(targetId)) {
         insights.push({
           severity: "info",
-          title: `${nodeNameFromId(node.id)} imports but may not render ${nodeNameFromId(targetId)}`,
-          detail:
-            "Component is imported but no JSX render edge was detected. Could be dynamic, conditional, or re-exported.",
+          title: `${nodeNameFromId(node.id)} imports but may not render ${targetName}`,
+          detail: `PascalCase component ${targetName} imported but no JSX render detected (may be dynamic/conditional). camelCase imports such as column defs, config, and hooks are ignored.`,
           file: relFile(node.file),
         });
       }
