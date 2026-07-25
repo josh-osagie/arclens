@@ -69,11 +69,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JCalmCrasher/react-atlas.git"
+    "url": "git+https://github.com/JCalmCrasher/arclens.git"
   },
-  "homepage": "https://github.com/JCalmCrasher/react-atlas#readme",
+  "homepage": "https://github.com/JCalmCrasher/arclens#readme",
   "bugs": {
-    "url": "https://github.com/JCalmCrasher/react-atlas/issues"
+    "url": "https://github.com/JCalmCrasher/arclens/issues"
   },
   "engines": {
     "node": ">=18"
