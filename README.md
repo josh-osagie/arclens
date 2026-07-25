@@ -288,7 +288,7 @@ Log in once with `npm login`. Each release command does everything in one shot â
 | `pnpm release:patch` | Bump patch, then build, publish, git tag + push |
 | `pnpm release:minor` | Bump minor, then build, publish, git tag + push |
 | `pnpm release:major` | Bump major, then build, publish, git tag + push |
-| `pnpm release:patch:dry` | Bump patch, build, `npm publish --dry-run`, git step in dry-run (no publish or push) |
+| `pnpm release:patch:dry` | Build, `npm publish --dry-run`, git step in dry-run (no version bump, publish, or push) |
 
 ```bash
 pnpm release:publish  # publish 2.0.0 as-is (no bump), tag v2.0.0, push

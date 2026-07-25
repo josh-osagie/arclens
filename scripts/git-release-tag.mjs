@@ -88,6 +88,8 @@ function main() {
 
   if (tagExistsLocally(tag)) {
     console.log(`Tag ${tag} already exists locally.`);
+  } else if (dryRun) {
+    console.log(`[dry-run] Would create annotated tag ${tag}.`);
   } else {
     run(`git tag -a "${tag}" -m "${tag}"`);
     console.log(`Created annotated tag ${tag}.`);
@@ -106,7 +108,9 @@ function main() {
   } else {
     try {
       run(`git push origin "${tag}"`);
-      console.log(`Pushed tag ${tag} to origin.`);
+      if (!dryRun) {
+        console.log(`Pushed tag ${tag} to origin.`);
+      }
     } catch (error) {
       warn(`Could not push tag ${tag} (${error.message ?? error}). Release may still be on npm.`);
     }
