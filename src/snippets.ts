@@ -3,7 +3,6 @@ import path from "node:path";
 import {
   getWriteSnippetsDir,
   resolveSnippetSidecarPath,
-  SNIPPETS_DIR,
 } from "./paths";
 
 export { SNIPPETS_DIR } from "./paths";

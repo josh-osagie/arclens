@@ -1,4 +1,4 @@
-import { readLocalStorage, writeLocalStorage } from "./storageCompat";
+import { readLocalStorage, writeLocalStorage } from "../../storageCompat";
 
 export const MOBILE_BANNER_STORAGE_KEY = "arclens-mobile-banner-dismissed";
 

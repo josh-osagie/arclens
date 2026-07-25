@@ -1,6 +1,6 @@
 {
   "name": "arclens",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Arclens — React architecture explorer. Statically map components, hooks, and dependencies into an interactive graph.",
   "main": "dist/cli.js",
   "bin": {
