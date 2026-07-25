@@ -20,5 +20,5 @@ done
 pnpm exec concurrently \
   -n analyze,viewer \
   -c blue,yellow \
-  "pnpm react-atlas watch \"${TARGET}\" ${EXTRA_ARGS[*]}" \
-  "VITE_ATLAS_PROJECT_ROOT=\"${TARGET}\" pnpm react-atlas view"
+  "pnpm arclens watch \"${TARGET}\" ${EXTRA_ARGS[*]}" \
+  "VITE_ARCLENS_PROJECT_ROOT=\"${TARGET}\" pnpm arclens view"

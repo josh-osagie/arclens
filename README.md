@@ -1,18 +1,17 @@
-# React Atlas
+![Arclens](./assets/arclens-logo.png)
 
-Understand any React codebase in minutes.
+# Arclens
+Arclens statically analyzes React and TypeScript applications and transforms them into an interactive architecture graph, making it easy to explore dependencies, trace component relationships, and understand unfamiliar codebases.
 
-React Atlas statically analyzes React and TypeScript applications and transforms them into an interactive architecture graph, making it easy to explore dependencies, trace component relationships, and understand unfamiliar codebases.
+Unlike traditional IDE navigation, Arclens gives you a high-level view of your application's architecture without executing your code.
 
-Unlike traditional IDE navigation, React Atlas gives you a high-level view of your application's architecture without executing your code.
-
-## Why React Atlas?
+## Why Arclens?
 
 As React applications grow, understanding architecture becomes harder.
 
 Developers spend hours tracing imports, opening files, and searching for component relationships.
 
-React Atlas turns your codebase into an interactive map, making onboarding, debugging, and refactoring significantly easier.
+Arclens turns your codebase into an interactive map, making onboarding, debugging, and refactoring significantly easier.
 
 ## Setup
 
@@ -22,35 +21,35 @@ React Atlas turns your codebase into an interactive map, making onboarding, debu
 
 ### Install
 
-**From npm** (once published):
+**From npm** (published on npm):
 
 ```bash
-npm install -g react-atlas
+npm install -g arclens
 ```
 
 Or run without a global install:
 
 ```bash
-npx react-atlas analyze ./src --insights
+npx arclens analyze ./src --insights
 ```
 
 **From source** (this repo):
 
 ```bash
 git clone <repo-url>
-cd react-atlas
+cd arclens
 pnpm install
 ```
 
-When working from source, use `pnpm react-atlas <command>` (same flags as the published CLI). See [Development](#development) for contributor scripts.
+When working from source, use `pnpm arclens <command>` (same flags as the published CLI). See [Development](#development) for contributor scripts.
 
 ### Quick start
 
 Analyze your project, then open the viewer:
 
 ```bash
-npx react-atlas analyze ./src --insights
-npx react-atlas view
+npx arclens analyze ./src --insights
+npx arclens view
 ```
 
 Open the URL printed in the terminal (default `http://127.0.0.1:5173`).
@@ -60,8 +59,8 @@ This prints a terminal report, writes `graph.json` in the current working direct
 From this repo:
 
 ```bash
-pnpm react-atlas analyze ./samples --insights
-pnpm react-atlas view
+pnpm arclens analyze ./samples --insights
+pnpm arclens view
 ```
 
 ## Commands
@@ -71,7 +70,7 @@ pnpm react-atlas view
 Scan a React project, print a terminal report, and write `graph.json`.
 
 ```bash
-npx react-atlas analyze [path] [options]
+npx arclens analyze [path] [options]
 ```
 
 | Argument | Default     | Description                                |
@@ -82,25 +81,25 @@ npx react-atlas analyze [path] [options]
 
 ```bash
 # Full report with architecture hints
-npx react-atlas analyze ./src --insights
+npx arclens analyze ./src --insights
 
 # Save a text report
-npx react-atlas analyze ./src --insights --report-file report.txt
+npx arclens analyze ./src --insights --report-file report.txt
 
 # Save structured JSON (includes graph + insights)
-npx react-atlas analyze ./src --report-file report.json
+npx arclens analyze ./src --report-file report.json
 
 # Write graph to a custom path
-npx react-atlas analyze ./src -o output/graph.json
+npx arclens analyze ./src -o output/graph.json
 
 # See who uses a specific symbol
-npx react-atlas analyze ./src --focus Button
+npx arclens analyze ./src --focus Button
 
 # Force full re-parse and write snippet sidecars
-npx react-atlas analyze ./src --no-cache --with-snippets
+npx arclens analyze ./src --no-cache --with-snippets
 
 # Help
-npx react-atlas analyze -h
+npx arclens analyze -h
 ```
 
 #### Options
@@ -111,7 +110,7 @@ npx react-atlas analyze -h
 | ---------------------- | ---------------------------------------------------------------------------- |
 | `-o, --output [file]`  | Write `graph.json` (default: `graph.json` in cwd)                            |
 | `--report-file <file>` | Save a full report (`.txt` = readable, `.json` = structured)                 |
-| `--with-snippets`      | Write source sidecars to `.react-atlas/snippets/` for faster viewer previews |
+| `--with-snippets`      | Write source sidecars to `.arclens/snippets/` for faster viewer previews |
 
 **Report content**
 
@@ -127,7 +126,7 @@ npx react-atlas analyze -h
 
 | Flag              | Default  | Description                                             |
 | ----------------- | -------- | ------------------------------------------------------- |
-| `--no-cache`      | cache on | Re-parse all files and ignore `.react-atlas/cache.json` |
+| `--no-cache`      | cache on | Re-parse all files and ignore `.arclens/cache.json` |
 | `--max-files <n>` | `3000`   | Refuse to scan more than N files (safety guard)         |
 
 #### Terminal output
@@ -147,7 +146,7 @@ A typical run includes:
 Re-run `analyze` when `.ts`/`.tsx` files change. Accepts the same flags as `analyze`.
 
 ```bash
-npx react-atlas watch ./src --insights
+npx arclens watch ./src --insights
 ```
 
 While watch is running in an interactive terminal, press `r` to re-analyze immediately, `q` to stop, or `?` for help.
@@ -155,9 +154,9 @@ While watch is running in an interactive terminal, press `r` to re-analyze immed
 Analyze and view together:
 
 ```bash
-npx react-atlas watch ./src --insights
+npx arclens watch ./src --insights
 # in another terminal
-npx react-atlas view
+npx arclens view
 ```
 
 The viewer auto-refreshes when `graph.json` changes.
@@ -167,8 +166,8 @@ The viewer auto-refreshes when `graph.json` changes.
 Serve the architecture graph viewer for the current `graph.json`.
 
 ```bash
-npx react-atlas view
-npx react-atlas view --graph ./output/graph.json --open
+npx arclens view
+npx arclens view --graph ./output/graph.json --open
 ```
 
 | Flag                 | Default      | Description                          |
@@ -177,6 +176,9 @@ npx react-atlas view --graph ./output/graph.json --open
 | `-g, --graph <file>` | `graph.json` | Path to the graph file               |
 | `--project-root`     | from graph   | Project root for live source snippets |
 | `--open`             | off          | Open the viewer in your browser      |
+| `--dev`              | auto*        | Vite dev server with HMR from `viewer/` |
+
+\*From this repo, dev mode is auto-detected when `viewer/vite.config.ts` exists. Published installs serve static assets from `dist/viewer/`.
 
 Run `analyze` first so `graph.json` exists.
 
@@ -243,9 +245,9 @@ Contributor setup uses [pnpm](https://pnpm.io/).
 ```bash
 pnpm install
 pnpm test              # run unit and integration tests
-pnpm react-atlas analyze ./samples --insights
-pnpm react-atlas watch ./samples --insights
-pnpm react-atlas view
+pnpm arclens analyze ./samples --insights
+pnpm arclens watch ./samples --insights
+pnpm arclens view --dev   # Vite dev server with HMR (viewer/ source)
 pnpm build             # compile CLI + bundle viewer to dist/
 pnpm dev:docs          # start the docs site
 ```
@@ -254,10 +256,12 @@ Shorthand scripts (same CLI, useful in this repo):
 
 | Script            | Equivalent                          |
 | ----------------- | ----------------------------------- |
-| `pnpm analyze`    | `pnpm react-atlas analyze`          |
-| `pnpm analyze:watch` | `pnpm react-atlas watch`         |
-| `pnpm dev:viewer` | `pnpm react-atlas view`             |
+| `pnpm analyze`    | `pnpm arclens analyze`          |
+| `pnpm analyze:watch` | `pnpm arclens watch`         |
+| `pnpm dev:viewer` | `pnpm arclens view --dev` (Vite HMR from `viewer/`) |
 | `pnpm dev:watch`  | watch + view together (see script)  |
+
+**Viewer dev vs production:** From this repo, `pnpm dev:viewer` (or `arclens view --dev`) runs the Vite dev server in `viewer/` so favicon, title, and UI changes hot-reload. `graph.json` is served from your current working directory. After `pnpm build`, or from the published npm package (no `viewer/` folder), `arclens view` serves the static bundle in `dist/viewer/`.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 
@@ -270,7 +274,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 | `docs/`    | Documentation site          |
 | `samples/` | Sample project for analysis |
 
-Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the viewer build to `dist/viewer/`. The `react-atlas` bin works from the compiled output or falls back to `tsx` when developing from source.
+Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the viewer build to `dist/viewer/`. The `arclens` bin works from the compiled output or falls back to `tsx` when developing from source.
 
 ## License
 

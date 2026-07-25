@@ -7,7 +7,7 @@ import { runWatch } from "./watchCommand";
 const program = new Command();
 
 program
-  .name("react-atlas")
+  .name("arclens")
   .description("Interactive architecture explorer for React/TypeScript")
   .version("1.0.0");
 
@@ -45,16 +45,21 @@ program
     "project root for source snippets (default: from graph meta)",
   )
   .option("--open", "open the viewer in your default browser")
+  .option(
+    "--dev",
+    "run Vite dev server with HMR (auto-detected when viewer/ source exists)",
+  )
   .action(
     async (options: {
       port: string;
       graph: string;
       projectRoot?: string;
       open?: boolean;
+      dev?: boolean;
     }) => {
       const port = Number.parseInt(options.port, 10);
       if (Number.isNaN(port) || port <= 0) {
-        console.error("react-atlas: --port must be a positive number");
+        console.error("arclens: --port must be a positive number");
         process.exitCode = 1;
         return;
       }
@@ -67,10 +72,11 @@ program
             ? path.resolve(process.cwd(), options.projectRoot)
             : undefined,
           open: options.open,
+          dev: options.dev,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`react-atlas: ${message}`);
+        console.error(`arclens: ${message}`);
         process.exitCode = 1;
       }
     },

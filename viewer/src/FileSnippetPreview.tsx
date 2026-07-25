@@ -48,7 +48,7 @@ export function FileSnippetPreview({ nodeFile, projectRoot, maxLines = DEFAULT_S
         status: "error",
         message: projectRoot
           ? "Could not resolve file path for preview."
-          : "No project root in graph meta. Re-run analyze or set VITE_ATLAS_PROJECT_ROOT.",
+          : "No project root in graph meta. Re-run analyze or set VITE_ARCLENS_PROJECT_ROOT.",
       });
       return;
     }

@@ -38,7 +38,7 @@ export function MobileBanner() {
           />
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              React Atlas works best on desktop
+              Arclens works best on desktop
             </p>
             <p className="text-xs leading-relaxed text-muted-foreground">
               Graph navigation is limited on small screens. You can keep exploring, but panning,

@@ -2,14 +2,13 @@ import path from "node:path";
 import { Project } from "ts-morph";
 import {
   buildCacheFile,
-  CACHE_DIR,
-  getCachePath,
   normalizePath,
   partitionFilesByCache,
   readFileCache,
   tsConfigCacheKey,
   writeFileCache,
 } from "./cache/fileCache";
+import { ALL_CACHE_DIR_NAMES, getWriteCacheFilePath, resolveCacheFilePath } from "./paths";
 import {
   detectUnsupportedProjectHint,
   discoverSourceFiles,
@@ -74,7 +73,7 @@ const IGNORED_PATH_PARTS = [
   `${path.sep}dist${path.sep}`,
   `${path.sep}build${path.sep}`,
   `${path.sep}.git${path.sep}`,
-  `${path.sep}${CACHE_DIR}${path.sep}`,
+  ...ALL_CACHE_DIR_NAMES.map((dir) => `${path.sep}${dir}${path.sep}`),
 ];
 
 function isSafeSourceFile(filePath: string): boolean {
@@ -119,7 +118,8 @@ export function analyzeProject(
 
   const tsConfigPath = findTsConfig(targetDir);
   const tsConfigKey = tsConfigCacheKey(tsConfigPath);
-  const cachePath = getCachePath(targetDir);
+  const readCachePath = resolveCacheFilePath(targetDir);
+  const writeCachePath = getWriteCacheFilePath(targetDir);
 
   let cacheHits = 0;
   let cacheMisses = discoveredFiles.length;
@@ -128,7 +128,7 @@ export function analyzeProject(
     progress,
     formatCacheLoadPhase(),
     () => {
-      const cache = useCache ? readFileCache(cachePath) : null;
+      const cache = useCache ? readFileCache(readCachePath) : null;
       const part = useCache
         ? partitionFilesByCache(targetDir, discoveredFiles, cache, tsConfigKey)
         : {
@@ -211,7 +211,7 @@ export function analyzeProject(
 
   if (useCache) {
     const nextCache = buildCacheFile(targetDir, discoveredFiles, allPayloads, tsConfigKey);
-    writeFileCache(cachePath, nextCache);
+    writeFileCache(writeCachePath, nextCache);
   }
 
   const graph = runWithPhaseHeartbeat(progress, formatBuildGraphPhase(), () =>

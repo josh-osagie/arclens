@@ -3,7 +3,7 @@ title: Viewer guide
 description: Navigate the React Flow viewer:search, folders, entry points, insights, and source preview.
 ---
 
-The viewer lives in `viewer/` and is a Vite + React Flow app. It reads `graph.json` from the project root (or a path configured via `VITE_ATLAS_PROJECT_ROOT` in watch mode).
+The viewer lives in `viewer/` and is a Vite + React Flow app. It reads `graph.json` from the project root (or a path configured via `VITE_ARCLENS_PROJECT_ROOT` in watch mode).
 
 ## Start the viewer
 
@@ -28,7 +28,7 @@ The viewer has three main areas:
 
 Floating panels are draggable and resizable; positions persist in local storage.
 
-![React Atlas viewer showing the samples dependency graph with sidebar, canvas, and minimap](/images/viewer/graph-overview.png)
+![Arclens viewer showing the samples dependency graph with sidebar, canvas, and minimap](/images/viewer/graph-overview.png)
 
 The screenshot above uses the `samples` fixture:a small graph with components, hooks, utilities, and context nodes connected by import, render, and use edges.
 
@@ -109,7 +109,7 @@ The details panel includes a **Source preview** section that loads a truncated s
 Preview resolution order:
 
 1. Live read via the dev server API (when running `dev:viewer` / `dev:watch`)
-2. Sidecar files from `--with-snippets` (`.react-atlas/snippets/`)
+2. Sidecar files from `--with-snippets` (`.arclens/snippets/`)
 
 Syntax highlighting covers comments, strings, keywords, JSX tags, and numbers. Truncated files show line counts (e.g. "showing 120 of 340 lines").
 

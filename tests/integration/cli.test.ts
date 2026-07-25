@@ -34,7 +34,7 @@ describe("CLI (developer workflow)", () => {
   it("analyze ./samples prints architecture summary to terminal", () => {
     const { output } = runCli(["analyze", "./samples", "--insights", "--no-color"]);
 
-    expect(output).toContain("React Atlas");
+    expect(output).toContain("Arclens");
     expect(output).toContain("Project:");
     expect(output).toContain("samples");
     expect(output).toContain("Nodes:");
@@ -44,7 +44,7 @@ describe("CLI (developer workflow)", () => {
   });
 
   it("writes graph.json by default", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-cli-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-cli-"));
     const samples = path.join(root, "samples");
     const graphPath = path.join(dir, "graph.json");
 
@@ -57,7 +57,7 @@ describe("CLI (developer workflow)", () => {
   });
 
   it("writes .txt vs .json reports based on extension", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-cli-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-cli-"));
     const samples = path.join(root, "samples");
     const txt = path.join(dir, "out.txt");
     const json = path.join(dir, "out.json");
@@ -65,7 +65,7 @@ describe("CLI (developer workflow)", () => {
     runCli(["analyze", samples, "--report-file", txt, "-q", "--no-color"]);
     runCli(["analyze", samples, "--report-file", json, "-q", "--no-color"]);
 
-    expect(fs.readFileSync(txt, "utf8")).toContain("React Atlas");
+    expect(fs.readFileSync(txt, "utf8")).toContain("Arclens");
     expect(fs.readFileSync(json, "utf8").trimStart().startsWith("{")).toBe(true);
   });
 
@@ -74,7 +74,7 @@ describe("CLI (developer workflow)", () => {
   });
 
   it("explains when the target has no TypeScript sources", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-cli-html-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-cli-html-"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
     const { output, status } = runCli(["analyze", dir, "--no-color"], {

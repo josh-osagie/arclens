@@ -19,7 +19,7 @@ function elementWithClass(className: string): Element {
 describe("exportGraphSnapshot", () => {
   it("slugifies export filename segments", () => {
     expect(slugifyExportSegment("My Cool App")).toBe("my-cool-app");
-    expect(slugifyExportSegment("   ")).toBe("react-atlas");
+    expect(slugifyExportSegment("   ")).toBe("arclens");
   });
 
   it("builds filenames from project name and timestamp", () => {

@@ -6,7 +6,7 @@ import {
   toggleSidebarSection,
 } from "../../viewer/src/sidebarPrefs";
 
-const STORAGE_KEY = "react-atlas-sidebar-sections";
+const STORAGE_KEY = "arclens-sidebar-sections";
 
 describe("sidebarPrefs", () => {
   let store: Record<string, string>;

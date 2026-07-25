@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadExportScope, saveExportScope } from "../../viewer/src/exportPrefs";
 
-const STORAGE_KEY = "react-atlas-export-scope";
+const STORAGE_KEY = "arclens-export-scope";
 
 describe("exportPrefs", () => {
   let store: Record<string, string>;

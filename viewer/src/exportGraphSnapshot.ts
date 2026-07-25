@@ -21,7 +21,7 @@ export function slugifyExportSegment(value: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
 
-  return slug || "react-atlas";
+  return slug || "arclens";
 }
 
 export function buildExportFilename(options: {
@@ -30,7 +30,7 @@ export function buildExportFilename(options: {
   format: ExportFormat;
   now?: Date;
 }): string {
-  const label = options.projectName?.trim() || options.graphKey?.trim() || "react-atlas";
+  const label = options.projectName?.trim() || options.graphKey?.trim() || "arclens";
   const stamp = (options.now ?? new Date()).toISOString().replace(/[:.]/g, "-").slice(0, 19);
   return `${slugifyExportSegment(label)}-graph-${stamp}.${options.format}`;
 }

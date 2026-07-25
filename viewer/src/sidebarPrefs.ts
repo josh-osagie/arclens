@@ -1,3 +1,5 @@
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
+
 export type SidebarSectionKey =
   | "entries"
   | "folders"
@@ -16,11 +18,11 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSectionPrefs = {
   legend: false,
 };
 
-const STORAGE_KEY = "react-atlas-sidebar-sections";
+const STORAGE_KEY = "arclens-sidebar-sections";
 
 export function loadSidebarSections(): SidebarSectionPrefs {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readLocalStorage(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SIDEBAR_SECTIONS };
     const parsed = JSON.parse(raw) as Partial<SidebarSectionPrefs>;
     return { ...DEFAULT_SIDEBAR_SECTIONS, ...parsed };
@@ -31,7 +33,7 @@ export function loadSidebarSections(): SidebarSectionPrefs {
 
 export function saveSidebarSections(prefs: SidebarSectionPrefs): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    writeLocalStorage(STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // ignore quota errors
   }

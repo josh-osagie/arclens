@@ -1,6 +1,6 @@
-import path from "node:path";
 import fs from "node:fs";
-import { describe, expect, it, vi, afterEach } from "vitest";
+import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   FILE_ACTION_VERBS,
   formatBuildGraphPhase,
@@ -19,22 +19,19 @@ import {
   formatStartMessage,
   formatTargetLabel,
   isWatchProgressMode,
-  pickCycledVerb,
-  shouldUpdateFileProgress,
-  writeProgressLine,
   LARGE_PROJECT_THRESHOLD,
   PARSE_UPDATE_BATCH,
-  PHASE_HEARTBEAT_MS,
-  runWithPhaseHeartbeat,
+  pickCycledVerb,
+  shouldUpdateFileProgress
 } from "../../src/analyzeProgress";
 
 describe("analyzeProgress helpers", () => {
-  const cwd = "/workspace/react-atlas";
-  const targetDir = "/workspace/react-atlas/samples";
+  const cwd = "/workspace/arclens";
+  const targetDir = "/workspace/arclens/samples";
 
   it("formats project context label", () => {
-    expect(formatTargetLabel("react-atlas", targetDir, cwd)).toBe(
-      "react-atlas (samples)",
+    expect(formatTargetLabel("arclens", targetDir, cwd)).toBe(
+      "arclens (samples)",
     );
   });
 
@@ -129,18 +126,18 @@ describe("analyzeProgress helpers", () => {
   });
 
   it("detects watch progress mode from env or reanalyze flag", () => {
-    const original = process.env.REACT_ATLAS_WATCH_TARGET;
-    delete process.env.REACT_ATLAS_WATCH_TARGET;
+    const original = process.env.ARCLENS_WATCH_TARGET;
+    delete process.env.ARCLENS_WATCH_TARGET;
     expect(isWatchProgressMode({})).toBe(false);
     expect(isWatchProgressMode({ reanalyze: true })).toBe(true);
 
-    process.env.REACT_ATLAS_WATCH_TARGET = "/tmp/demo";
+    process.env.ARCLENS_WATCH_TARGET = "/tmp/demo";
     expect(isWatchProgressMode({})).toBe(true);
 
     if (original === undefined) {
-      delete process.env.REACT_ATLAS_WATCH_TARGET;
+      delete process.env.ARCLENS_WATCH_TARGET;
     } else {
-      process.env.REACT_ATLAS_WATCH_TARGET = original;
+      process.env.ARCLENS_WATCH_TARGET = original;
     }
   });
 });
@@ -246,9 +243,9 @@ describe("createAnalyzeProgressReporter line mode", () => {
   it("uses sync stderr writes in watch mode", async () => {
     const stderr = process.stderr as NodeJS.WriteStream & { isTTY?: boolean };
     const originalIsTTY = stderr.isTTY;
-    const originalWatchTarget = process.env.REACT_ATLAS_WATCH_TARGET;
+    const originalWatchTarget = process.env.ARCLENS_WATCH_TARGET;
     const targetDir = path.join(process.cwd(), "watch-demo");
-    process.env.REACT_ATLAS_WATCH_TARGET = targetDir;
+    process.env.ARCLENS_WATCH_TARGET = targetDir;
     Object.defineProperty(stderr, "isTTY", { value: false, configurable: true });
 
     const syncWrites: string[] = [];
@@ -264,9 +261,9 @@ describe("createAnalyzeProgressReporter line mode", () => {
 
     Object.defineProperty(stderr, "isTTY", { value: originalIsTTY, configurable: true });
     if (originalWatchTarget === undefined) {
-      delete process.env.REACT_ATLAS_WATCH_TARGET;
+      delete process.env.ARCLENS_WATCH_TARGET;
     } else {
-      process.env.REACT_ATLAS_WATCH_TARGET = originalWatchTarget;
+      process.env.ARCLENS_WATCH_TARGET = originalWatchTarget;
     }
 
     expect(syncWrites.join("")).toContain(`Re-mapping demo (${path.relative(process.cwd(), targetDir) || "watch-demo"})...\n`);

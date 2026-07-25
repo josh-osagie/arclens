@@ -1,4 +1,5 @@
 import type { GraphEdgeType } from "./types";
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
 
 export type EdgeVisibilityPrefs = Record<GraphEdgeType, boolean>;
 
@@ -16,11 +17,11 @@ export const DEFAULT_EDGE_VISIBILITY: EdgeVisibilityPrefs = {
   uses: true,
 };
 
-const STORAGE_KEY = "react-atlas-edge-visibility";
+const STORAGE_KEY = "arclens-edge-visibility";
 
 export function loadEdgeVisibility(): EdgeVisibilityPrefs {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readLocalStorage(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_EDGE_VISIBILITY };
     const parsed = JSON.parse(raw) as Partial<EdgeVisibilityPrefs>;
     return {
@@ -35,7 +36,7 @@ export function loadEdgeVisibility(): EdgeVisibilityPrefs {
 
 export function saveEdgeVisibility(prefs: EdgeVisibilityPrefs): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    writeLocalStorage(STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // ignore quota errors
   }

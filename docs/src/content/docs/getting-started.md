@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Install React Atlas, run your first analysis, and open the viewer.
+description: Install Arclens, run your first analysis, and open the viewer.
 ---
 
 ## Requirements
@@ -10,7 +10,7 @@ description: Install React Atlas, run your first analysis, and open the viewer.
 
 ## Install (from source)
 
-React Atlas is under active development. Clone the repo and install dependencies:
+Arclens is under active development. Clone the repo and install dependencies:
 
 ```bash
 git clone <repo-url>
@@ -18,14 +18,14 @@ cd react-atlas
 pnpm install
 ```
 
-When the package is published to npm, you will be able to run `npx react-atlas analyze ./src` from any project. Until then, prefix commands with `pnpm react-atlas`.
+When the package is published to npm, you will be able to run `npx arclens analyze ./src` from any project. Until then, prefix commands with `pnpm arclens`.
 
 ## Analyze a project
 
 Run analysis against the built-in sample project:
 
 ```bash
-pnpm react-atlas analyze ./samples --insights
+pnpm arclens analyze ./samples --insights
 ```
 
 This command:
@@ -37,7 +37,7 @@ This command:
 Analyze your own app by pointing at a source folder:
 
 ```bash
-pnpm react-atlas analyze ./src --insights
+pnpm arclens analyze ./src --insights
 ```
 
 Use `--insights` to include architecture suggestions and ESLint-style hints in the terminal output. Insights are always embedded in `graph.json` for the viewer.
@@ -82,7 +82,7 @@ pnpm analyze:watch -- ./samples --insights --no-cache
 
 ## Typical workflow
 
-1. `pnpm react-atlas analyze ./src --insights`:generate `graph.json`
+1. `pnpm arclens analyze ./src --insights`:generate `graph.json`
 2. `pnpm dev:viewer`:explore the graph
 3. Refactor, then re-run analyze or use `pnpm dev:watch` for live updates
 

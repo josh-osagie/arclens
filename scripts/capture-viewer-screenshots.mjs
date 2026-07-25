@@ -1,5 +1,5 @@
 /**
- * Capture React Atlas viewer screenshots for docs.
+ * Capture Arclens viewer screenshots for docs.
  * Usage:
  *   pnpm add -D playwright   # one-time
  *   pnpm dev:viewer            # in another terminal

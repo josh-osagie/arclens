@@ -1,4 +1,4 @@
-import type { SourceFile } from "ts-morph";
+import type { SourceFile, StandardizedFilePath } from "ts-morph";
 import path from "node:path";
 import { nodeId } from "./extractors/find";
 import type { ExportRecord } from "./extractors/exports";
@@ -17,8 +17,8 @@ export type ImportEdge = ReturnType<typeof extractImportEdges>[number];
 export type RenderEdge = ReturnType<typeof extractJsxRenders>[number];
 export type UseEdge = ReturnType<typeof extractHookUsage>[number];
 
-function normalizeFileRef(filePath: string): string {
-  return path.normalize(filePath);
+function normalizeFileRef(filePath: string): StandardizedFilePath {
+  return path.normalize(filePath) as StandardizedFilePath;
 }
 
 export type FileAnalysisPayload = {

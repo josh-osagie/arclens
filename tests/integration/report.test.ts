@@ -59,7 +59,7 @@ describe("report", () => {
   });
 
   it("writes structured JSON report", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-test-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-test-"));
     const jsonPath = path.join(dir, "report.json");
 
     writeReportFile(result, jsonPath, { graphOutput: null, reportOutput: jsonPath });
@@ -72,13 +72,13 @@ describe("report", () => {
   });
 
   it("writes human-readable text report", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-test-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-test-"));
     const txtPath = path.join(dir, "report.txt");
 
     writeReportFile(result, txtPath, { graphOutput: null, reportOutput: txtPath });
     const text = fs.readFileSync(txtPath, "utf8");
 
-    expect(text).toContain("React Atlas");
+    expect(text).toContain("Arclens");
     expect(text.startsWith("{")).toBe(false);
   });
 });

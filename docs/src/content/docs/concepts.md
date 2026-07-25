@@ -3,7 +3,7 @@ title: Concepts
 description: Graph nodes, edges, entry points, and how insights are computed.
 ---
 
-React Atlas builds a directed graph from static analysis. Understanding nodes and edges helps you interpret both terminal reports and the viewer.
+Arclens builds a directed graph from static analysis. Understanding nodes and edges helps you interpret both terminal reports and the viewer.
 
 ## Nodes
 
@@ -99,7 +99,7 @@ Insights reference optional `eslintRule` ids where applicable (e.g. `import/no-u
 
 ## Caching
 
-Analyze stores parse metadata in `.react-atlas/cache.json` inside the target project. Use `--no-cache` to force a full re-parse after changing extractors or when debugging stale results.
+Analyze stores parse metadata in `.arclens/cache.json` inside the target project. Use `--no-cache` to force a full re-parse after changing extractors or when debugging stale results.
 
 ## What is not analyzed
 

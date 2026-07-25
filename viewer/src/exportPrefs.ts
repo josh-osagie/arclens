@@ -1,10 +1,12 @@
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
+
 export type ExportScope = "viewport" | "full";
 
-const STORAGE_KEY = "react-atlas-export-scope";
+const STORAGE_KEY = "arclens-export-scope";
 
 export function loadExportScope(): ExportScope {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readLocalStorage(STORAGE_KEY);
     if (raw === "full" || raw === "viewport") return raw;
   } catch {
     // ignore storage errors
@@ -14,7 +16,7 @@ export function loadExportScope(): ExportScope {
 
 export function saveExportScope(scope: ExportScope): void {
   try {
-    localStorage.setItem(STORAGE_KEY, scope);
+    writeLocalStorage(STORAGE_KEY, scope);
   } catch {
     // ignore quota errors
   }

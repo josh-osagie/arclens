@@ -15,6 +15,8 @@ export type ViewOptions = {
   graphPath: string;
   projectRoot?: string;
   open?: boolean;
+  /** Prefer Vite dev server with HMR (viewer/ source). */
+  dev?: boolean;
 };
 
 const MIME_TYPES: Record<string, string> = {
@@ -69,6 +71,30 @@ export function resolveViewerDist(packageRoot: string): string | null {
   return null;
 }
 
+function resolveViewerSourceDir(packageRoot: string): string | null {
+  const viewerDir = path.join(packageRoot, "viewer");
+  for (const configName of ["vite.config.ts", "vite.config.mjs", "vite.config.js"]) {
+    if (fs.existsSync(path.join(viewerDir, configName))) {
+      return viewerDir;
+    }
+  }
+  return null;
+}
+
+/** Use Vite HMR when developing from source; static dist/viewer in published installs. */
+export function shouldUseViteDev(
+  packageRoot: string,
+  options: Pick<ViewOptions, "dev">,
+): boolean {
+  if (options.dev) {
+    return true;
+  }
+  if (process.env.NODE_ENV === "development") {
+    return true;
+  }
+  return resolveViewerSourceDir(packageRoot) !== null;
+}
+
 function resolveProjectRoot(options: ViewOptions): string | null {
   if (options.projectRoot && fs.existsSync(options.projectRoot)) {
     return path.resolve(options.projectRoot);
@@ -113,7 +139,7 @@ function createStaticServer(
     if (url.pathname === "/graph.json") {
       if (!fs.existsSync(options.graphPath)) {
         sendJson(res, 404, {
-          error: "graph.json not found. Run react-atlas analyze first.",
+          error: "graph.json not found. Run arclens analyze first.",
         });
         return;
       }
@@ -194,40 +220,53 @@ async function openBrowser(url: string): Promise<void> {
   spawn(command, [], { shell: true, stdio: "ignore" }).unref();
 }
 
-function startViteDevServer(options: ViewOptions): Promise<number> {
-  const packageRoot = getPackageRoot();
-  const viewerDir = path.join(packageRoot, "viewer");
+function startViteDevServer(
+  options: ViewOptions,
+  packageRoot: string,
+): Promise<number> {
+  const viewerDir = resolveViewerSourceDir(packageRoot);
+  if (!viewerDir) {
+    throw new Error(
+      "Viewer source not found. Use a published install or clone the repo with viewer/.",
+    );
+  }
+
   const viteCli = path.join(viewerDir, "node_modules", "vite", "bin", "vite.js");
 
   if (!fs.existsSync(viteCli)) {
     throw new Error(
-      "Viewer not available. From source run `pnpm install` in the repo, or build with `pnpm build:viewer`.",
+      "Viewer dev dependencies missing. From source run `pnpm install` in the repo, or build with `pnpm build:viewer` for static assets.",
     );
   }
 
   const env = { ...process.env };
+  env.VITE_ARCLENS_GRAPH_PATH = options.graphPath;
   const projectRoot = resolveProjectRoot(options);
   if (projectRoot) {
-    env.VITE_ATLAS_PROJECT_ROOT = projectRoot;
+    env.VITE_ARCLENS_PROJECT_ROOT = projectRoot;
   }
 
-  console.log("React Atlas view (dev server)");
+  const url = `http://127.0.0.1:${options.port}`;
+  console.log("Arclens view (dev server)");
+  console.log(`  url:     ${url}`);
   console.log(`  graph:   ${options.graphPath}`);
+  console.log(`  source:  ${viewerDir}`);
   if (projectRoot) {
     console.log(`  project: ${projectRoot}`);
   }
   console.log("");
 
+  const viteArgs = [viteCli, "--port", String(options.port), "--host"];
+  if (options.open) {
+    viteArgs.push("--open");
+  }
+
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [viteCli, "--port", String(options.port), "--host"],
-      {
-        cwd: viewerDir,
-        env,
-        stdio: "inherit",
-      },
-    );
+    const child = spawn(process.execPath, viteArgs, {
+      cwd: viewerDir,
+      env,
+      stdio: "inherit",
+    });
 
     child.on("error", reject);
     child.on("close", (code) => resolve(code ?? 0));
@@ -236,11 +275,16 @@ function startViteDevServer(options: ViewOptions): Promise<number> {
 
 export async function runView(options: ViewOptions): Promise<number> {
   const packageRoot = getPackageRoot();
-  const distDir = resolveViewerDist(packageRoot);
 
+  if (shouldUseViteDev(packageRoot, options)) {
+    return startViteDevServer(options, packageRoot);
+  }
+
+  const distDir = resolveViewerDist(packageRoot);
   if (!distDir) {
-    const status = await startViteDevServer(options);
-    return status;
+    throw new Error(
+      "Viewer not available. Run `pnpm build:viewer`, or from source use `arclens view --dev`.",
+    );
   }
 
   const url = `http://127.0.0.1:${options.port}`;
@@ -251,7 +295,7 @@ export async function runView(options: ViewOptions): Promise<number> {
     server.on("error", reject);
   });
 
-  console.log("React Atlas view");
+  console.log("Arclens view");
   console.log(`  url:     ${url}`);
   console.log(`  graph:   ${options.graphPath}`);
   console.log(`  assets:  ${distDir}`);

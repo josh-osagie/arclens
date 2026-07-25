@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import {
+  getWriteSnippetsDir,
+  resolveSnippetSidecarPath,
+  SNIPPETS_DIR,
+} from "./paths";
 
-export const SNIPPETS_DIR = ".react-atlas/snippets";
+export { SNIPPETS_DIR } from "./paths";
 export const DEFAULT_SNIPPET_LINES = 120;
 
 export type TruncatedContent = {
@@ -85,8 +90,8 @@ export function readSnippetFromDisk(
     return { ...truncateLines(raw, maxLines), source: "live" };
   }
 
-  const sidecarPath = path.join(root, SNIPPETS_DIR, ...relativeFile.split("/"));
-  if (fs.existsSync(sidecarPath) && fs.statSync(sidecarPath).isFile()) {
+  const sidecarPath = resolveSnippetSidecarPath(root, relativeFile);
+  if (sidecarPath) {
     const raw = fs.readFileSync(sidecarPath, "utf8");
     const lines = raw.replace(/\r\n/g, "\n").split("\n");
     return {
@@ -105,7 +110,10 @@ export function snippetSidecarPath(
   projectRoot: string,
   relativeFile: string,
 ): string {
-  return path.join(projectRoot, SNIPPETS_DIR, ...relativeFile.split("/"));
+  return path.join(
+    getWriteSnippetsDir(projectRoot),
+    ...relativeFile.split("/"),
+  );
 }
 
 export function writeSnippetSidecar(

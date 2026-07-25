@@ -12,7 +12,7 @@ import {
   setEdgeTypeVisible,
 } from "../../viewer/src/edgeVisibilityPrefs";
 
-const STORAGE_KEY = "react-atlas-edge-visibility";
+const STORAGE_KEY = "arclens-edge-visibility";
 
 function edge(id: string, type: "imports" | "renders" | "uses", label?: string): Edge {
   return {

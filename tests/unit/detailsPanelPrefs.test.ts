@@ -4,7 +4,7 @@ import {
   saveSourcePreviewExpanded,
 } from "../../viewer/src/detailsPanelPrefs";
 
-const SOURCE_PREVIEW_KEY = "react-atlas-source-preview-expanded";
+const SOURCE_PREVIEW_KEY = "arclens-source-preview-expanded";
 
 describe("detailsPanelPrefs — source preview", () => {
   let store: Record<string, string>;

@@ -4,6 +4,7 @@ import { folderKey } from "./clusterGraph";
 import { DAGRE_LAYOUT_THRESHOLD } from "./viewerConfig";
 import type { AtlasGraph, AtlasGraphNode, GraphNodeType } from "./types";
 import type { AtlasNodeData } from "./buildFlowGraph";
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
 
 export const LAYOUT_PRESETS = [
   { id: "tree-down", label: "Tree down" },
@@ -18,7 +19,7 @@ export type LayoutPreset = (typeof LAYOUT_PRESETS)[number]["id"];
 
 export const DEFAULT_LAYOUT_PRESET: LayoutPreset = "tree-down";
 
-const STORAGE_KEY = "react-atlas-layout-preset";
+const STORAGE_KEY = "arclens-layout-preset";
 
 export const NODE_W = 196;
 export const NODE_H = 88;
@@ -46,7 +47,7 @@ type DagreOptions = {
 
 export function loadLayoutPreset(): LayoutPreset {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readLocalStorage(STORAGE_KEY);
     if (raw && LAYOUT_PRESETS.some((preset) => preset.id === raw)) {
       return raw as LayoutPreset;
     }
@@ -58,7 +59,7 @@ export function loadLayoutPreset(): LayoutPreset {
 
 export function saveLayoutPreset(preset: LayoutPreset): void {
   try {
-    localStorage.setItem(STORAGE_KEY, preset);
+    writeLocalStorage(STORAGE_KEY, preset);
   } catch {
     // ignore quota errors
   }

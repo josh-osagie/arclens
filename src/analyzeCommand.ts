@@ -9,7 +9,8 @@ import { printReport, writeReportFile } from "./report";
 import { resolveTarget } from "./resolveTarget";
 import { buildInsights } from "./insights";
 import { slimGraphForExport } from "./slimGraph";
-import { writeSnippetSidecars } from "./snippets";
+import { CACHE_DIR } from "./cache/fileCache";
+import { writeSnippetSidecars, SNIPPETS_DIR } from "./snippets";
 
 export type AnalyzeOptions = {
   output?: string;
@@ -51,10 +52,10 @@ export function addAnalyzeOptions(command: Command): Command {
       "refuse to scan more than N files (safety guard)",
       "3000",
     )
-    .option("--no-cache", "re-parse all files and ignore .react-atlas/cache.json")
+    .option("--no-cache", `re-parse all files and ignore ${CACHE_DIR}/cache.json`)
     .option(
       "--with-snippets",
-      "write truncated source sidecars to .react-atlas/snippets/ in the analyzed project",
+      `write truncated source sidecars to ${SNIPPETS_DIR}/ in the analyzed project`,
     )
     .option("--reanalyze", "watch mode: show re-analyze progress", false);
 }
@@ -67,7 +68,7 @@ export function runAnalyze(
     quiet: options.quiet,
     verbose: options.verbose,
     reanalyze:
-      options.reanalyze || Boolean(process.env.REACT_ATLAS_WATCH_TARGET),
+      options.reanalyze || Boolean(process.env.ARCLENS_WATCH_TARGET),
     color: options.color,
   });
 
@@ -110,7 +111,7 @@ export function runAnalyze(
       );
       if (!options.quiet) {
         console.log(
-          `Wrote ${snippetCount} snippet sidecar(s) to ${path.join(targetDir, ".react-atlas", "snippets")}`,
+          `Wrote ${snippetCount} snippet sidecar(s) to ${path.join(targetDir, SNIPPETS_DIR)}`,
         );
       }
     }
@@ -148,13 +149,13 @@ export function runAnalyze(
     if (error instanceof UnsupportedProjectError) {
       progress.stop();
       if (options.quiet) {
-        console.error(`react-atlas: ${message.split("\n")[0]}`);
+        console.error(`arclens: ${message.split("\n")[0]}`);
       } else {
         console.error(message);
       }
     } else if (options.quiet) {
       progress.stop();
-      console.error(`react-atlas: ${message}`);
+      console.error(`arclens: ${message}`);
     } else {
       progress.fail(message);
     }

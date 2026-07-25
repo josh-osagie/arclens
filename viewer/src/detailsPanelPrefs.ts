@@ -1,3 +1,5 @@
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
+
 export type DetailsFieldKey =
   | "export"
   | "astKind"
@@ -41,11 +43,11 @@ export const DEFAULT_DETAILS_FIELDS: DetailsFieldPrefs = {
   callsHooks: true,
 };
 
-const STORAGE_KEY = "react-atlas-details-fields";
+const STORAGE_KEY = "arclens-details-fields";
 
 export function loadDetailsFields(): DetailsFieldPrefs {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readLocalStorage(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_DETAILS_FIELDS };
     const parsed = JSON.parse(raw) as Partial<DetailsFieldPrefs>;
     return { ...DEFAULT_DETAILS_FIELDS, ...parsed };
@@ -56,18 +58,18 @@ export function loadDetailsFields(): DetailsFieldPrefs {
 
 export function saveDetailsFields(prefs: DetailsFieldPrefs): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    writeLocalStorage(STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // ignore quota errors
   }
 }
 
-const SOURCE_PREVIEW_KEY = "react-atlas-source-preview-expanded";
+const SOURCE_PREVIEW_KEY = "arclens-source-preview-expanded";
 
 /** `true` = source preview section expanded */
 export function loadSourcePreviewExpanded(): boolean {
   try {
-    const raw = localStorage.getItem(SOURCE_PREVIEW_KEY);
+    const raw = readLocalStorage(SOURCE_PREVIEW_KEY);
     if (raw === null) return true;
     return raw === "true";
   } catch {
@@ -77,7 +79,7 @@ export function loadSourcePreviewExpanded(): boolean {
 
 export function saveSourcePreviewExpanded(expanded: boolean): void {
   try {
-    localStorage.setItem(SOURCE_PREVIEW_KEY, String(expanded));
+    writeLocalStorage(SOURCE_PREVIEW_KEY, String(expanded));
   } catch {
     // ignore quota errors
   }

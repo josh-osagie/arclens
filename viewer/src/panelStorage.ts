@@ -1,3 +1,9 @@
+import {
+  readLocalStorage,
+  removeLocalStorage,
+  writeLocalStorage,
+} from "./storageCompat";
+
 export type PanelRect = {
   x: number;
   y: number;
@@ -5,7 +11,7 @@ export type PanelRect = {
   height: number;
 };
 
-const STORAGE_PREFIX = "react-atlas-panel:";
+const STORAGE_PREFIX = "arclens-panel:";
 
 export function panelStorageKey(id: string): string {
   return `${STORAGE_PREFIX}${id}`;
@@ -17,7 +23,7 @@ export function panelMinimizedKey(id: string): string {
 
 export function loadPanelMinimized(id: string): boolean {
   try {
-    return localStorage.getItem(panelMinimizedKey(id)) === "1";
+    return readLocalStorage(panelMinimizedKey(id)) === "1";
   } catch {
     return false;
   }
@@ -27,9 +33,9 @@ export function savePanelMinimized(id: string, minimized: boolean): void {
   try {
     const key = panelMinimizedKey(id);
     if (minimized) {
-      localStorage.setItem(key, "1");
+      writeLocalStorage(key, "1");
     } else {
-      localStorage.removeItem(key);
+      removeLocalStorage(key);
     }
   } catch {
     // ignore quota errors
@@ -38,7 +44,7 @@ export function savePanelMinimized(id: string, minimized: boolean): void {
 
 export function loadPanelRect(id: string): PanelRect | null {
   try {
-    const raw = localStorage.getItem(panelStorageKey(id));
+    const raw = readLocalStorage(panelStorageKey(id));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PanelRect;
     if (
@@ -57,7 +63,7 @@ export function loadPanelRect(id: string): PanelRect | null {
 
 export function savePanelRect(id: string, rect: PanelRect): void {
   try {
-    localStorage.setItem(panelStorageKey(id), JSON.stringify(rect));
+    writeLocalStorage(panelStorageKey(id), JSON.stringify(rect));
   } catch {
     // ignore quota errors
   }

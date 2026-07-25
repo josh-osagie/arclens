@@ -36,7 +36,7 @@ else
   WATCH_GLOBS=("${TARGET}/**/*.{ts,tsx}")
 fi
 
-echo "React Atlas watch"
+echo "Arclens watch"
 echo "  target:  ${TARGET}"
 echo "  globs:   ${WATCH_GLOBS[*]}"
 echo "  note:    watches .ts/.tsx only (React/TypeScript projects)"
@@ -55,7 +55,7 @@ if ! bash "${SCRIPT_DIR}/analyze-once.sh" "${TARGET}" --reanalyze ${EXTRA_ARGS[*
   exit 1
 fi
 
-export REACT_ATLAS_WATCH_TARGET="$TARGET"
+export ARCLENS_WATCH_TARGET="$TARGET"
 
 CHOKIDAR_PID=""
 cleanup_watch() {
@@ -72,7 +72,7 @@ run_watch_reanalyze() {
 pnpm exec chokidar "${WATCH_GLOBS[@]}" \
   "${IGNORE_ARGS[@]}" \
   --silent \
-  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${REACT_ATLAS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}" &
+  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${ARCLENS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}" &
 CHOKIDAR_PID=$!
 
 trap cleanup_watch EXIT INT TERM

@@ -3,6 +3,7 @@ node_modules
 graph.json
 .react-atlas/
 
+src/**/*.js
 # docs build output (source lives in docs/)
 docs/.astro/
 docs/dist/

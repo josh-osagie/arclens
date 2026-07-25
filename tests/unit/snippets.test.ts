@@ -24,7 +24,7 @@ describe("snippets", () => {
   });
 
   it("resolves absolute and relative files under project root", () => {
-    const root = path.join(os.tmpdir(), "react-atlas-snippet-root");
+    const root = path.join(os.tmpdir(), "arclens-snippet-root");
     const file = path.join(root, "src", "Button.tsx");
 
     expect(resolveRelativeFile(root, file)).toBe("src/Button.tsx");
@@ -34,12 +34,12 @@ describe("snippets", () => {
   });
 
   it("blocks path traversal when reading snippets", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-snippet-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-snippet-"));
     expect(() => readSnippetFromDisk(root, "../secret.ts")).toThrow();
   });
 
   it("reads live files and falls back to sidecar copies", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-snippet-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-snippet-"));
     const sourcePath = path.join(root, "src", "App.tsx");
     fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
     fs.writeFileSync(sourcePath, "line1\nline2\nline3\n", "utf8");
@@ -55,6 +55,17 @@ describe("snippets", () => {
     const sidecar = readSnippetFromDisk(root, "src/App.tsx", 120);
     expect(sidecar.source).toBe("sidecar");
     expect(sidecar.content).toBe("line1\nline2");
+  });
+
+  it("reads snippet sidecars from legacy .react-atlas directory", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-snippet-legacy-"));
+    const legacySidecar = path.join(root, ".react-atlas", "snippets", "src", "App.tsx");
+    fs.mkdirSync(path.dirname(legacySidecar), { recursive: true });
+    fs.writeFileSync(legacySidecar, "legacy sidecar\n", "utf8");
+
+    const sidecar = readSnippetFromDisk(root, "src/App.tsx", 120);
+    expect(sidecar.source).toBe("sidecar");
+    expect(sidecar.content).toBe("legacy sidecar\n");
   });
 
   it("builds encoded snippet API URLs", () => {

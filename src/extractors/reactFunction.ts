@@ -182,7 +182,7 @@ function isCreateRootRenderChain(call: CallExpression): boolean {
   const target = access.getExpression();
   if (target.getKind() !== SyntaxKind.CallExpression) return false;
 
-  const innerExpr = target.getExpression();
+  const innerExpr = (target as CallExpression).getExpression();
   if (innerExpr.getKind() !== SyntaxKind.Identifier) return false;
 
   const name = innerExpr.getText();

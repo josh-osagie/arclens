@@ -1,4 +1,6 @@
-export const MOBILE_BANNER_STORAGE_KEY = "react-atlas-mobile-banner-dismissed";
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
+
+export const MOBILE_BANNER_STORAGE_KEY = "arclens-mobile-banner-dismissed";
 
 export type MobileBannerPrefs = {
   dismissed: boolean;
@@ -12,7 +14,7 @@ export const DEFAULT_MOBILE_BANNER_PREFS: MobileBannerPrefs = {
 
 export function loadMobileBannerPrefs(): MobileBannerPrefs {
   try {
-    const raw = localStorage.getItem(MOBILE_BANNER_STORAGE_KEY);
+    const raw = readLocalStorage(MOBILE_BANNER_STORAGE_KEY);
     if (!raw) return { ...DEFAULT_MOBILE_BANNER_PREFS };
     const parsed = JSON.parse(raw) as Partial<MobileBannerPrefs>;
     return { ...DEFAULT_MOBILE_BANNER_PREFS, ...parsed };
@@ -23,7 +25,7 @@ export function loadMobileBannerPrefs(): MobileBannerPrefs {
 
 export function saveMobileBannerPrefs(prefs: MobileBannerPrefs): void {
   try {
-    localStorage.setItem(MOBILE_BANNER_STORAGE_KEY, JSON.stringify(prefs));
+    writeLocalStorage(MOBILE_BANNER_STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // ignore quota errors
   }

@@ -1,24 +1,26 @@
 {
-  "name": "react-atlas",
+  "name": "arclens",
   "version": "1.0.0",
-  "description": "Interactive architecture explorer for React and TypeScript codebases",
+  "description": "Arclens — React architecture explorer. Statically map components, hooks, and dependencies into an interactive graph.",
   "main": "dist/cli.js",
   "bin": {
-    "react-atlas": "./bin/react-atlas.js"
+    "arclens": "bin/arclens.js"
   },
   "files": [
     "bin",
     "dist",
-    "README.md"
+    "assets",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "react-atlas": "tsx src/cli.ts",
+    "arclens": "tsx src/cli.ts",
     "analyze": "tsx src/cli.ts analyze",
     "analyze:watch": "tsx src/cli.ts watch",
     "build": "tsc && node scripts/copy-viewer.mjs",
     "build:viewer": "pnpm --dir viewer build",
     "prebuild": "pnpm build:viewer",
-    "dev:viewer": "tsx src/cli.ts view",
+    "dev:viewer": "tsx src/cli.ts view --dev",
     "dev:docs": "pnpm --dir docs dev",
     "build:docs": "pnpm --dir docs build",
     "dev": "pnpm dev:viewer",
@@ -26,8 +28,18 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "react",
+    "architecture",
+    "graph",
+    "arclens",
+    "typescript",
+    "static-analysis",
+    "dependency-graph",
+    "devtools",
+    "cli"
+  ],
+  "author": "JoshX <joshx.dev@gmail.com>",
   "license": "ISC",
   "packageManager": "pnpm@10.24.0",
   "dependencies": {
@@ -48,5 +60,19 @@
     "tsx": "^4.23.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JCalmCrasher/react-atlas.git"
+  },
+  "homepage": "https://github.com/JCalmCrasher/react-atlas#readme",
+  "bugs": {
+    "url": "https://github.com/JCalmCrasher/react-atlas/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

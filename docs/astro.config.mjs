@@ -6,7 +6,7 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
 	integrations: [
 		starlight({
-			title: 'React Atlas',
+			title: 'Arclens',
 			description: 'Interactive architecture explorer for React/TypeScript',
 			head: [
 				{
@@ -25,7 +25,7 @@ export default defineConfig({
 					],
 				},
 				{
-					label: 'Using React Atlas',
+					label: 'Using Arclens',
 					items: [
 						{ label: 'CLI reference', slug: 'cli-reference' },
 						{ label: 'Viewer guide', slug: 'viewer-guide' },

@@ -1,4 +1,4 @@
-# Contributing to React Atlas
+# Contributing to Arclens
 
 Thanks for taking a look. This doc covers local setup, running tests, and what we expect in pull requests.
 
@@ -13,7 +13,7 @@ You need Node.js 18 or newer.
 ## Run the analyzer locally
 
 ```bash
-pnpm react-atlas analyze ./samples --insights
+pnpm arclens analyze ./samples --insights
 ```
 
 The `samples/` folder is the main fixture during development. Add or change files there to test extractors, then re-run analyze.

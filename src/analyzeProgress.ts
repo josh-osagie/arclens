@@ -213,7 +213,7 @@ export function formatStartMessage(
 export function isWatchProgressMode(
   options: Pick<AnalyzeProgressReporterOptions, "reanalyze"> = {},
 ): boolean {
-  return Boolean(options.reanalyze || process.env.REACT_ATLAS_WATCH_TARGET);
+  return Boolean(options.reanalyze || process.env.ARCLENS_WATCH_TARGET);
 }
 
 export function formatPhaseHeartbeat(message: string, elapsedMs: number): string {

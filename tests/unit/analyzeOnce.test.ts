@@ -45,7 +45,7 @@ function runAnalyzeOnce(
   options: { watch?: boolean } = {},
 ): BashResult {
   const quotedTarget = JSON.stringify(target);
-  const env = options.watch ? { REACT_ATLAS_WATCH_TARGET: target } : undefined;
+  const env = options.watch ? { ARCLENS_WATCH_TARGET: target } : undefined;
   return runBash(`bash ${JSON.stringify(analyzeOnce)} ${quotedTarget} --no-color`, {
     expectFailure: true,
     env,
@@ -54,7 +54,7 @@ function runAnalyzeOnce(
 
 describe("analyze-once.sh", () => {
   it("exits non-zero for unsupported projects without watch messaging", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-analyze-once-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-analyze-once-"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
     const result = runAnalyzeOnce(dir);
@@ -65,7 +65,7 @@ describe("analyze-once.sh", () => {
   });
 
   it("shows still-watching hint only for watch-mode re-analyze failures", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-analyze-once-watch-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-analyze-once-watch-"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
     const result = runAnalyzeOnce(dir, { watch: true });

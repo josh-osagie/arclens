@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { CACHE_DIR } from "./cache/fileCache";
+import { ALL_CACHE_DIR_NAMES } from "./paths";
 import { isConfigFile } from "./extractors/reactFunction";
 
 const IGNORED_DIRS = new Set([
@@ -11,7 +11,7 @@ const IGNORED_DIRS = new Set([
   "coverage",
   ".next",
   "out",
-  CACHE_DIR,
+  ...ALL_CACHE_DIR_NAMES,
 ]);
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
@@ -79,7 +79,7 @@ export function formatUnsupportedProjectMessage(
   const lines = [
     `No TypeScript sources (.ts/.tsx) found under ${rel}.`,
     "",
-    "React Atlas analyzes React/TypeScript projects only.",
+    "Arclens analyzes React/TypeScript projects only.",
     "HTML-only, plain JavaScript, and other non-TS projects are not supported yet.",
   ];
 

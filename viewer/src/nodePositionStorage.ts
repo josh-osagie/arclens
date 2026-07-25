@@ -1,9 +1,10 @@
 import type { Node } from "@xyflow/react";
 import type { AtlasNodeData } from "./buildFlowGraph";
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
 
 export type NodePositions = Record<string, { x: number; y: number }>;
 
-const STORAGE_PREFIX = "react-atlas-node-positions:";
+const STORAGE_PREFIX = "arclens-node-positions:";
 
 export function nodePositionStorageKey(graphKey: string): string {
   return `${STORAGE_PREFIX}${graphKey}`;
@@ -17,7 +18,7 @@ function isValidPosition(value: unknown): value is { x: number; y: number } {
 
 export function loadNodePositions(graphKey: string): NodePositions | null {
   try {
-    const raw = localStorage.getItem(nodePositionStorageKey(graphKey));
+    const raw = readLocalStorage(nodePositionStorageKey(graphKey));
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as unknown;
@@ -38,7 +39,7 @@ export function loadNodePositions(graphKey: string): NodePositions | null {
 
 export function saveNodePositions(graphKey: string, positions: NodePositions): void {
   try {
-    localStorage.setItem(nodePositionStorageKey(graphKey), JSON.stringify(positions));
+    writeLocalStorage(nodePositionStorageKey(graphKey), JSON.stringify(positions));
   } catch {
     // ignore quota errors
   }

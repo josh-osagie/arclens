@@ -1,6 +1,7 @@
 import type { Viewport } from "@xyflow/react";
+import { readLocalStorage, writeLocalStorage } from "./storageCompat";
 
-const STORAGE_PREFIX = "react-atlas-viewport:";
+const STORAGE_PREFIX = "arclens-viewport:";
 
 export function viewportStorageKey(graphKey: string): string {
   return `${STORAGE_PREFIX}${graphKey}`;
@@ -8,7 +9,7 @@ export function viewportStorageKey(graphKey: string): string {
 
 export function loadViewport(graphKey: string): Viewport | null {
   try {
-    const raw = localStorage.getItem(viewportStorageKey(graphKey));
+    const raw = readLocalStorage(viewportStorageKey(graphKey));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Viewport;
     if (
@@ -26,7 +27,7 @@ export function loadViewport(graphKey: string): Viewport | null {
 
 export function saveViewport(graphKey: string, viewport: Viewport): void {
   try {
-    localStorage.setItem(viewportStorageKey(graphKey), JSON.stringify(viewport));
+    writeLocalStorage(viewportStorageKey(graphKey), JSON.stringify(viewport));
   } catch {
     // ignore quota errors
   }

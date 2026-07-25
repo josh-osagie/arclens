@@ -11,7 +11,9 @@ import {
 } from "../src/snippets.js";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
-const graphPath = path.resolve(rootDir, "../graph.json");
+const graphPath = process.env.VITE_ARCLENS_GRAPH_PATH
+  ? path.resolve(process.env.VITE_ARCLENS_GRAPH_PATH)
+  : path.resolve(process.cwd(), "graph.json");
 
 function readProjectRootFromGraph(): string | null {
   if (!fs.existsSync(graphPath)) {
@@ -30,7 +32,7 @@ function readProjectRootFromGraph(): string | null {
 }
 
 function resolveProjectRoot(): string | null {
-  const fromEnv = process.env.VITE_ATLAS_PROJECT_ROOT;
+  const fromEnv = process.env.VITE_ARCLENS_PROJECT_ROOT;
   if (fromEnv && fs.existsSync(fromEnv)) {
     return path.resolve(fromEnv);
   }
@@ -77,7 +79,7 @@ function serveSnippetApi(): Plugin {
         if (!projectRoot) {
           sendJson(res, 503, {
             error:
-              "Project root unavailable. Set VITE_ATLAS_PROJECT_ROOT or analyze with meta.targetDir in graph.json.",
+              "Project root unavailable. Set VITE_ARCLENS_PROJECT_ROOT or analyze with meta.targetDir in graph.json.",
           });
           return;
         }

@@ -221,7 +221,7 @@ export function formatReport(
 
   if (!options.quiet) {
     lines.push("");
-    lines.push(`${colors.bold(colors.cyan("React Atlas"))}`);
+    lines.push(`${colors.bold(colors.cyan("Arclens"))}`);
     lines.push(colors.dim("=".repeat(40)));
     lines.push(`${colors.dim("Project:")}   ${colors.white(projectName)}`);
     lines.push(`${colors.dim("Target:")}     ${colors.white(relTarget)}`);
@@ -325,7 +325,7 @@ export function formatReport(
       lines.push("");
       lines.push(
         colors.yellow(
-          "Warning: Large scan - next time try a subfolder: pnpm react-atlas analyze ./src",
+          "Warning: Large scan - next time try a subfolder: pnpm arclens analyze ./src",
         ),
       );
     } else if (fileCount >= FILE_COUNT_WARNING) {

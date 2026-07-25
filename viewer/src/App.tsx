@@ -295,7 +295,7 @@ function EmptyGraphPanel({ presentation }: { presentation: EmptyGraphPresentatio
   return (
     <div className="graph-shell graph-shell--empty">
       <div className="graph-panel graph-panel--empty">
-        <p className="graph-panel__eyebrow">React Atlas</p>
+        <p className="graph-panel__eyebrow">Arclens</p>
         <h1>{presentation.title}</h1>
         <p>{presentation.body}</p>
         <p className="graph-panel__detail">{presentation.detail}</p>
@@ -892,7 +892,7 @@ export default function App() {
     return (
       <div className="graph-shell graph-shell--empty">
         <div className="graph-panel">
-          <p className="graph-panel__eyebrow">React Atlas</p>
+          <p className="graph-panel__eyebrow">Arclens</p>
           <h1>Could not load graph</h1>
           <p className="graph-error">{error}</p>
         </div>
@@ -908,7 +908,7 @@ export default function App() {
     return (
       <div className="graph-shell graph-shell--empty">
         <div className="graph-panel">
-          <p className="graph-panel__eyebrow">React Atlas</p>
+          <p className="graph-panel__eyebrow">Arclens</p>
           <h1>Loading graph…</h1>
         </div>
       </div>

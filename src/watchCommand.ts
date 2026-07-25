@@ -46,7 +46,7 @@ export function getWatchGlobs(targetDir: string, packageRoot: string): string[] 
 }
 
 function printWatchBanner(targetDir: string, globs: string[]): void {
-  console.log("React Atlas watch");
+  console.log("Arclens watch");
   console.log(`  target:  ${targetDir}`);
   console.log(`  globs:   ${globs.join(" ")}`);
   console.log("  note:    watches .ts/.tsx only (React/TypeScript projects)");
@@ -119,11 +119,11 @@ export async function runWatch(
     reanalyze: true,
   };
 
-  process.env.REACT_ATLAS_WATCH_TARGET = targetDir;
+  process.env.ARCLENS_WATCH_TARGET = targetDir;
 
   const initialStatus = runAnalyze(inputPath, watchOptions);
   if (initialStatus !== 0) {
-    delete process.env.REACT_ATLAS_WATCH_TARGET;
+    delete process.env.ARCLENS_WATCH_TARGET;
     return initialStatus;
   }
 
@@ -157,7 +157,7 @@ export async function runWatch(
       return;
     }
     stopped = true;
-    delete process.env.REACT_ATLAS_WATCH_TARGET;
+    delete process.env.ARCLENS_WATCH_TARGET;
     await watcher.close();
   };
 

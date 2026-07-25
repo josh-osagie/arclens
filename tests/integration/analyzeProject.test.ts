@@ -130,7 +130,7 @@ describe("analyzeProject integration", () => {
     });
 
     it("throws UnsupportedProjectError for HTML-only folders", () => {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-html-only-"));
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-html-only-"));
       fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
       expect(() => analyzeProject(dir, { cache: false })).toThrow(UnsupportedProjectError);

@@ -86,7 +86,7 @@ describe("watch.sh argument parsing", () => {
   });
 
   it("exits before watching when initial analyze hits an unsupported project", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-watch-html-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-watch-html-"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
     try {

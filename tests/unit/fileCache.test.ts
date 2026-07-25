@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 function makeTempProject(files: Record<string, string>): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-cache-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-cache-"));
   tempDirs.push(dir);
 
   for (const [relativePath, content] of Object.entries(files)) {
@@ -198,5 +198,18 @@ describe("analyzeProject cache integration", () => {
       uncached.graph.nodes.map((node) => node.id).sort(),
     );
     expect(cached.graph.edges.length).toBe(uncached.graph.edges.length);
+  });
+
+  it("reads legacy .react-atlas cache when .arclens is absent", () => {
+    const dir = makeTempProject({ "App.tsx": "export function App() { return null; }" });
+    const filePath = path.join(dir, "App.tsx");
+    const legacyCachePath = path.join(dir, ".react-atlas", "cache.json");
+
+    writeFileCache(legacyCachePath, buildCacheFile(dir, [filePath], [samplePayload(filePath)], undefined));
+
+    const result = analyzeProject(dir, { cache: true });
+    expect(result.cacheHits).toBe(1);
+    expect(result.cacheMisses).toBe(0);
+    expect(fs.existsSync(getCachePath(dir))).toBe(true);
   });
 });

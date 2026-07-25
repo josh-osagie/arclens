@@ -24,21 +24,21 @@ describe("discoverFiles", () => {
     expect(files.some((f) => f.endsWith("App.tsx"))).toBe(true);
   });
 
-  it("skips .react-atlas snippet sidecars", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-discover-"));
+  it("skips .arclens snippet sidecars", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-discover-"));
     fs.writeFileSync(path.join(dir, "App.tsx"), "export const App = () => null;\n");
-    const sidecarDir = path.join(dir, ".react-atlas", "snippets");
+    const sidecarDir = path.join(dir, ".arclens", "snippets");
     fs.mkdirSync(sidecarDir, { recursive: true });
     fs.writeFileSync(path.join(sidecarDir, "App.tsx"), "export const App = () => null;\n");
 
     const files = discoverSourceFiles(dir);
     expect(files).toHaveLength(1);
     expect(files[0]).toMatch(/App\.tsx$/);
-    expect(files[0]).not.toContain(".react-atlas");
+    expect(files[0]).not.toContain(".arclens");
   });
 
   it("detects HTML-only folders for unsupported project hints", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-html-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-html-"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
     expect(discoverSourceFiles(dir)).toHaveLength(0);
@@ -80,7 +80,7 @@ describe("resolveTarget", () => {
   });
 
   it("refuses node_modules as target", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-resolve-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-resolve-"));
     const nm = path.join(dir, "node_modules");
     fs.mkdirSync(nm);
     expect(() => resolveTarget(nm)).toThrow(/Refusing to analyze/);
@@ -96,7 +96,7 @@ describe("findTsConfig", () => {
 
 describe("resolveProjectName", () => {
   it("uses package.json name when present", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "react-atlas-name-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-name-"));
     fs.writeFileSync(
       path.join(dir, "package.json"),
       JSON.stringify({ name: "my-cool-app" }),

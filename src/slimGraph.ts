@@ -20,7 +20,7 @@ export function findEntryNodeIds(graph: Graph): string[] {
 export function slimGraphForExport(
   graph: Graph,
   options: GraphExportOptions = {},
-): Graph {
+): Pick<Graph, "meta" | "edges"> & { nodes: SlimGraphNode[] } {
   const laidOut = attachLayoutToNodes(graph.nodes, graph.edges);
   const nodes: SlimGraphNode[] = laidOut.map(
     ({ connections: _connections, ...node }) => node,

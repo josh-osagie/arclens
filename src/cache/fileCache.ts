@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { sanitizeFileAnalysisPayload, type FileAnalysisPayload } from "../extractFileAnalysis";
 
+export { CACHE_DIR, CACHE_FILE, getCachePath, getWriteCacheFilePath, resolveCacheFilePath } from "../paths";
+
 export const CACHE_VERSION = 1;
-export const CACHE_DIR = ".react-atlas";
-export const CACHE_FILE = "cache.json";
 
 export type FileCacheEntry = {
   mtimeMs: number;
@@ -22,10 +22,6 @@ export type FileStat = {
   mtimeMs: number;
   size: number;
 };
-
-export function getCachePath(targetDir: string): string {
-  return path.join(targetDir, CACHE_DIR, CACHE_FILE);
-}
 
 export function normalizePath(filePath: string): string {
   return path.normalize(filePath);

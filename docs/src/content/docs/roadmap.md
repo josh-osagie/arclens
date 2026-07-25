@@ -1,9 +1,9 @@
 ---
 title: Roadmap
-description: Planned and completed milestones for React Atlas.
+description: Planned and completed milestones for Arclens.
 ---
 
-React Atlas development is organized in phases.  This page summarizes progress from `roadmap.md` at the repository root.
+Arclens development is organized in phases.  This page summarizes progress from `roadmap.md` at the repository root.
 
 ## Phase 1: Foundations
 
@@ -87,7 +87,7 @@ Based on open roadmap items, likely next investments include:
 
 1. **Service detection** and richer module typing
 2. **Circular dependency** and coupling insights
-3. **npm publish** workflow (`react-atlas analyze` + bundled `view` command)
+3. **npm publish** workflow (`arclens analyze` + bundled `view` command)
 4. **Watch performance** for incremental re-analysis
 
 Contributions welcome, see `CONTRIBUTING.md` in the repo root.

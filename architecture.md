@@ -1,4 +1,4 @@
-# React Atlas MVP
+# Arclens MVP
 
 Things I detect:
 

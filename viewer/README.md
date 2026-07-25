@@ -1,6 +1,6 @@
-# React Atlas Viewer
+# Arclens Viewer
 
-Interactive graph viewer for React Atlas analysis output.
+Interactive graph viewer for Arclens analysis output.
 
 ## shadcn/ui
 
@@ -20,4 +20,4 @@ Press **Cmd+K** (macOS) or **Ctrl+K** (Windows/Linux) to open the command palett
 
 ## Mobile banner
 
-On viewports ≤768px wide, a dismissible banner explains that React Atlas works best on desktop. Users can dismiss for the session or choose **Don't show again** (stored in `localStorage`).
+On viewports ≤768px wide, a dismissible banner explains that Arclens works best on desktop. Users can dismiss for the session or choose **Don't show again** (stored in `localStorage`).
