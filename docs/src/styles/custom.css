@@ -1,81 +1,260 @@
 :root {
-	/* Starlight accent — aligned with logo gradient */
-	--sl-color-accent: #38bdf8;
-	--sl-color-accent-high: #7dd3fc;
-	--sl-color-accent-low: #0c1929;
+	/* Layout & typography (theme-agnostic) */
+	--al-max-width: 68.75rem;
+	--al-showcase-width: 60rem;
+	--al-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-	/* Arclens brand tokens (viewer palette) */
-	--al-canvas: #111111;
-	--al-surface: #1a1a1a;
-	--al-brand-sky: #38bdf8;
-	--al-brand-indigo: #6366f1;
+	/* Node type accents for feature card type labels */
 	--al-type-component: #60a5fa;
 	--al-type-hook: #c084fc;
 	--al-type-utility: #34d399;
+	--al-type-context: #fbbf24;
 	--al-type-entry: #22d3ee;
-	--al-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-:root[data-theme='dark'],
+/* Light mode — Starlight inverts --sl-color-black (bg) and --sl-color-white (headings/text) */
+:root[data-theme='light'] {
+	--al-canvas: #fafafa;
+	--al-surface: #ffffff;
+	--al-surface-raised: #f5f5f5;
+	--al-text: #171717;
+	--al-text-body: #404040;
+	--al-muted: #737373;
+	--al-border: rgba(0, 0, 0, 0.08);
+	--al-border-strong: rgba(0, 0, 0, 0.14);
+
+	--al-accent: #3b82f6;
+	--al-accent-hover: #2563eb;
+	--al-accent-muted: rgba(59, 130, 246, 0.1);
+
+	--al-shadow-md: 0 12px 32px rgba(0, 0, 0, 0.08);
+
+	--al-sidebar-active-bg: var(--al-accent);
+	--al-sidebar-active-text: #ffffff;
+
+	/* Starlight palette — respect inverted token semantics (black = bg, white = text) */
+	--sl-color-black: var(--al-canvas);
+	--sl-color-white: var(--al-text);
+	--sl-color-gray-1: #404040;
+	--sl-color-gray-2: #525252;
+	--sl-color-gray-3: #737373;
+	--sl-color-gray-4: var(--al-border-strong);
+	--sl-color-gray-5: var(--al-border);
+	--sl-color-gray-6: var(--al-surface);
+	--sl-color-gray-7: var(--al-surface-raised);
+	--sl-color-accent: var(--al-accent);
+	--sl-color-accent-high: var(--al-accent-hover);
+	--sl-color-accent-low: var(--al-accent-muted);
+	--sl-color-bg-nav: var(--al-surface);
+	--sl-color-text-accent: var(--al-sidebar-active-bg);
+	--sl-color-text-invert: var(--al-sidebar-active-text);
+}
+
+/* Dark mode (default) — viewer palette */
 :root:not([data-theme='light']) {
-	color-scheme: dark;
+	--al-canvas: #111111;
+	--al-surface: #1a1a1a;
+	--al-surface-raised: #111111;
+	--al-text: #f5f5f5;
+	--al-text-body: #d4d4d4;
+	--al-muted: #a3a3a3;
+	--al-border: rgba(255, 255, 255, 0.08);
+	--al-border-strong: rgba(255, 255, 255, 0.18);
+
+	--al-accent: #60a5fa;
+	--al-accent-hover: #93c5fd;
+	--al-accent-muted: rgba(96, 165, 250, 0.12);
+
+	--al-shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
+
+	--al-sidebar-active-bg: var(--al-accent-hover);
+	--al-sidebar-active-text: var(--al-canvas);
+
+	/* Starlight palette — black = dark bg, white = light text */
+	--sl-color-black: var(--al-canvas);
+	--sl-color-white: var(--al-text);
+	--sl-color-gray-1: var(--al-muted);
+	--sl-color-gray-2: #737373;
+	--sl-color-gray-3: #525252;
+	--sl-color-gray-4: var(--al-border-strong);
+	--sl-color-gray-5: var(--al-border);
+	--sl-color-gray-6: var(--al-surface);
+	--sl-color-gray-7: var(--al-surface-raised);
+	--sl-color-accent: var(--al-accent);
+	--sl-color-accent-high: var(--al-accent-hover);
+	--sl-color-accent-low: var(--al-accent-muted);
+	--sl-color-bg-nav: var(--al-surface);
+	--sl-color-text-accent: var(--al-sidebar-active-bg);
+	--sl-color-text-invert: var(--al-sidebar-active-text);
 }
 
-/* Splash landing page */
+/* Sidebar: current page link — dark text on blue pill (dark), white on blue (light) */
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus,
+#starlight__sidebar a[aria-current='page'],
+#starlight__sidebar a[aria-current='page']:hover,
+#starlight__sidebar a[aria-current='page']:focus {
+	color: var(--al-sidebar-active-text);
+	background-color: var(--al-sidebar-active-bg);
+}
+
+/* Splash landing: hide footer pagination (Get started CTA covers next step) */
+html:not([data-has-sidebar]) .pagination-links {
+	display: none;
+}
+
+/* Splash landing: single centered column, custom LandingHero owns the title */
 [data-has-hero] .hero {
-	padding-block: clamp(2.5rem, 6vw, 4rem) 1.5rem;
+	display: none;
 }
 
-[data-has-hero] .hero::before {
-	background:
-		radial-gradient(ellipse 70% 50% at 50% -10%, color-mix(in srgb, var(--al-brand-indigo) 18%, transparent), transparent),
-		radial-gradient(ellipse 50% 40% at 80% 20%, color-mix(in srgb, var(--al-brand-sky) 10%, transparent), transparent);
-	opacity: 1;
+[data-has-hero] .content-panel {
+	padding-top: 0;
 }
 
-.hero img {
-	width: 56px;
-	height: 56px;
-	filter: drop-shadow(0 4px 16px color-mix(in srgb, var(--al-brand-sky) 35%, transparent));
+/* Splash: logo-only in header — hide site title text (LandingHero shows the name) */
+[data-has-hero] .site-title span {
+	display: none;
 }
 
-.hero h1 {
-	font-size: clamp(2.25rem, 5vw, 3.25rem);
-	font-weight: 800;
-	letter-spacing: -0.03em;
-	background: linear-gradient(135deg, var(--sl-color-white) 30%, var(--al-brand-sky) 100%);
-	-webkit-background-clip: text;
-	background-clip: text;
-	-webkit-text-fill-color: transparent;
+/* Fallback: splash without hero frontmatter still skips Starlight PageTitle */
+html:not([data-has-sidebar]) main > .content-panel:first-child h1#_top {
+	display: none;
 }
 
-.hero .tagline {
-	max-width: 28rem;
-	margin-inline: auto;
-	font-size: clamp(1.05rem, 2.5vw, 1.25rem);
-	font-weight: 500;
-	line-height: 1.5;
-	color: var(--sl-color-gray-2);
+/* Search trigger — viewer-matched surface in both themes */
+@media (min-width: 50rem) {
+	button[data-open-modal] {
+		background-color: var(--al-surface);
+		border-color: var(--al-border);
+		color: var(--al-muted);
+	}
+
+	button[data-open-modal]:hover {
+		border-color: var(--al-border-strong);
+		color: var(--al-text);
+	}
 }
 
-.hero .actions {
-	margin-top: 1.25rem;
+button[data-open-modal] kbd {
+	background-color: var(--al-surface-raised);
 }
 
-.hero .actions a[data-variant='minimal'] {
-	border: 1px solid var(--sl-color-gray-5);
-	border-radius: 0.5rem;
-	padding: 0.55rem 1.1rem;
-	background: color-mix(in srgb, var(--al-surface) 80%, transparent);
-	transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.hero .actions a[data-variant='minimal']:hover {
-	border-color: color-mix(in srgb, var(--al-brand-sky) 50%, var(--sl-color-gray-5));
-	background: color-mix(in srgb, var(--al-brand-indigo) 12%, var(--al-surface));
-}
-
-/* Splash content width */
 .sl-markdown-content {
 	max-width: none;
+	padding-block: 0;
+}
+
+.landing {
+	width: 100%;
+	max-width: var(--al-max-width);
+	margin-inline: auto;
+	padding-inline: clamp(1rem, 3vw, 1.5rem);
+}
+
+/* Feature cards — explicit rows so each pair stretches to equal height */
+.feature-cards__rows {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.feature-cards__row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	align-items: stretch;
+}
+
+@media (max-width: 640px) {
+	.feature-cards__row {
+		grid-template-columns: 1fr;
+	}
+}
+
+.feature-card {
+	display: flex;
+	flex-direction: column;
+	align-self: stretch;
+	height: 100%;
+	min-height: 100%;
+	border: 1px solid var(--al-border);
+	border-radius: 0.5rem;
+	background: var(--al-surface);
+	transition: border-color 0.15s ease;
+}
+
+.feature-card:hover {
+	border-color: var(--al-border-strong);
+}
+
+.feature-card__inner {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	width: 100%;
+	min-height: 0;
+	padding: 1.125rem 1.25rem;
+}
+
+.feature-card__type {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	margin-bottom: 0.625rem;
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--al-muted);
+}
+
+.feature-card__type-dot {
+	flex-shrink: 0;
+	width: 0.375rem;
+	height: 0.375rem;
+	border-radius: 50%;
+	background: var(--feature-type-color, var(--al-accent));
+}
+
+.feature-card--component {
+	--feature-type-color: var(--al-type-component);
+}
+
+.feature-card--hook {
+	--feature-type-color: var(--al-type-hook);
+}
+
+.feature-card--utility {
+	--feature-type-color: var(--al-type-utility);
+}
+
+.feature-card--context {
+	--feature-type-color: var(--al-type-context);
+}
+
+.feature-card--entry {
+	--feature-type-color: var(--al-type-entry);
+}
+
+.feature-card__title {
+	margin: 0 0 0.375rem;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: var(--al-text);
+}
+
+.feature-card__desc {
+	flex: 1;
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.55;
+	color: var(--al-muted);
+}
+
+.feature-card__desc code {
+	font-family: var(--al-font-mono);
+	font-size: 0.85em;
+	color: var(--al-accent);
 }

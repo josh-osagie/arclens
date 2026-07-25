@@ -1,26 +1,19 @@
 ---
 title: Arclens
-description: A lens on your React architecture — static analysis to interactive graph.
+description: A lens on your React architecture. Static analysis to interactive graph.
 template: splash
-hero:
-  tagline: A lens on your React architecture
-  image:
-    file: ../../assets/arclens-logo.svg
-    alt: Arclens logo
-  actions:
-    - text: Read the docs
-      link: /getting-started/
-      icon: document
-      variant: minimal
+hero: {}
 ---
 
 import CopyCommand from '../../components/CopyCommand.astro';
 import FeatureCards from '../../components/FeatureCards.astro';
-import LandingIntro from '../../components/LandingIntro.astro';
+import LandingHero from '../../components/LandingHero.astro';
 import LandingShowcase from '../../components/LandingShowcase.astro';
 import ProjectLinks from '../../components/ProjectLinks.astro';
 
-<LandingIntro />
+<div class="landing">
+
+<LandingHero />
 
 <CopyCommand />
 
@@ -29,3 +22,5 @@ import ProjectLinks from '../../components/ProjectLinks.astro';
 <FeatureCards />
 
 <ProjectLinks />
+
+</div>
