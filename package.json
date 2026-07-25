@@ -28,6 +28,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "pnpm build",
+    "release:publish": "pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",
     "release:patch": "npm version patch --no-git-tag-version && pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",
     "release:minor": "npm version minor --no-git-tag-version && pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",
     "release:major": "npm version major --no-git-tag-version && pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",

@@ -278,17 +278,19 @@ Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the v
 
 ### Releasing to npm and GitHub
 
-Log in once with `npm login`. Each release script bumps the version, builds, publishes to npm, then commits, tags, and pushes to GitHub:
+Log in once with `npm login`.
 
 | Script | Description |
 | ------ | ----------- |
-| `pnpm release:patch` | Patch release — npm + git tag + push |
-| `pnpm release:minor` | Minor release — npm + git tag + push |
-| `pnpm release:major` | Major release — npm + git tag + push |
+| `pnpm release:publish` | Publish the **current** version (no bump) — build, npm publish, git tag + push. Use when the version is already set (e.g. rename to 2.0.0). |
+| `pnpm release:patch` | Bump patch, then build, publish, git tag + push |
+| `pnpm release:minor` | Bump minor, then build, publish, git tag + push |
+| `pnpm release:major` | Bump major, then build, publish, git tag + push |
 | `pnpm release:patch:dry` | Build and `npm publish --dry-run` (no version bump, no git) |
 
 ```bash
-pnpm release:major   # example: 1.0.0 → 2.0.0, publish, tag v2.0.0, push
+pnpm release:publish  # publish 2.0.0 as-is (no bump), tag v2.0.0, push
+pnpm release:major    # example: 2.0.0 → 3.0.0, publish, tag v3.0.0, push
 ```
 
 The git step commits tracked file changes (including the version bump in `package.json`) and creates `vX.Y.Z`. Untracked files are not included — commit or `.gitignore` them before releasing if they should be in the repo.
