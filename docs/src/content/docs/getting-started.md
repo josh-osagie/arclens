@@ -82,12 +82,12 @@ pnpm analyze:watch -- ./samples --insights --no-cache
 
 ## Typical workflow
 
-1. `pnpm arclens analyze ./src --insights`:generate `graph.json`
-2. `pnpm dev:viewer`:explore the graph
+1. `pnpm arclens analyze ./src --insights`: generate `graph.json`
+2. `pnpm dev:viewer`: explore the graph
 3. Refactor, then re-run analyze or use `pnpm dev:watch` for live updates
 
 ## Next steps
 
-- [CLI reference](/cli-reference/):all flags and commands
+- [CLI reference](/cli-reference/): all flags and commands
 - [Viewer guide](/viewer-guide/):search, entry points, insights badge
-- [Concepts](/concepts/):nodes, edges, and insight criteria
+- [Concepts](/concepts/): nodes, edges, and insight criteria
