@@ -276,25 +276,22 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 
 Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the viewer build to `dist/viewer/`. The `arclens` bin works from the compiled output or falls back to `tsx` when developing from source.
 
-### Releasing to npm
+### Releasing to npm and GitHub
 
-1. Run the appropriate release script (bumps `package.json` only — no git commit or tag):
+Log in once with `npm login`. Each release script bumps the version, builds, publishes to npm, then commits, tags, and pushes to GitHub:
 
 | Script | Description |
 | ------ | ----------- |
-| `pnpm release:patch` | Bump patch version, build, publish to npm |
-| `pnpm release:minor` | Bump minor version, build, publish to npm |
-| `pnpm release:major` | Bump major version, build, publish to npm |
-| `pnpm release:patch:dry` | Build and run `npm publish --dry-run` (no version bump) |
-
-Release scripts use `npm version --no-git-tag-version` so they work even when the working tree has uncommitted changes. `prepublishOnly` runs `pnpm build` automatically before every `npm publish`.
-
-2. After a successful publish, commit the version bump and tag the release (replace `X.Y.Z` with the new version from `package.json`):
+| `pnpm release:patch` | Patch release — npm + git tag + push |
+| `pnpm release:minor` | Minor release — npm + git tag + push |
+| `pnpm release:major` | Major release — npm + git tag + push |
+| `pnpm release:patch:dry` | Build and `npm publish --dry-run` (no version bump, no git) |
 
 ```bash
-git add -A && git commit -m "chore: release vX.Y.Z"
-git tag vX.Y.Z && git push && git push --tags
+pnpm release:major   # example: 1.0.0 → 2.0.0, publish, tag v2.0.0, push
 ```
+
+The git step commits tracked file changes (including the version bump in `package.json`) and creates `vX.Y.Z`. Untracked files are not included — commit or `.gitignore` them before releasing if they should be in the repo.
 
 ## License
 
