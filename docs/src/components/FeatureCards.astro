@@ -1,0 +1,150 @@
+---
+const features = [
+	{
+		title: 'Map your architecture',
+		description:
+			'Scan React and TypeScript projects to discover components, hooks, contexts, utilities, and how they connect.',
+		accent: 'var(--al-type-component)',
+		icon: '◈',
+	},
+	{
+		title: 'Interactive viewer',
+		descriptionHtml:
+			'Run <code>npx arclens view</code> locally — explore the graph on your machine from <code>graph.json</code>, not a hosted dashboard.',
+		accent: 'var(--al-type-entry)',
+		icon: '◎',
+	},
+	{
+		title: 'Terminal insights',
+		descriptionHtml:
+			'Print node counts, top connections, external libraries, and optional architecture hints right in the CLI.',
+		accent: 'var(--al-type-hook)',
+		icon: '▸',
+	},
+	{
+		title: 'Live watch mode',
+		descriptionHtml:
+			'Re-analyze on file changes with <code>arclens watch</code> while the viewer auto-refreshes as your graph evolves.',
+		accent: 'var(--al-type-utility)',
+		icon: '↻',
+	},
+];
+---
+
+<section class="feature-cards" aria-labelledby="features-heading">
+	<h2 id="features-heading" class="feature-cards__heading">Built for React codebases</h2>
+	<p class="feature-cards__lead">
+		From first scan to interactive exploration — everything runs locally on your machine.
+	</p>
+	<div class="feature-cards__grid">
+		{
+			features.map((feature) => (
+				<article class="feature-card" style={`--feature-accent: ${feature.accent}`}>
+					<span class="feature-card__icon" aria-hidden="true">
+						{feature.icon}
+					</span>
+					<h3 class="feature-card__title">{feature.title}</h3>
+					<p
+						class="feature-card__desc"
+						set:html={'descriptionHtml' in feature ? feature.descriptionHtml : feature.description}
+					/>
+				</article>
+			))
+		}
+	</div>
+</section>
+
+<style>
+	.feature-cards {
+		margin: 4rem auto 3rem;
+		max-width: 56rem;
+		padding: 0 1rem;
+	}
+
+	.feature-cards__heading {
+		margin: 0;
+		font-size: clamp(1.35rem, 3vw, 1.75rem);
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		text-align: center;
+		color: var(--sl-color-white);
+	}
+
+	.feature-cards__lead {
+		margin: 0.75rem auto 0;
+		max-width: 36rem;
+		font-size: 1rem;
+		line-height: 1.6;
+		text-align: center;
+		color: var(--sl-color-gray-3);
+	}
+
+	.feature-cards__grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+		gap: 1rem;
+		margin-top: 2rem;
+	}
+
+	.feature-card {
+		position: relative;
+		padding: 1.25rem 1.35rem 1.35rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.75rem;
+		background: linear-gradient(
+			165deg,
+			color-mix(in srgb, var(--feature-accent) 8%, var(--al-surface)) 0%,
+			var(--al-surface) 55%
+		);
+		overflow: hidden;
+		transition: border-color 0.2s ease, transform 0.2s ease;
+	}
+
+	.feature-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 2px;
+		background: var(--feature-accent);
+		opacity: 0.85;
+	}
+
+	.feature-card:hover {
+		border-color: color-mix(in srgb, var(--feature-accent) 40%, var(--sl-color-gray-5));
+		transform: translateY(-2px);
+	}
+
+	.feature-card__icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		margin-bottom: 0.85rem;
+		border-radius: 0.45rem;
+		font-size: 1rem;
+		color: var(--feature-accent);
+		background: color-mix(in srgb, var(--feature-accent) 14%, transparent);
+	}
+
+	.feature-card__title {
+		margin: 0 0 0.5rem;
+		font-size: 1.05rem;
+		font-weight: 700;
+		color: var(--sl-color-white);
+	}
+
+	.feature-card__desc {
+		margin: 0;
+		font-size: 0.9rem;
+		line-height: 1.55;
+		color: var(--sl-color-gray-3);
+	}
+
+	.feature-card__desc :global(code) {
+		font-size: 0.82em;
+		color: var(--sl-color-accent-high);
+	}
+</style>

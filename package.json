@@ -22,7 +22,8 @@
     "prebuild": "pnpm build:viewer",
     "dev:viewer": "tsx src/cli.ts view --dev",
     "dev:docs": "pnpm --dir docs dev",
-    "build:docs": "pnpm --dir docs build",
+    "build:docs": "pnpm --dir docs install && pnpm --dir docs build",
+    "predev:docs": "pnpm --dir docs install",
     "dev": "pnpm dev:viewer",
     "dev:watch": "bash scripts/dev-watch.sh",
     "test": "vitest run",
@@ -71,7 +72,7 @@
     "type": "git",
     "url": "git+https://github.com/JCalmCrasher/arclens.git"
   },
-  "homepage": "https://github.com/JCalmCrasher/arclens#readme",
+  "homepage": "https://arclens.vercel.app",
   "bugs": {
     "url": "https://github.com/JCalmCrasher/arclens/issues"
   },

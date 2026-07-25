@@ -1,10 +1,81 @@
 :root {
-	--sl-color-accent: #6ea8fe;
-	--sl-color-accent-high: #9ec5ff;
-	--sl-color-accent-low: #1e3a5f;
+	/* Starlight accent — aligned with logo gradient */
+	--sl-color-accent: #38bdf8;
+	--sl-color-accent-high: #7dd3fc;
+	--sl-color-accent-low: #0c1929;
+
+	/* Arclens brand tokens (viewer palette) */
+	--al-canvas: #111111;
+	--al-surface: #1a1a1a;
+	--al-brand-sky: #38bdf8;
+	--al-brand-indigo: #6366f1;
+	--al-type-component: #60a5fa;
+	--al-type-hook: #c084fc;
+	--al-type-utility: #34d399;
+	--al-type-entry: #22d3ee;
+	--al-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 :root[data-theme='dark'],
 :root:not([data-theme='light']) {
 	color-scheme: dark;
+}
+
+/* Splash landing page */
+[data-has-hero] .hero {
+	padding-block: clamp(2.5rem, 6vw, 4rem) 1.5rem;
+}
+
+[data-has-hero] .hero::before {
+	background:
+		radial-gradient(ellipse 70% 50% at 50% -10%, color-mix(in srgb, var(--al-brand-indigo) 18%, transparent), transparent),
+		radial-gradient(ellipse 50% 40% at 80% 20%, color-mix(in srgb, var(--al-brand-sky) 10%, transparent), transparent);
+	opacity: 1;
+}
+
+.hero img {
+	width: 56px;
+	height: 56px;
+	filter: drop-shadow(0 4px 16px color-mix(in srgb, var(--al-brand-sky) 35%, transparent));
+}
+
+.hero h1 {
+	font-size: clamp(2.25rem, 5vw, 3.25rem);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	background: linear-gradient(135deg, var(--sl-color-white) 30%, var(--al-brand-sky) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+.hero .tagline {
+	max-width: 28rem;
+	margin-inline: auto;
+	font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+	font-weight: 500;
+	line-height: 1.5;
+	color: var(--sl-color-gray-2);
+}
+
+.hero .actions {
+	margin-top: 1.25rem;
+}
+
+.hero .actions a[data-variant='minimal'] {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.5rem;
+	padding: 0.55rem 1.1rem;
+	background: color-mix(in srgb, var(--al-surface) 80%, transparent);
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.hero .actions a[data-variant='minimal']:hover {
+	border-color: color-mix(in srgb, var(--al-brand-sky) 50%, var(--sl-color-gray-5));
+	background: color-mix(in srgb, var(--al-brand-indigo) 12%, var(--al-surface));
+}
+
+/* Splash content width */
+.sl-markdown-content {
+	max-width: none;
 }

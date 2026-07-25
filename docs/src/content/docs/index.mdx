@@ -1,36 +1,31 @@
 ---
 title: Arclens
-description: Interactive architecture explorer for React and TypeScript applications.
+description: A lens on your React architecture — static analysis to interactive graph.
 template: splash
 hero:
-  tagline: Map your React architecture in minutes:static analysis, terminal reports, and an interactive graph viewer.
+  tagline: A lens on your React architecture
+  image:
+    file: ../../assets/arclens-logo.svg
+    alt: Arclens logo
   actions:
-    - text: Get started
+    - text: Read the docs
       link: /getting-started/
-      icon: right-arrow
-    - text: Introduction
-      link: /introduction/
-      icon: open-book
+      icon: document
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import CopyCommand from '../../components/CopyCommand.astro';
+import FeatureCards from '../../components/FeatureCards.astro';
+import LandingIntro from '../../components/LandingIntro.astro';
+import LandingShowcase from '../../components/LandingShowcase.astro';
+import ProjectLinks from '../../components/ProjectLinks.astro';
 
-![Arclens viewer exploring a React dependency graph](/images/viewer/graph-overview.png)
+<LandingIntro />
 
-## What you can do
+<CopyCommand />
 
-<CardGrid stagger>
-	<Card title="Analyze" icon="magnifier">
-		Scan a React/TypeScript project and print node counts, relationships, external libraries, and optional architecture insights in the terminal.
-	</Card>
-	<Card title="Visualize" icon="seti:react">
-		Open the bundled viewer to explore components, hooks, contexts, and utilities as an interactive dependency graph.
-	</Card>
-	<Card title="Watch" icon="approve-check">
-		Re-analyze on file changes with `pnpm dev:watch` while the viewer auto-refreshes from `graph.json`.
-	</Card>
-	<Card title="Focus" icon="forward">
-		Use `--focus` in the CLI or search and entry-point shortcuts in the viewer to trace how code connects.
-	</Card>
-</CardGrid>
+<LandingShowcase />
+
+<FeatureCards />
+
+<ProjectLinks />

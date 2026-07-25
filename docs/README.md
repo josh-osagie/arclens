@@ -1,49 +1,28 @@
-# Starlight Starter Kit: Basics
+# Arclens docs site
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+Astro + [Starlight](https://starlight.astro.build/) site: marketing splash at `/` and documentation under `/introduction/`, `/getting-started/`, etc.
 
-```
-pnpm create astro@latest -- --template starlight
-```
+## Commands
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Run from `docs/` (or `pnpm dev:docs` / `pnpm build:docs` from the repo root):
 
-## 🚀 Project Structure
+| Command | Action |
+| ------- | ------ |
+| `pnpm install` | Install dependencies |
+| `pnpm dev` | Dev server at `http://localhost:4321` (uses `--force` to replace a stale server) |
+| `pnpm build` | Production build to `./dist/` |
+| `pnpm preview` | Preview the production build |
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+## Port already in use?
 
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+If `pnpm dev` reports another Astro dev server on port 4321, either open [http://localhost:4321](http://localhost:4321) (the site may already be running) or stop it:
+
+```bash
+pnpm exec astro dev stop
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+From the repo root: `pnpm --dir docs exec astro dev stop`.
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+## Deploy
 
-Static assets, like favicons, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+See [DEPLOY.md](./DEPLOY.md) for Vercel setup (Root Directory: `docs`, no custom domain required).

@@ -1,0 +1,154 @@
+---
+interface Props {
+	command?: string;
+	label?: string;
+}
+
+const {
+	command = 'npx arclens analyze ./src --insights',
+	label = 'Try it now',
+} = Astro.props;
+---
+
+<div class="copy-command">
+	<p class="copy-command__label">{label}</p>
+	<div class="copy-command__row">
+		<span class="copy-command__prompt" aria-hidden="true">$</span>
+		<code class="copy-command__code">{command}</code>
+		<button type="button" class="copy-command__btn" data-copy={command} aria-label="Copy command">
+			<svg class="copy-command__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.75"></rect>
+				<path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+			</svg>
+			<span class="copy-command__btn-text">Copy</span>
+		</button>
+	</div>
+	<p class="copy-command__hint">
+		Then run <code>npx arclens view</code> to open the interactive graph on your machine.
+	</p>
+</div>
+
+<script>
+	const buttons = document.querySelectorAll<HTMLButtonElement>('[data-copy]');
+
+	for (const button of buttons) {
+		button.addEventListener('click', async () => {
+			const text = button.getAttribute('data-copy');
+			if (!text) return;
+
+			try {
+				await navigator.clipboard.writeText(text);
+				const label = button.querySelector('.copy-command__btn-text');
+				if (label) {
+					const original = label.textContent;
+					label.textContent = 'Copied!';
+					button.classList.add('copy-command__btn--copied');
+					window.setTimeout(() => {
+						label.textContent = original;
+						button.classList.remove('copy-command__btn--copied');
+					}, 2000);
+				}
+			} catch {
+				// Clipboard API unavailable — selection fallback is enough for most cases.
+			}
+		});
+	}
+</script>
+
+<style>
+	.copy-command {
+		margin: 0 auto 2.5rem;
+		max-width: 44rem;
+		padding: 0 1rem;
+		text-align: left;
+	}
+
+	.copy-command__label {
+		margin: 0 0 0.65rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--sl-color-gray-3);
+	}
+
+	.copy-command__row {
+		display: flex;
+		align-items: stretch;
+		gap: 0;
+		border: 1px solid color-mix(in srgb, var(--al-brand-sky) 25%, var(--sl-color-gray-5));
+		border-radius: 0.65rem;
+		background: var(--al-canvas);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+		overflow: hidden;
+	}
+
+	.copy-command__prompt {
+		display: flex;
+		align-items: center;
+		padding: 0 0 0 1rem;
+		font-family: var(--al-font-mono);
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: var(--al-brand-sky);
+		user-select: none;
+	}
+
+	.copy-command__code {
+		flex: 1;
+		margin: 0;
+		padding: 0.95rem 0.75rem;
+		font-family: var(--al-font-mono);
+		font-size: clamp(0.78rem, 2.5vw, 0.92rem);
+		line-height: 1.4;
+		overflow-x: auto;
+		white-space: nowrap;
+		color: var(--sl-color-white);
+		background: transparent;
+	}
+
+	.copy-command__btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		flex-shrink: 0;
+		margin: 0;
+		padding: 0 1.15rem;
+		border: 0;
+		border-left: 1px solid var(--sl-color-gray-5);
+		background: color-mix(in srgb, var(--al-brand-indigo) 18%, var(--sl-color-gray-6));
+		color: var(--sl-color-white);
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.copy-command__btn:hover {
+		background: color-mix(in srgb, var(--al-brand-indigo) 28%, var(--sl-color-gray-6));
+	}
+
+	.copy-command__btn--copied {
+		background: color-mix(in srgb, var(--al-type-utility) 20%, var(--sl-color-gray-6));
+		color: var(--al-type-utility);
+	}
+
+	.copy-command__icon {
+		flex-shrink: 0;
+		opacity: 0.85;
+	}
+
+	.copy-command__hint {
+		margin: 0.75rem 0 0;
+		padding-left: 0.15rem;
+		font-size: 0.9rem;
+		color: var(--sl-color-gray-3);
+	}
+
+	.copy-command__hint code {
+		font-family: var(--al-font-mono);
+		font-size: 0.85em;
+		color: var(--al-brand-sky);
+	}
+</style>

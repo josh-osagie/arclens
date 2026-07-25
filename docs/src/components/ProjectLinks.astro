@@ -1,0 +1,123 @@
+---
+interface Props {
+	heading?: string;
+}
+
+const { heading = 'Links' } = Astro.props;
+
+const links = [
+	{
+		href: 'https://www.npmjs.com/package/arclens',
+		label: 'npm',
+		description: 'Install the CLI',
+		external: true,
+	},
+	{
+		href: 'https://github.com/JCalmCrasher/arclens',
+		label: 'GitHub',
+		description: 'Source & issues',
+		external: true,
+	},
+	{
+		href: '/getting-started/',
+		label: 'Documentation',
+		description: 'Guides & reference',
+		external: false,
+	},
+];
+---
+
+<footer class="project-links">
+	<h2 class="project-links__heading">{heading}</h2>
+	<nav class="project-links__nav" aria-label="Project links">
+		{
+			links.map((link) => (
+				<a
+					class="project-links__item"
+					href={link.href}
+					{...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+				>
+					<span class="project-links__label">{link.label}</span>
+					<span class="project-links__desc">{link.description}</span>
+					{link.external && <span class="project-links__arrow" aria-hidden="true">↗</span>}
+				</a>
+			))
+		}
+	</nav>
+</footer>
+
+<style>
+	.project-links {
+		margin: 4rem auto 3rem;
+		max-width: 44rem;
+		padding: 2rem 1rem 0;
+		border-top: 1px solid var(--sl-color-gray-5);
+	}
+
+	.project-links__heading {
+		margin: 0 0 1.25rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		text-align: center;
+		color: var(--sl-color-gray-3);
+	}
+
+	.project-links__nav {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.75rem;
+	}
+
+	@media (max-width: 540px) {
+		.project-links__nav {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	.project-links__item {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 1rem 1.1rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.65rem;
+		background: color-mix(in srgb, var(--al-surface) 90%, transparent);
+		color: var(--sl-color-white);
+		text-decoration: none;
+		transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+	}
+
+	.project-links__item:hover {
+		border-color: color-mix(in srgb, var(--al-brand-sky) 45%, var(--sl-color-gray-5));
+		background: color-mix(in srgb, var(--al-brand-indigo) 10%, var(--al-surface));
+		transform: translateY(-1px);
+	}
+
+	.project-links__label {
+		font-size: 1rem;
+		font-weight: 700;
+		color: var(--sl-color-white);
+	}
+
+	.project-links__desc {
+		margin-top: 0.2rem;
+		font-size: 0.82rem;
+		color: var(--sl-color-gray-3);
+	}
+
+	.project-links__arrow {
+		position: absolute;
+		top: 0.85rem;
+		right: 0.85rem;
+		font-size: 0.85rem;
+		color: var(--sl-color-gray-4);
+		transition: color 0.15s ease;
+	}
+
+	.project-links__item:hover .project-links__arrow {
+		color: var(--al-brand-sky);
+	}
+</style>

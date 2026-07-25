@@ -267,6 +267,18 @@ Shorthand scripts (same CLI, useful in this repo):
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 
+### Docs site & deployment
+
+The documentation and marketing landing page live in `docs/` (Astro + Starlight). Local preview:
+
+```bash
+pnpm dev:docs
+```
+
+If port 4321 is already in use, open [http://localhost:4321](http://localhost:4321) or stop the existing server with `pnpm --dir docs exec astro dev stop`.
+
+Deploy to Vercel (landing at `/`, docs at `/getting-started/`, etc.): see [docs/DEPLOY.md](./docs/DEPLOY.md). The graph viewer is **not** deployed — users run `npx arclens view` locally after analyze.
+
 ### Repo layout
 
 | Path       | Role                        |
