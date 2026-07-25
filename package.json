@@ -1,6 +1,6 @@
 {
   "name": "arclens",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Arclens — React architecture explorer. Statically map components, hooks, and dependencies into an interactive graph.",
   "main": "dist/cli.js",
   "bin": {
@@ -28,11 +28,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "pnpm build",
-    "release:publish": "pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",
-    "release:patch": "npm version patch --no-git-tag-version && pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",
-    "release:minor": "npm version minor --no-git-tag-version && pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",
-    "release:major": "npm version major --no-git-tag-version && pnpm build && npm publish --access public && node scripts/git-release-tag.mjs",
-    "release:patch:dry": "pnpm build && npm publish --dry-run --access public"
+    "release:publish": "node scripts/release.mjs publish",
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major",
+    "release:patch:dry": "node scripts/release.mjs patch --dry-run"
   },
   "keywords": [
     "react",

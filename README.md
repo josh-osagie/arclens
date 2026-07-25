@@ -1,4 +1,6 @@
-![Arclens](./assets/arclens-logo.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/JCalmCrasher/react-atlas/main/assets/arclens-logo.png" alt="Arclens" width="48" />
+</p>
 
 # Arclens
 Arclens statically analyzes React and TypeScript applications and transforms them into an interactive architecture graph, making it easy to explore dependencies, trace component relationships, and understand unfamiliar codebases.
@@ -278,22 +280,25 @@ Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the v
 
 ### Releasing to npm and GitHub
 
-Log in once with `npm login`.
+Log in once with `npm login`. Each release command does everything in one shot — version bump (when applicable), build, npm publish, git commit, annotated tag, and push to GitHub. No manual git steps.
 
 | Script | Description |
 | ------ | ----------- |
-| `pnpm release:publish` | Publish the **current** version (no bump) — build, npm publish, git tag + push. Use when the version is already set (e.g. rename to 2.0.0). |
+| `pnpm release:publish` | Publish the **current** version (no bump) — build, npm publish, git tag + push |
 | `pnpm release:patch` | Bump patch, then build, publish, git tag + push |
 | `pnpm release:minor` | Bump minor, then build, publish, git tag + push |
 | `pnpm release:major` | Bump major, then build, publish, git tag + push |
-| `pnpm release:patch:dry` | Build and `npm publish --dry-run` (no version bump, no git) |
+| `pnpm release:patch:dry` | Bump patch, build, `npm publish --dry-run`, git step in dry-run (no publish or push) |
 
 ```bash
 pnpm release:publish  # publish 2.0.0 as-is (no bump), tag v2.0.0, push
 pnpm release:major    # example: 2.0.0 → 3.0.0, publish, tag v3.0.0, push
+pnpm release:patch:dry  # safe rehearsal — no npm publish or git push
 ```
 
-The git step commits tracked file changes (including the version bump in `package.json`) and creates `vX.Y.Z`. Untracked files are not included — commit or `.gitignore` them before releasing if they should be in the repo.
+After a successful release, the git step prints the tag URL (e.g. `https://github.com/JCalmCrasher/arclens/releases/tag/v2.1.0`).
+
+Tracked file changes (including the version bump in `package.json`) are committed as `chore: release vX.Y.Z` and tagged as `vX.Y.Z`. Untracked files are not included — commit or `.gitignore` them before releasing if they should be in the repo.
 
 ## License
 
