@@ -275,10 +275,6 @@ The documentation and marketing landing page live in `docs/` (Astro + Starlight)
 pnpm dev:docs
 ```
 
-If port 4321 is already in use, open [http://localhost:4321](http://localhost:4321) or stop the existing server with `pnpm --dir docs exec astro dev stop`.
-
-Deploy to Vercel (landing at `/`, docs at `/getting-started/`, etc.): see [docs/DEPLOY.md](./docs/DEPLOY.md). The graph viewer is **not** deployed — users run `npx arclens view` locally after analyze.
-
 ### Repo layout
 
 | Path       | Role                        |
@@ -289,28 +285,6 @@ Deploy to Vercel (landing at `/`, docs at `/getting-started/`, etc.): see [docs/
 | `samples/` | Sample project for analysis |
 
 Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the viewer build to `dist/viewer/`. The `arclens` bin works from the compiled output or falls back to `tsx` when developing from source.
-
-### Releasing to npm and GitHub
-
-Log in once with `npm login`. Each release command does everything in one shot — version bump (when applicable), build, npm publish, git commit, annotated tag, and push to GitHub. No manual git steps.
-
-| Script | Description |
-| ------ | ----------- |
-| `pnpm release:publish` | Publish the **current** version (no bump) — build, npm publish, git tag + push |
-| `pnpm release:patch` | Bump patch, then build, publish, git tag + push |
-| `pnpm release:minor` | Bump minor, then build, publish, git tag + push |
-| `pnpm release:major` | Bump major, then build, publish, git tag + push |
-| `pnpm release:patch:dry` | Build, `npm publish --dry-run`, git step in dry-run (no version bump, publish, or push) |
-
-```bash
-pnpm release:publish  # publish 2.0.0 as-is (no bump), tag v2.0.0, push
-pnpm release:major    # example: 2.0.0 → 3.0.0, publish, tag v3.0.0, push
-pnpm release:patch:dry  # safe rehearsal — no npm publish or git push
-```
-
-After a successful release, the git step prints the tag URL (e.g. `https://github.com/JCalmCrasher/arclens/releases/tag/v2.1.0`).
-
-Tracked file changes (including the version bump in `package.json`) are committed as `chore: release vX.Y.Z` and tagged as `vX.Y.Z`. Untracked files are not included — commit or `.gitignore` them before releasing if they should be in the repo.
 
 ## License
 
