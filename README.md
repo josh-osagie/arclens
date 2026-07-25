@@ -1,7 +1,5 @@
 # React Atlas
 
-# React Atlas
-
 Understand any React codebase in minutes.
 
 React Atlas statically analyzes React and TypeScript applications and transforms them into an interactive architecture graph, making it easy to explore dependencies, trace component relationships, and understand unfamiliar codebases.
@@ -20,7 +18,7 @@ React Atlas turns your codebase into an interactive map, making onboarding, debu
 
 ### Requirements
 
-- [pnpm](https://pnpm.io/) (recommended)
+- Node.js 18 or newer
 
 ### Install
 
@@ -44,33 +42,36 @@ cd react-atlas
 pnpm install
 ```
 
-When working from source, prefix CLI commands with `pnpm react-atlas` instead of `react-atlas`. See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup.
+When working from source, use `pnpm react-atlas <command>` (same flags as the published CLI). See [Development](#development) for contributor scripts.
 
 ### Quick start
 
-Analyze the built-in sample project and open the viewer:
+Analyze your project, then open the viewer:
 
 ```bash
-pnpm react-atlas analyze ./samples --insights
-pnpm dev:viewer
+npx react-atlas analyze ./src --insights
+npx react-atlas view
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`).
+Open the URL printed in the terminal (default `http://127.0.0.1:5173`).
 
 This prints a terminal report, writes `graph.json` in the current working directory, and loads that graph in the viewer.
 
+From this repo:
+
 ```bash
-react-atlas analyze ./samples --insights
+pnpm react-atlas analyze ./samples --insights
+pnpm react-atlas view
 ```
 
-The CLI entry point is `src/cli.ts`. Invoke it with `pnpm react-atlas <command>` from this repo, or `react-atlas <command>` after npm publish.
+## Commands
 
 ### `analyze`
 
 Scan a React project, print a terminal report, and write `graph.json`.
 
 ```bash
-pnpm react-atlas analyze [path] [options]
+npx react-atlas analyze [path] [options]
 ```
 
 | Argument | Default     | Description                                |
@@ -81,28 +82,25 @@ pnpm react-atlas analyze [path] [options]
 
 ```bash
 # Full report with architecture hints
-pnpm react-atlas analyze ./src --insights
-
-# Shorthand script (same as above)
-pnpm analyze ./samples --insights
+npx react-atlas analyze ./src --insights
 
 # Save a text report
-pnpm react-atlas analyze ./src --insights --report-file report.txt
+npx react-atlas analyze ./src --insights --report-file report.txt
 
 # Save structured JSON (includes graph + insights)
-pnpm react-atlas analyze ./src --report-file report.json
+npx react-atlas analyze ./src --report-file report.json
 
 # Write graph to a custom path
-pnpm react-atlas analyze ./src -o output/graph.json
+npx react-atlas analyze ./src -o output/graph.json
 
 # See who uses a specific symbol
-pnpm react-atlas analyze ./samples --focus Button
+npx react-atlas analyze ./src --focus Button
 
 # Force full re-parse and write snippet sidecars
-pnpm react-atlas analyze ./src --no-cache --with-snippets
+npx react-atlas analyze ./src --no-cache --with-snippets
 
 # Help
-pnpm react-atlas analyze -h
+npx react-atlas analyze -h
 ```
 
 #### Options
@@ -144,36 +142,47 @@ A typical run includes:
 - **Most referenced** — nodes with the most incoming edges
 - **Insights** — with `--insights`
 
-#### Watch scripts
+### `watch`
 
-There is no separate `watch` CLI subcommand. Re-analysis on file changes is handled by pnpm scripts:
-
-| Script                                 | Description                                   |
-| -------------------------------------- | --------------------------------------------- |
-| `pnpm analyze:watch -- [path] [flags]` | Re-run `analyze` when TS/TSX files change     |
-| `pnpm dev:watch -- [path] [flags]`     | Run `analyze:watch` and `dev:viewer` together |
+Re-run `analyze` when `.ts`/`.tsx` files change. Accepts the same flags as `analyze`.
 
 ```bash
-pnpm analyze:watch -- ./samples --insights
-pnpm dev:watch -- ../my-app/src --no-cache
+npx react-atlas watch ./src --insights
 ```
 
-While `analyze:watch` is running in an interactive terminal, press `r` to re-analyze immediately, `q` to stop, or `?` for help.
+While watch is running in an interactive terminal, press `r` to re-analyze immediately, `q` to stop, or `?` for help.
+
+Analyze and view together:
+
+```bash
+npx react-atlas watch ./src --insights
+# in another terminal
+npx react-atlas view
+```
+
+The viewer auto-refreshes when `graph.json` changes.
+
+### `view`
+
+Serve the architecture graph viewer for the current `graph.json`.
+
+```bash
+npx react-atlas view
+npx react-atlas view --graph ./output/graph.json --open
+```
+
+| Flag                 | Default      | Description                          |
+| -------------------- | ------------ | ------------------------------------ |
+| `-p, --port <n>`     | `5173`       | Port for the viewer server           |
+| `-g, --graph <file>` | `graph.json` | Path to the graph file               |
+| `--project-root`     | from graph   | Project root for live source snippets |
+| `--open`             | off          | Open the viewer in your browser      |
+
+Run `analyze` first so `graph.json` exists.
 
 ## Viewer
 
-The viewer is a Vite + React Flow app in `viewer/`. It reads `graph.json` from the repo root and auto-refreshes when the file changes.
-
-### Start the viewer
-
-Run an analysis first, then start the dev server:
-
-```bash
-pnpm analyze ./samples --insights
-pnpm dev:viewer
-```
-
-Open the URL Vite prints (usually `http://localhost:5173`).
+The viewer is a React Flow app that reads `graph.json` and auto-refreshes when the file changes.
 
 ### What you can do
 
@@ -181,23 +190,7 @@ Open the URL Vite prints (usually `http://localhost:5173`).
 - **Browse folders** and entry points on large graphs without rendering every node at once
 - **Click a node** to open a details panel with file, type, connections, props, and source preview
 - **Inspect insights** via the floating badge (mirrors CLI `--insights` output)
-- **Auto-refresh** when `graph.json` changes — use `pnpm dev:watch` to re-analyze while the viewer stays open
-
-### Watch while developing
-
-```bash
-# Built-in samples (also re-runs when analyzer extractors under src/ change)
-pnpm dev:watch
-
-# External project
-pnpm dev:watch -- ../my-app/src
-```
-
-For analyze-only watch without the viewer:
-
-```bash
-pnpm analyze:watch -- ../my-app/src
-```
+- **Auto-refresh** when `graph.json` changes — pair `watch` and `view` while developing
 
 ## graph.json
 
@@ -245,10 +238,26 @@ Relationships:
 
 ## Development
 
+Contributor setup uses [pnpm](https://pnpm.io/).
+
 ```bash
-pnpm test              # run unit tests
+pnpm install
+pnpm test              # run unit and integration tests
+pnpm react-atlas analyze ./samples --insights
+pnpm react-atlas watch ./samples --insights
+pnpm react-atlas view
+pnpm build             # compile CLI + bundle viewer to dist/
 pnpm dev:docs          # start the docs site
 ```
+
+Shorthand scripts (same CLI, useful in this repo):
+
+| Script            | Equivalent                          |
+| ----------------- | ----------------------------------- |
+| `pnpm analyze`    | `pnpm react-atlas analyze`          |
+| `pnpm analyze:watch` | `pnpm react-atlas watch`         |
+| `pnpm dev:viewer` | `pnpm react-atlas view`             |
+| `pnpm dev:watch`  | watch + view together (see script)  |
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 
@@ -261,7 +270,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 | `docs/`    | Documentation site          |
 | `samples/` | Sample project for analysis |
 
-On npm publish, the build step compiles the CLI and bundles the viewer to static files under `dist/viewer/`. A `react-atlas view` command to serve those assets is planned.
+Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the viewer build to `dist/viewer/`. The `react-atlas` bin works from the compiled output or falls back to `tsx` when developing from source.
 
 ## License
 
