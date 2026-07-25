@@ -1,4 +1,9 @@
 import { InfoTip } from "./InfoTip";
+import {
+  EDGE_TYPES,
+  EDGE_VISIBILITY_LABELS,
+  type EdgeVisibilityPrefs,
+} from "./edgeVisibilityPrefs";
 import { LAYOUT_PRESETS, type LayoutPreset } from "./layoutPresets";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -11,6 +16,8 @@ type Props = {
   onNeighborhoodHopsChange: (hops: number) => void;
   focusOnSelect: boolean;
   onFocusOnSelectChange: (enabled: boolean) => void;
+  edgeVisibility: EdgeVisibilityPrefs;
+  onEdgeVisibilityChange: (type: keyof EdgeVisibilityPrefs, visible: boolean) => void;
   expandedFolders: string[];
   onShowFromEntry: () => void;
   onCollapseFolders: () => void;
@@ -28,6 +35,8 @@ export function GraphActions({
   onNeighborhoodHopsChange,
   focusOnSelect,
   onFocusOnSelectChange,
+  edgeVisibility,
+  onEdgeVisibilityChange,
   expandedFolders,
   onShowFromEntry,
   onCollapseFolders,
@@ -143,6 +152,29 @@ export function GraphActions({
             onChange={onFocusOnSelectChange}
             ariaLabel="Pan to selection"
           />
+        </div>
+
+        <div className="graph-toggle graph-toggle--expanded">
+          <div className="graph-toggle__main">
+            <span className="graph-toggle__label">
+              <span className="field-label">
+                <span className="field-label__text">Edges</span>
+                <InfoTip text="Show or hide relationship lines on the canvas by type." />
+              </span>
+            </span>
+          </div>
+          <div className="graph-toggle__sub graph-toggle__sub--stacked">
+            {EDGE_TYPES.map((type) => (
+              <div key={type} className="graph-toggle graph-toggle--nested">
+                <span className="graph-toggle__label">{EDGE_VISIBILITY_LABELS[type]}</span>
+                <ToggleSwitch
+                  checked={edgeVisibility[type]}
+                  onChange={(visible) => onEdgeVisibilityChange(type, visible)}
+                  ariaLabel={`Show ${EDGE_VISIBILITY_LABELS[type].toLowerCase()} edges`}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

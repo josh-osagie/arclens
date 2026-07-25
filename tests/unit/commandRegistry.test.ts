@@ -36,6 +36,8 @@ const paletteActions = {
   onFocusSelected: vi.fn(),
   onCopySelectedName: vi.fn(),
   onCopySelectedPath: vi.fn(),
+  onHideEdgeType: vi.fn(),
+  onShowAllEdges: vi.fn(),
 };
 
 const paletteState = {
@@ -46,6 +48,11 @@ const paletteState = {
   layoutPreset: "tree-down" as const,
   selected: sampleNodes[0]!,
   hasEntryNodes: true,
+  edgeVisibility: {
+    imports: true,
+    renders: true,
+    uses: true,
+  },
 };
 
 describe("commandRegistry", () => {
@@ -60,11 +67,14 @@ describe("commandRegistry", () => {
 
     const grouped = groupCommandActions(built);
     expect(grouped.get("navigate")).toHaveLength(1);
-    expect(grouped.get("graph")).toHaveLength(12);
+    expect(grouped.get("graph")).toHaveLength(16);
     expect(grouped.get("selection")).toHaveLength(3);
 
     const dimAction = built.find((action) => action.id === "toggle-dim-distant");
     expect(dimAction?.label).toContain("Disable");
+
+    const hideImports = built.find((action) => action.id === "hide-imports");
+    expect(hideImports?.label).toBe("Hide imports");
   });
 
   it("assigns shortcut labels when a binding exists", () => {

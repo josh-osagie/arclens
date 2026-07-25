@@ -233,6 +233,7 @@ export function buildFlowGraph(
       id: `e${i}`,
       source: edge.from,
       target: edge.to,
+      data: { edgeType: edge.type },
       label: compact ? undefined : edge.type,
       type: "default",
       // Never use stroke-dasharray bulk animation — costly at scale (see Liam ERD).

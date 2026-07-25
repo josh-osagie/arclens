@@ -1,4 +1,8 @@
-import type { AtlasGraphNode } from "@/types";
+import type { AtlasGraphNode, GraphEdgeType } from "@/types";
+import {
+  EDGE_VISIBILITY_LABELS,
+  type EdgeVisibilityPrefs,
+} from "../../edgeVisibilityPrefs";
 import {
   LAYOUT_PRESETS,
   type LayoutPreset,
@@ -92,6 +96,8 @@ export type CommandPaletteActions = {
   onFocusSelected: () => void;
   onCopySelectedName: () => void;
   onCopySelectedPath: () => void;
+  onHideEdgeType: (type: GraphEdgeType) => void;
+  onShowAllEdges: () => void;
 };
 
 export type CommandPaletteState = {
@@ -102,6 +108,7 @@ export type CommandPaletteState = {
   layoutPreset: LayoutPreset;
   selected: AtlasGraphNode | null;
   hasEntryNodes: boolean;
+  edgeVisibility: EdgeVisibilityPrefs;
 };
 
 export const COMMAND_GROUP_LABELS: Record<CommandGroupId, string> = {
@@ -216,6 +223,28 @@ export function buildCommandActions(
       keywords: ["neighborhood", "focus", "dim"],
       run: actions.onToggleNeighborhoodFocus,
     }),
+    ...(["imports", "renders", "uses"] as const).flatMap((type) => {
+      if (!state.edgeVisibility[type]) return [];
+      return [
+        {
+          id: `hide-${type}`,
+          group: "graph" as const,
+          label: `Hide ${EDGE_VISIBILITY_LABELS[type].toLowerCase()}`,
+          keywords: ["edge", "visibility", "hide", type],
+          run: () => actions.onHideEdgeType(type),
+        },
+      ];
+    }),
+    {
+      id: "show-all-edges",
+      group: "graph" as const,
+      label: "Show all edges",
+      keywords: ["edge", "visibility", "show", "all"],
+      disabled: (["imports", "renders", "uses"] as const).every(
+        (type) => state.edgeVisibility[type],
+      ),
+      run: actions.onShowAllEdges,
+    },
     withShortcut({
       id: "focus-selected",
       group: "selection",

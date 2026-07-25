@@ -46,6 +46,14 @@ import {
 } from "./clusterGraph";
 import { FocusOnSelect } from "./FocusOnSelect";
 import { computeFolderSpotlightIds } from "./folderSpotlight";
+import { filterEdgesByVisibility } from "./edgeVisibility";
+import {
+  loadEdgeVisibility,
+  saveEdgeVisibility,
+  setEdgeTypeVisible,
+  DEFAULT_EDGE_VISIBILITY,
+  type EdgeVisibilityPrefs,
+} from "./edgeVisibilityPrefs";
 import { GraphActions } from "./GraphActions";
 import { CommandPalette } from "./features/command-palette/CommandPalette";
 import { ExportBridge, triggerExport } from "./exportGraphBridge";
@@ -220,6 +228,21 @@ function patchEdgePresentation(
   return changed ? next : edges;
 }
 
+function presentEdges(
+  edges: Edge[],
+  visibility: EdgeVisibilityPrefs,
+  highlightIds: Set<string> | null,
+  pathEdges: Set<string>,
+  highlight: boolean,
+): Edge[] {
+  return patchEdgePresentation(
+    filterEdgesByVisibility(edges, visibility),
+    highlightIds,
+    pathEdges,
+    highlight,
+  );
+}
+
 function FitViewOnce({
   viewKey,
   nodeCount,
@@ -302,6 +325,9 @@ export default function App() {
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
   const [relayoutNonce, setRelayoutNonce] = useState(0);
   const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() => loadLayoutPreset());
+  const [edgeVisibility, setEdgeVisibility] = useState<EdgeVisibilityPrefs>(() =>
+    loadEdgeVisibility(),
+  );
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
@@ -500,7 +526,15 @@ export default function App() {
           highlightIds,
         ),
       );
-      setEdges(patchEdgePresentation(built.edges, highlightIds, pathEdges, shouldHighlightEdges));
+      setEdges(
+        presentEdges(
+          built.edges,
+          edgeVisibility,
+          highlightIds,
+          pathEdges,
+          shouldHighlightEdges,
+        ),
+      );
       setIsBuilding(false);
     }, 0);
 
@@ -515,14 +549,24 @@ export default function App() {
       patchNodePresentation(current, searchLower, selected?.id ?? null, highlightIds),
     );
     setEdges((current) =>
-      patchEdgePresentation(
-        current.length > 0 ? current : baseEdgesRef.current,
+      presentEdges(
+        baseEdgesRef.current.length > 0 ? baseEdgesRef.current : current,
+        edgeVisibility,
         highlightIds,
         pathEdges,
         shouldHighlightEdges,
       ),
     );
-  }, [searchLower, selected?.id, highlightIds, pathEdges, shouldHighlightEdges, setNodes, setEdges]);
+  }, [
+    searchLower,
+    selected?.id,
+    highlightIds,
+    pathEdges,
+    shouldHighlightEdges,
+    edgeVisibility,
+    setNodes,
+    setEdges,
+  ]);
 
   const expandClusterFolder = useCallback(
     (folder: string) => {
@@ -746,6 +790,23 @@ export default function App() {
     applyLayout(nextLayoutPreset(layoutPreset));
   }, [applyLayout, layoutPreset]);
 
+  const onEdgeVisibilityChange = useCallback(
+    (type: keyof EdgeVisibilityPrefs, visible: boolean) => {
+      setEdgeVisibility((prev) => {
+        const next = setEdgeTypeVisible(prev, type, visible);
+        saveEdgeVisibility(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const showAllEdges = useCallback(() => {
+    const next = { ...DEFAULT_EDGE_VISIBILITY };
+    setEdgeVisibility(next);
+    saveEdgeVisibility(next);
+  }, []);
+
   const copyText = useCallback(async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -763,8 +824,9 @@ export default function App() {
       layoutDisabled: nodes.length === 0,
       selected,
       hasEntryNodes: graph ? findEntryNodes(graph).length > 0 : false,
+      edgeVisibility,
     }),
-    [graph, clusterMode, neighborhoodFocus, nodes.length, selected, layoutPreset],
+    [graph, clusterMode, neighborhoodFocus, nodes.length, selected, layoutPreset, edgeVisibility],
   );
 
   const commandPaletteActions = useMemo<CommandPaletteActions>(
@@ -805,8 +867,12 @@ export default function App() {
       onCopySelectedPath: () => {
         if (selected?.file && selected.file !== "external") void copyText(selected.file);
       },
+      onHideEdgeType: (type) => {
+        onEdgeVisibilityChange(type, false);
+      },
+      onShowAllEdges: showAllEdges,
     }),
-    [focusGraphNode, showFromEntry, applyLayout, cycleLayout, selected, copyText],
+    [focusGraphNode, showFromEntry, applyLayout, cycleLayout, selected, copyText, onEdgeVisibilityChange, showAllEdges],
   );
 
   const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
@@ -989,6 +1055,8 @@ export default function App() {
               onNeighborhoodHopsChange={setNeighborhoodHops}
               focusOnSelect={focusOnSelect}
               onFocusOnSelectChange={setFocusOnSelect}
+              edgeVisibility={edgeVisibility}
+              onEdgeVisibilityChange={onEdgeVisibilityChange}
               expandedFolders={expandedFolders}
               onShowFromEntry={showFromEntry}
               onCollapseFolders={() => {
