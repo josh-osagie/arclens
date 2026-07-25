@@ -276,6 +276,26 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 
 Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the viewer build to `dist/viewer/`. The `arclens` bin works from the compiled output or falls back to `tsx` when developing from source.
 
+### Releasing to npm
+
+1. Run the appropriate release script (bumps `package.json` only — no git commit or tag):
+
+| Script | Description |
+| ------ | ----------- |
+| `pnpm release:patch` | Bump patch version, build, publish to npm |
+| `pnpm release:minor` | Bump minor version, build, publish to npm |
+| `pnpm release:major` | Bump major version, build, publish to npm |
+| `pnpm release:patch:dry` | Build and run `npm publish --dry-run` (no version bump) |
+
+Release scripts use `npm version --no-git-tag-version` so they work even when the working tree has uncommitted changes. `prepublishOnly` runs `pnpm build` automatically before every `npm publish`.
+
+2. After a successful publish, commit the version bump and tag the release (replace `X.Y.Z` with the new version from `package.json`):
+
+```bash
+git add -A && git commit -m "chore: release vX.Y.Z"
+git tag vX.Y.Z && git push && git push --tags
+```
+
 ## License
 
 ISC
