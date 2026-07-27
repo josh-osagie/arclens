@@ -970,20 +970,19 @@ export default function App() {
         <ZoomControls />
         <HelperLinesOverlay lines={helperLines} />
 
-        {!isLargeGraph && (
-          <MiniMap
-            nodeColor={(node) =>
-              typeColors[node.data.type as keyof typeof typeColors] ?? "#64748b"
-            }
-            maskColor="rgba(17, 17, 17, 0.85)"
-            style={{
-              background: "var(--atlas-surface)",
-              border: "1px solid var(--atlas-border)",
-              borderRadius: "var(--atlas-radius-xl)",
-            }}
-            pannable
-          />
-        )}
+        <MiniMap
+          nodeColor={(node) =>
+            typeColors[node.data.type as keyof typeof typeColors] ?? "#64748b"
+          }
+          maskColor="rgba(17, 17, 17, 0.85)"
+          style={{
+            background: "var(--atlas-surface)",
+            border: "1px solid var(--atlas-border)",
+            borderRadius: "var(--atlas-radius-xl)",
+          }}
+          pannable
+          zoomable
+        />
 
         {(canvasMessage || isBuilding) && (
           <Panel position="top-center" className="graph-canvas-notice">
