@@ -1,4 +1,5 @@
 import type { AtlasGraph } from "./types";
+import { nodeMatchesSearch } from "./clusterGraph";
 import {
   FORCE_FULL_GRAPH,
   MAX_VISIBLE_NODES,
@@ -31,10 +32,7 @@ export function selectVisibleGraph(
 
   const matchingIds = new Set<string>();
   for (const node of graph.nodes) {
-    if (
-      node.name.toLowerCase().includes(searchLower) ||
-      node.file.toLowerCase().includes(searchLower)
-    ) {
+    if (nodeMatchesSearch(node, searchLower)) {
       matchingIds.add(node.id);
     }
   }

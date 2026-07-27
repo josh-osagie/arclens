@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyzeSamples } from "../helpers";
-import { buildInsights } from "../../src/insights";
+import { buildInsights, hookRuleViolationsToInsights } from "../../src/insights";
 import type { ExportRecord } from "../../src/extractors/exports";
 import type { GraphEdge, GraphNode } from "../../src/types";
 import { nodeId } from "../../src/extractors/find";
@@ -49,5 +49,56 @@ describe("buildInsights gates", () => {
     expect(titles.some((title) => title.includes("Component naming: generateFileError"))).toBe(
       false,
     );
+  });
+});
+
+describe("hookRuleViolationsToInsights", () => {
+  it("groups duplicate hook violations in the same file", () => {
+    const file = "/src/features/LoanApply.tsx";
+    const insights = hookRuleViolationsToInsights([
+      {
+        hook: "useFormik",
+        file,
+        line: 42,
+        context: "after an early return",
+        eslintRule: "@eslint-react/rules-of-hooks",
+      },
+      {
+        hook: "useFormik",
+        file,
+        line: 78,
+        context: "after an early return",
+        eslintRule: "@eslint-react/rules-of-hooks",
+      },
+    ]);
+
+    expect(insights).toHaveLength(1);
+    expect(insights[0]?.title).toBe(
+      "Rules of Hooks: 2× useFormik called after an early return",
+    );
+    expect(insights[0]?.detail).toContain("At lines 42, 78.");
+  });
+
+  it("keeps separate insights for different hooks or contexts", () => {
+    const file = "/src/Comp.tsx";
+    const insights = hookRuleViolationsToInsights([
+      {
+        hook: "useFormik",
+        file,
+        line: 10,
+        context: "after an early return",
+        eslintRule: "@eslint-react/rules-of-hooks",
+      },
+      {
+        hook: "useState",
+        file,
+        line: 20,
+        context: "after an early return",
+        eslintRule: "@eslint-react/rules-of-hooks",
+      },
+    ]);
+
+    expect(insights).toHaveLength(2);
+    expect(insights.every((insight) => !insight.title.includes("×"))).toBe(true);
   });
 });

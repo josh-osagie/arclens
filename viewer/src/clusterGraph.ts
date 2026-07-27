@@ -47,6 +47,28 @@ export function folderFromClusterId(id: string): string {
   return id.slice(CLUSTER_ID_PREFIX.length);
 }
 
+export function nodeMatchesSearch(node: AtlasGraphNode, searchLower: string): boolean {
+  if (!searchLower) return false;
+  return (
+    node.name.toLowerCase().includes(searchLower) ||
+    node.file.toLowerCase().includes(searchLower)
+  );
+}
+
+export function findSearchMatchingNodeIds(
+  graph: AtlasGraph,
+  searchLower: string,
+): Set<string> {
+  const ids = new Set<string>();
+  if (!searchLower) return ids;
+  for (const node of graph.nodes) {
+    if (nodeMatchesSearch(node, searchLower)) {
+      ids.add(node.id);
+    }
+  }
+  return ids;
+}
+
 export function nextClusterReveal(
   folder: string,
   members: AtlasGraphNode[],
@@ -328,4 +350,55 @@ export function revealNodeForSpotlight(
   }
 
   return next;
+}
+
+/** Reveal search matches inside collapsed folder clusters (large-graph search mode). */
+export function mergeSearchPartialReveals(
+  graph: AtlasGraph,
+  searchLower: string,
+  partialReveals: Map<string, Set<string>>,
+): Map<string, Set<string>> {
+  if (!searchLower) return partialReveals;
+
+  let next = new Map(partialReveals);
+  for (const node of graph.nodes) {
+    if (!nodeMatchesSearch(node, searchLower)) continue;
+    next = revealNodeForSpotlight(node, graph, next);
+  }
+  return next;
+}
+
+/** Highlight matches, neighbors, and folder clusters that contain hidden matches. */
+export function computeSearchHighlightIds(
+  fullGraph: AtlasGraph,
+  viewGraph: AtlasGraph,
+  searchLower: string,
+  clusterMode: boolean,
+  fullyExpandedFolders: Set<string>,
+): Set<string> | null {
+  if (!searchLower) return null;
+
+  const matching = findSearchMatchingNodeIds(fullGraph, searchLower);
+  if (matching.size === 0) return null;
+
+  const ids = new Set<string>(matching);
+
+  for (const edge of viewGraph.edges) {
+    if (matching.has(edge.from) || matching.has(edge.to)) {
+      ids.add(edge.from);
+      ids.add(edge.to);
+    }
+  }
+
+  if (clusterMode) {
+    for (const node of fullGraph.nodes) {
+      if (!matching.has(node.id) || node.file === "external") continue;
+      const folder = folderKey(node.file);
+      if (!fullyExpandedFolders.has(folder)) {
+        ids.add(clusterNodeId(folder));
+      }
+    }
+  }
+
+  return ids;
 }

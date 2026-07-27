@@ -8,7 +8,11 @@ import {
   folderFromClusterId,
   isClusterId,
   listExpandedFolders,
+  mergeSearchPartialReveals,
+  nextClusterReveal,
   revealNodeForSpotlight,
+  computeSearchHighlightIds,
+  findSearchMatchingNodeIds,
   wireClusterEdges,
   buildClusterNodeVisibilityMap,
   groupNodesByFolder,
@@ -141,5 +145,49 @@ describe("clusterGraph", () => {
     expect(clustered.edges).toEqual([
       { from: clusterNodeId("src"), to: "n1", type: "renders" },
     ]);
+  });
+
+  it("reveals search matches inside collapsed folders", () => {
+    const searchGraph: AtlasGraph = {
+      nodes: [
+        { id: "router", name: "LendhaRouter", file: "src/routing/LendhaRouter.tsx", type: "component" },
+        { id: "other", name: "Other", file: "src/routing/Other.tsx", type: "component" },
+        { id: "main", name: "Main", file: "src/main.tsx", type: "entry" },
+      ],
+      edges: [{ from: "main", to: "router", type: "renders" }],
+    };
+
+    const reveals = mergeSearchPartialReveals(searchGraph, "lendharouter", new Map());
+    expect(reveals.get("src/routing")?.has("router")).toBe(true);
+
+    const clustered = applyClusterView(searchGraph, true, new Set(), reveals);
+    expect(clustered.nodes.some((node) => node.id === "router")).toBe(true);
+  });
+
+  it("highlights folder cluster when search match is still collapsed", () => {
+    const searchGraph: AtlasGraph = {
+      nodes: [
+        { id: "router", name: "LendhaRouter", file: "src/routing/LendhaRouter.tsx", type: "component" },
+        { id: "main", name: "Main", file: "src/main.tsx", type: "entry" },
+      ],
+      edges: [{ from: "main", to: "router", type: "renders" }],
+    };
+    const viewGraph = {
+      meta: searchGraph.meta,
+      nodes: searchGraph.nodes.filter((node) => node.id === "router" || node.id === "main"),
+      edges: searchGraph.edges,
+    };
+
+    const highlights = computeSearchHighlightIds(
+      searchGraph,
+      viewGraph,
+      "lendharouter",
+      true,
+      new Set(),
+    );
+
+    expect(highlights?.has("router")).toBe(true);
+    expect(highlights?.has(clusterNodeId("src/routing"))).toBe(true);
+    expect(highlights?.has("main")).toBe(true);
   });
 });

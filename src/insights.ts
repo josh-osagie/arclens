@@ -8,6 +8,7 @@ import {
   nodeId,
 } from "./extractors/find";
 import type { AnalysisResult } from "./analyzeProject";
+import type { HookRuleViolation } from "./extractors/hookRules";
 import {
   isKebabCaseSymbol,
   isLikelyStateExport,
@@ -29,6 +30,38 @@ export type Insight = {
 
 function relFile(filePath: string): string {
   return path.relative(process.cwd(), filePath) || filePath;
+}
+
+const HOOK_RULES_DETAIL =
+  "Hooks must run in the same order on every render - never inside conditions, loops, nested functions, or after early returns.";
+
+/** Group identical hook violations (same file, hook, context) into one insight with a count. */
+export function hookRuleViolationsToInsights(violations: HookRuleViolation[]): Insight[] {
+  const groups = new Map<string, HookRuleViolation[]>();
+
+  for (const violation of violations) {
+    const key = `${violation.file}|${violation.hook}|${violation.context}`;
+    const group = groups.get(key) ?? [];
+    group.push(violation);
+    groups.set(key, group);
+  }
+
+  return [...groups.values()].map((group) => {
+    const first = group[0]!;
+    const count = group.length;
+    const lines = group.map((violation) => violation.line).sort((a, b) => a - b);
+    const hookLabel = count > 1 ? `${count}× ${first.hook}` : first.hook;
+
+    return {
+      severity: "error" as const,
+      title: `Rules of Hooks: ${hookLabel} called ${first.context}`,
+      detail:
+        count > 1 ? `At lines ${lines.join(", ")}. ${HOOK_RULES_DETAIL}` : HOOK_RULES_DETAIL,
+      file: relFile(first.file),
+      line: first.line,
+      eslintRule: first.eslintRule,
+    };
+  });
 }
 
 function nodeNameFromId(id: string): string {
@@ -298,17 +331,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
     }
   }
 
-  for (const violation of result.hookRuleViolations) {
-    insights.push({
-      severity: "error",
-      title: `Rules of Hooks: ${violation.hook} called ${violation.context}`,
-      detail:
-        "Hooks must run in the same order on every render - never inside conditions, loops, nested functions, or after early returns.",
-      file: relFile(violation.file),
-      line: violation.line,
-      eslintRule: violation.eslintRule,
-    });
-  }
+  insights.push(...hookRuleViolationsToInsights(result.hookRuleViolations));
 
   if (targetDir.endsWith("node_modules")) {
     insights.push({
