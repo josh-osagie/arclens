@@ -5,89 +5,90 @@ description: Install Arclens, run your first analysis, and open the viewer.
 
 ## Requirements
 
-- [pnpm](https://pnpm.io/) (recommended)
 - Node.js 18+
 
-## Install (from source)
+## Install
 
-Arclens is under active development. Clone the repo and install dependencies:
+Arclens is published on [npm](https://www.npmjs.com/package/arclens). Install it globally:
 
 ```bash
-git clone <repo-url>
-cd react-atlas
-pnpm install
+npm install -g arclens
 ```
 
-When the package is published to npm, you will be able to run `npx arclens analyze ./src` from any project. Until then, prefix commands with `pnpm arclens`.
+Or run it without installing:
+
+```bash
+npx arclens analyze ./src --insights
+```
 
 ## Analyze a project
 
-Run analysis against the built-in sample project:
+From your app directory, analyze a source folder:
 
 ```bash
-pnpm arclens analyze ./samples --insights
+npx arclens analyze ./src --insights
 ```
 
 This command:
 
-1. Scans TypeScript and TSX files under `./samples`
+1. Scans TypeScript and TSX files under `./src`
 2. Prints a terminal report (node counts, relationships, external libraries, top connections)
 3. Writes `graph.json` in the current working directory
-
-Analyze your own app by pointing at a source folder:
-
-```bash
-pnpm arclens analyze ./src --insights
-```
 
 Use `--insights` to include architecture suggestions and ESLint-style hints in the terminal output. Insights are always embedded in `graph.json` for the viewer.
 
 ## Open the viewer
 
-After analysis, start the Vite dev server for the bundled viewer:
+After analysis, start the bundled viewer:
 
 ```bash
-pnpm dev:viewer
+npx arclens view
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`). The viewer loads `graph.json` from the repo root and auto-refreshes when the file changes.
+Open the URL printed in the terminal (default `http://127.0.0.1:5173`). The viewer loads `graph.json` from your current directory.
 
-## Watch mode (recommended for development)
+Add `--open` to launch it in your default browser automatically.
 
-To re-analyze on file changes while the viewer stays open:
+## Watch mode
+
+To re-analyze on file changes:
 
 ```bash
-pnpm dev:watch
+npx arclens watch ./src --insights
 ```
 
-This runs analyze-watch and the viewer concurrently. For the built-in samples, it also re-runs when analyzer extractors under `src/` change.
-
-Watch an external project:
+Run watch and the viewer together by opening a second terminal:
 
 ```bash
-pnpm dev:watch -- ../my-app/src
+npx arclens view
 ```
 
-Or run watch alone:
+Pass through CLI flags as needed:
 
 ```bash
-pnpm analyze:watch -- ../my-app/src
-```
-
-Pass through CLI flags after `--`:
-
-```bash
-pnpm analyze:watch -- ./samples --insights --no-cache
+npx arclens watch ./src --insights --no-cache
 ```
 
 ## Typical workflow
 
-1. `pnpm arclens analyze ./src --insights`:generate `graph.json`
-2. `pnpm dev:viewer`:explore the graph
-3. Refactor, then re-run analyze or use `pnpm dev:watch` for live updates
+1. `npx arclens analyze ./src --insights` — generate `graph.json`
+2. `npx arclens view` — explore the graph
+3. Refactor, then re-run analyze or use `npx arclens watch` for live updates
+
+## From source (contributors)
+
+To work on Arclens itself, clone the repo and use pnpm:
+
+```bash
+git clone https://github.com/JCalmCrasher/arclens.git
+cd arclens
+pnpm install
+```
+
+From the repo, prefix commands with `pnpm arclens` (for example `pnpm arclens analyze ./samples --insights`). Use `pnpm dev:watch` to run watch mode and the viewer together during development.
 
 ## Next steps
 
-- [CLI reference](/cli-reference/):all flags and commands
-- [Viewer guide](/viewer-guide/):search, entry points, insights badge
-- [Concepts](/concepts/):nodes, edges, and insight criteria
+- [CLI reference](/cli-reference/): all flags and commands
+- [Viewer guide](/viewer-guide/): search, entry points, insights badge
+- [Concepts](/concepts/): nodes, edges, and insight criteria
