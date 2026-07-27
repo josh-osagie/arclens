@@ -42,6 +42,8 @@ The sidebar keeps search and project stats pinned at the top while folder, entry
 
 On large graphs (above the virtualize threshold), search switches to **subgraph mode**: only matching nodes and their immediate neighborhood are shown, keeping the canvas responsive.
 
+Search also **reveals matches inside collapsed folder clusters** and **highlights the folder bubble** so you can find nodes like `LendhaRouter` even when their folder is still collapsed. See [Large project walkthrough](/walkthrough/) for the full navigation playbook.
+
 ## Folder overview
 
 The **Folders** section lists top folders by node count. Click a folder to:

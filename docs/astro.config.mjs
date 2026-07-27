@@ -70,6 +70,7 @@ export default defineConfig({
 					items: [
 						{ label: 'CLI reference', slug: 'cli-reference' },
 						{ label: 'Viewer guide', slug: 'viewer-guide' },
+						{ label: 'Large project walkthrough', slug: 'walkthrough' },
 						{ label: 'Concepts', slug: 'concepts' },
 					],
 				},
