@@ -781,16 +781,23 @@ export default function App() {
     if (entries.length === 0) return;
 
     const entry = entries[0]!;
-    setClusterMode(false);
-    setFullyExpandedFolders(new Set());
-    setPartialReveals(new Map());
     setSearch("");
     setSelected(enrichNodeForDetails(entry, graph, nodeById));
     setSpotlightFolder(null);
     setSpotlightNodeId(entry.id);
     setFocusOnSelect(true);
     setCanvasFocusId(null);
-  }, [graph, nodeById]);
+
+    if (isLargeGraph && !FORCE_FULL_GRAPH) {
+      setClusterMode(true);
+      setFullyExpandedFolders(new Set());
+      setPartialReveals(revealNodeForSpotlight(entry, graph, new Map()));
+    } else {
+      setClusterMode(false);
+      setFullyExpandedFolders(new Set());
+      setPartialReveals(new Map());
+    }
+  }, [graph, nodeById, isLargeGraph]);
 
   const applyLayout = useCallback(
     (preset: LayoutPreset) => {

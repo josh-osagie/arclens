@@ -9,6 +9,9 @@ import {
   isClusterId,
   listExpandedFolders,
   revealNodeForSpotlight,
+  wireClusterEdges,
+  buildClusterNodeVisibilityMap,
+  groupNodesByFolder,
 } from "../../viewer/src/clusterGraph";
 import type { AtlasGraph } from "../../viewer/src/types";
 
@@ -34,6 +37,13 @@ describe("clusterGraph", () => {
     expect(clustered.nodes.some((node) => node.id === "n1")).toBe(false);
     expect(clustered.nodes.some((node) => node.id === "n3")).toBe(false);
     expect(clustered.nodes.some((node) => node.id === clusterNodeId("src"))).toBe(true);
+    expect(clustered.edges).toEqual([
+      {
+        from: clusterNodeId("src"),
+        to: clusterNodeId("src/components"),
+        type: "renders",
+      },
+    ]);
   });
 
   it("expands a folder when fully expanded", () => {
@@ -88,5 +98,48 @@ describe("clusterGraph", () => {
     const next = revealNodeForSpotlight(target, graph, new Map());
 
     expect(next.get("src/components")).toEqual(new Set(["n1"]));
+  });
+
+  it("reveals directly connected nodes in other folders for spotlight", () => {
+    const entry = graph.nodes[2]!;
+    const next = revealNodeForSpotlight(entry, graph, new Map());
+
+    expect(next.get("src")).toEqual(new Set(["n3"]));
+    expect(next.get("src/components")).toEqual(new Set(["n1"]));
+  });
+
+  it("dedupes wired cluster edges by endpoint pair and type", () => {
+    const groups = groupNodesByFolder(graph.nodes);
+    const visibility = buildClusterNodeVisibilityMap(graph, groups, new Set(), new Map());
+    const visibleIds = new Set([
+      clusterNodeId("src"),
+      clusterNodeId("src/components"),
+    ]);
+
+    const wired = wireClusterEdges(
+      [
+        { from: "n3", to: "n1", type: "renders" },
+        { from: "n3", to: "n2", type: "renders" },
+      ],
+      visibility,
+      visibleIds,
+    );
+
+    expect(wired).toEqual([
+      {
+        from: clusterNodeId("src"),
+        to: clusterNodeId("src/components"),
+        type: "renders",
+      },
+    ]);
+  });
+
+  it("wires edges from revealed nodes to a same-folder cluster bubble", () => {
+    const partial = new Map([["src/components", new Set(["n1"])]]);
+    const clustered = applyClusterView(graph, true, new Set(), partial);
+
+    expect(clustered.edges).toEqual([
+      { from: clusterNodeId("src"), to: "n1", type: "renders" },
+    ]);
   });
 });

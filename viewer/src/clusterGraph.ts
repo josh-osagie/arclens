@@ -101,6 +101,70 @@ export function nextClusterReveal(
   return next;
 }
 
+/** Map each graph node id to the id shown on the clustered canvas. */
+export function buildClusterNodeVisibilityMap(
+  graph: AtlasGraph,
+  groups: Map<string, AtlasGraphNode[]>,
+  fullyExpandedFolders: Set<string>,
+  partialReveals: Map<string, Set<string>>,
+): Map<string, string> {
+  const nodeIdToVisibleId = new Map<string, string>();
+
+  for (const [folder, members] of groups) {
+    if (fullyExpandedFolders.has(folder)) {
+      for (const member of members) {
+        nodeIdToVisibleId.set(member.id, member.id);
+      }
+      continue;
+    }
+
+    const revealed = partialReveals.get(folder) ?? new Set<string>();
+    const hiddenCount = members.length - members.filter((member) => revealed.has(member.id)).length;
+    const clusterId = hiddenCount > 0 ? clusterNodeId(folder) : null;
+
+    for (const member of members) {
+      if (revealed.has(member.id)) {
+        nodeIdToVisibleId.set(member.id, member.id);
+      } else if (clusterId) {
+        nodeIdToVisibleId.set(member.id, clusterId);
+      }
+    }
+  }
+
+  for (const node of graph.nodes) {
+    if (node.file === "external") {
+      nodeIdToVisibleId.set(node.id, node.id);
+    }
+  }
+
+  return nodeIdToVisibleId;
+}
+
+/** Rewire edges to folder cluster nodes when an endpoint is collapsed. */
+export function wireClusterEdges(
+  edges: AtlasGraph["edges"],
+  nodeIdToVisibleId: Map<string, string>,
+  visibleIds: Set<string>,
+): AtlasGraph["edges"] {
+  const wired: AtlasGraph["edges"] = [];
+  const seen = new Set<string>();
+
+  for (const edge of edges) {
+    const from = nodeIdToVisibleId.get(edge.from);
+    const to = nodeIdToVisibleId.get(edge.to);
+    if (!from || !to || from === to) continue;
+    if (!visibleIds.has(from) || !visibleIds.has(to)) continue;
+
+    const key = `${from}|${to}|${edge.type}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    wired.push({ from, to, type: edge.type });
+  }
+
+  return wired;
+}
+
 /**
  * Collapse nodes into folder clusters unless the folder is expanded.
  * Partial reveals show a subset plus a "+N more" cluster on large graphs.
@@ -157,12 +221,17 @@ export function applyClusterView(
     }
   }
 
+  const nodeIdToVisibleId = buildClusterNodeVisibilityMap(
+    graph,
+    groups,
+    fullyExpandedFolders,
+    partialReveals,
+  );
+
   return {
     meta: graph.meta,
     nodes: displayNodes,
-    edges: graph.edges.filter(
-      (edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to),
-    ),
+    edges: wireClusterEdges(graph.edges, nodeIdToVisibleId, visibleIds),
   };
 }
 
@@ -241,5 +310,22 @@ export function revealNodeForSpotlight(
   }
 
   next.set(folder, revealed);
+
+  for (const edge of graph.edges) {
+    const otherId =
+      edge.from === node.id ? edge.to : edge.to === node.id ? edge.from : null;
+    if (!otherId) continue;
+
+    const other = graph.nodes.find((candidate) => candidate.id === otherId);
+    if (!other || other.file === "external") continue;
+
+    const otherFolder = folderKey(other.file);
+    if (otherFolder === folder) continue;
+
+    const otherRevealed = new Set(next.get(otherFolder) ?? []);
+    otherRevealed.add(otherId);
+    next.set(otherFolder, otherRevealed);
+  }
+
   return next;
 }
