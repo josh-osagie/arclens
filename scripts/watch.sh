@@ -72,7 +72,9 @@ run_watch_reanalyze() {
 pnpm exec chokidar "${WATCH_GLOBS[@]}" \
   "${IGNORE_ARGS[@]}" \
   --silent \
-  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${ARCLENS_WATCH_TARGET}\" ${EXTRA_ARGS[*]}" &
+  --polling \
+  --debounce 300 \
+  -c "bash \"${SCRIPT_DIR}/analyze-once.sh\" \"\${ARCLENS_WATCH_TARGET}\" --reanalyze ${EXTRA_ARGS[*]}" &
 CHOKIDAR_PID=$!
 
 trap cleanup_watch EXIT INT TERM

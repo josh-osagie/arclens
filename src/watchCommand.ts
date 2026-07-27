@@ -129,9 +129,15 @@ export async function runWatch(
 
   let running = false;
   let stopped = false;
+  let pending = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const queueReanalyze = () => {
-    if (running || stopped) {
+  const runReanalyze = () => {
+    if (stopped) {
+      return;
+    }
+    if (running) {
+      pending = true;
       return;
     }
     running = true;
@@ -139,16 +145,38 @@ export async function runWatch(
       runAnalyze(inputPath, watchOptions);
     } finally {
       running = false;
+      if (pending) {
+        pending = false;
+        runReanalyze();
+      }
     }
+  };
+
+  const queueReanalyze = () => {
+    if (stopped) {
+      return;
+    }
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      runReanalyze();
+    }, 300);
   };
 
   const watcher = chokidar.watch(globs, {
     ignored: WATCH_IGNORE,
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
+    usePolling: process.platform === "win32",
+    interval: 300,
   });
 
-  watcher.on("all", () => {
+  watcher.on("all", (event, filePath) => {
+    if (process.env.ARCLENS_WATCH_DEBUG) {
+      console.log(`watch: ${event} ${filePath}`);
+    }
     queueReanalyze();
   });
 
@@ -157,6 +185,10 @@ export async function runWatch(
       return;
     }
     stopped = true;
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     delete process.env.ARCLENS_WATCH_TARGET;
     await watcher.close();
   };

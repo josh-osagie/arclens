@@ -30,6 +30,7 @@ export function slimGraphForExport(
     ...graph.meta,
     isReactProject: graph.meta?.isReactProject ?? true,
     entryNodeIds: options.entryNodeIds ?? findEntryNodeIds(graph),
+    analyzedAt: new Date().toISOString(),
     ...(options.insights ? { insights: options.insights } : {}),
   };
 

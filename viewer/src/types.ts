@@ -32,6 +32,7 @@ export type GraphMeta = {
   signals?: string[];
   insights?: GraphInsight[];
   entryNodeIds?: string[];
+  analyzedAt?: string;
 };
 
 export type GraphConnection = {

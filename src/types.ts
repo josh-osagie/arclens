@@ -32,6 +32,8 @@ export type GraphMeta = {
   signals?: string[];
   insights?: GraphInsight[];
   entryNodeIds?: string[];
+  /** ISO timestamp of the last analyze run — used by the viewer to detect watch updates. */
+  analyzedAt?: string;
 };
 
 export type GraphConnection = {

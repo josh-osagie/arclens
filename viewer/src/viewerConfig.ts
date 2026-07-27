@@ -12,8 +12,11 @@ export const MAX_VISIBLE_NODES = 200;
 /** Enable React Flow viewport culling above this visible node count. */
 export const VIRTUALIZE_THRESHOLD = 100;
 
-/** Poll graph.json for updates (ms). Disabled for large graphs. */
+/** Poll graph.json for updates (ms). */
 export const GRAPH_POLL_MS = 2000;
+
+/** Slower poll interval for large graphs (watch mode still needs updates). */
+export const GRAPH_POLL_MS_LARGE = 4000;
 
 /**
  * Test override: render the full graph even above LARGE_GRAPH_THRESHOLD.

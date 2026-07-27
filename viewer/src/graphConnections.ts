@@ -78,6 +78,7 @@ export function graphSignature(graph: AtlasGraph): string {
   return [
     graph.nodes.length,
     graph.edges.length,
+    graph.meta?.analyzedAt ?? "",
     graph.meta?.targetDir ?? "",
     lastNode?.id ?? "",
     lastEdge ? `${lastEdge.from}|${lastEdge.to}|${lastEdge.type}` : "",
