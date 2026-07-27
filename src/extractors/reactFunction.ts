@@ -1,6 +1,10 @@
 import path from "node:path";
 import { isAppEntryFile, isNonProductionFile } from "../entryPoints";
 import {
+  isLikelyStateExport,
+  isTestOrHocUtility,
+} from "../exportHeuristics";
+import {
   SyntaxKind,
   type CallExpression,
   type ClassDeclaration,
@@ -356,6 +360,14 @@ export function classifyExport(
     return "config";
   }
 
+  if (filePath && isTestOrHocUtility(name, filePath)) {
+    return "utility";
+  }
+
+  if (filePath && isLikelyStateExport(name, filePath)) {
+    return "utility";
+  }
+
   const node = declarations[0];
   if (!node) return "utility";
 
@@ -364,12 +376,20 @@ export function classifyExport(
   const createsContext =
     nodeCreatesContext(node) ||
     (componentRoot ? nodeCreatesContext(componentRoot) : false);
+  const callsHooks = nodeCallsHooks(hookCheckNode);
+  const hasJsx = componentRoot ? nodeHasJsx(componentRoot) : false;
 
-  if (componentRoot && nodeHasJsx(componentRoot)) return "component";
+  // use-prefixed exports that call hooks are hooks even when they return JSX.
+  if (isCustomHookName(name) && callsHooks) return "hook";
+
+  if (hasJsx) return "component";
 
   if (createsContext) return "context";
 
-  if (isCustomHookName(name) || nodeCallsHooks(hookCheckNode)) return "hook";
+  // PascalCase symbols that call hooks are components (ToastContainer), not hooks.
+  if (callsHooks && isPascalCase(name)) return "component";
+
+  if (callsHooks) return "hook";
 
   return "utility";
 }

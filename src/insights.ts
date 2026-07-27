@@ -1,8 +1,20 @@
 import path from "node:path";
 import type { ExportRecord } from "./extractors/exports";
+import type { ImportEdge } from "./extractFileAnalysis";
+import {
+  findDefaultExportInFile,
+  findExportByName,
+  findExportInFile,
+  nodeId,
+} from "./extractors/find";
 import type { AnalysisResult } from "./analyzeProject";
+import {
+  isKebabCaseSymbol,
+  isLikelyStateExport,
+  isTestOrHocUtility,
+} from "./exportHeuristics";
 import type { GraphEdge, GraphNode } from "./types";
-import { isConfigFile, isPascalCase } from "./extractors/reactFunction";
+import { isConfigFile, isCustomHookName, isPascalCase } from "./extractors/reactFunction";
 
 export type InsightSeverity = "error" | "warning" | "info" | "tip";
 
@@ -24,14 +36,108 @@ function nodeNameFromId(id: string): string {
   return parts.length > 1 ? parts[parts.length - 1] : id;
 }
 
-function getIncomingEdgeCount(edges: GraphEdge[]): Map<string, number> {
+function buildImportReferenceCounts(
+  importEdges: ImportEdge[],
+  exports: ExportRecord[],
+): Map<string, number> {
   const counts = new Map<string, number>();
 
-  for (const edge of edges) {
-    counts.set(edge.to, (counts.get(edge.to) ?? 0) + 1);
+  for (const imp of importEdges) {
+    if (!imp.resolvedTo || imp.resolvedTo.includes("node_modules")) continue;
+
+    const resolvedTargets: ExportRecord[] = [];
+
+    if (imp.defaultImport) {
+      const match =
+        findDefaultExportInFile(exports, imp.resolvedTo) ??
+        findExportInFile(exports, imp.resolvedTo, imp.defaultImport);
+      if (match) resolvedTargets.push(match);
+    }
+
+    for (const symbol of imp.namedImports) {
+      const match =
+        findExportInFile(exports, imp.resolvedTo, symbol) ??
+        findExportByName(exports, symbol);
+      if (match) resolvedTargets.push(match);
+    }
+
+    for (const target of resolvedTargets) {
+      const id = nodeId(target);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
   }
 
   return counts;
+}
+
+function isRenderedAsJsx(targetId: string, edges: GraphEdge[]): boolean {
+  return edges.some((edge) => edge.type === "renders" && edge.to === targetId);
+}
+
+function shouldFlagComponentNaming(
+  exp: ExportRecord,
+  edges: GraphEdge[],
+  exports: ExportRecord[],
+): boolean {
+  if (exp.type !== "component" || isConfigFile(exp.file)) return false;
+  if (/^[A-Z]/.test(exp.name)) return false;
+  if (isCustomHookName(exp.name)) return false;
+  if (isTestOrHocUtility(exp.name, exp.file)) return false;
+  if (isKebabCaseSymbol(exp.name)) return false;
+
+  if (isRenderedAsJsx(nodeId(exp), edges)) return true;
+
+  const pascalAlias = exp.name
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+  const aliasExport = exports.find((other) => other.name === pascalAlias);
+  return aliasExport ? isRenderedAsJsx(nodeId(aliasExport), edges) : false;
+}
+
+function shouldFlagHookNaming(hook: ExportRecord): boolean {
+  if (hook.type !== "hook") return false;
+  if (/^use[A-Z]/.test(hook.name)) return false;
+  if (isPascalCase(hook.name)) return false;
+  return true;
+}
+
+function isReExportStub(
+  node: GraphNode,
+  edges: GraphEdge[],
+  importRefs: Map<string, number>,
+  exports: ExportRecord[],
+): boolean {
+  const canonical = exports.filter(
+    (exp) => exp.name === node.name && exp.file !== node.file,
+  );
+  return canonical.some((exp) => {
+    const id = nodeId(exp);
+    return edges.some((edge) => edge.to === id) || (importRefs.get(id) ?? 0) > 0;
+  });
+}
+
+function shouldFlagOrphanExport(
+  node: GraphNode,
+  edges: GraphEdge[],
+  importRefs: Map<string, number>,
+  exports: ExportRecord[],
+): boolean {
+  if (node.file === "external" || isConfigFile(node.file)) return false;
+  if (node.type === "entry" || node.type === "config") return false;
+  if (isLikelyStateExport(node.name, node.file)) return false;
+  if (isTestOrHocUtility(node.name, node.file)) return false;
+
+  const graphIncoming = edges.filter((edge) => edge.to === node.id).length;
+  const importIncoming = importRefs.get(node.id) ?? 0;
+  if (graphIncoming > 0 || importIncoming > 0) return false;
+
+  const hasOutgoing = edges.some((edge) => edge.from === node.id);
+  if (hasOutgoing) return false;
+
+  if (isReExportStub(node, edges, importRefs, exports)) return false;
+
+  return true;
 }
 
 function getOutgoingImportTargets(
@@ -82,7 +188,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
   const { graph, exports, importEdges, fileCount, tsConfigPath, targetDir } =
     result;
 
-  const incoming = getIncomingEdgeCount(graph.edges);
+  const importRefs = buildImportReferenceCounts(importEdges, exports);
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
   if (!tsConfigPath) {
@@ -113,21 +219,15 @@ export function buildInsights(result: AnalysisResult): Insight[] {
   }
 
   for (const node of graph.nodes) {
-    if (node.file === "external" || isConfigFile(node.file)) continue;
+    if (!shouldFlagOrphanExport(node, graph.edges, importRefs, exports)) continue;
 
-    const incomingCount = incoming.get(node.id) ?? 0;
-    if (incomingCount === 0) {
-      const hasOutgoing = graph.edges.some((edge) => edge.from === node.id);
-      if (hasOutgoing) continue;
-
-      insights.push({
-        severity: "info",
-        title: `Orphan export: ${node.name}`,
-        detail: `${node.type} is exported but nothing in the graph imports or uses it.`,
-        file: relFile(node.file),
-        eslintRule: "import/no-unused-modules",
-      });
-    }
+    insights.push({
+      severity: "info",
+      title: `Orphan export: ${node.name}`,
+      detail: `${node.type} is exported but nothing in the graph imports or uses it.`,
+      file: relFile(node.file),
+      eslintRule: "import/no-unused-modules",
+    });
   }
 
   for (const node of graph.nodes) {
@@ -154,30 +254,30 @@ export function buildInsights(result: AnalysisResult): Insight[] {
     }
   }
 
-  for (const exp of exports.filter((e) => e.type === "component" && !isConfigFile(e.file))) {
-    if (!/^[A-Z]/.test(exp.name)) {
-      insights.push({
-        severity: "warning",
-        title: `Component naming: ${exp.name}`,
-        detail:
-          "React components should use PascalCase (e.g. Counter) so JSX can distinguish them from HTML elements.",
-        file: relFile(exp.file),
-        eslintRule: "@eslint-react/no-missing-component-display-name",
-      });
-    }
+  for (const exp of exports) {
+    if (!shouldFlagComponentNaming(exp, graph.edges, exports)) continue;
+
+    insights.push({
+      severity: "warning",
+      title: `Component naming: ${exp.name}`,
+      detail:
+        "React components should use PascalCase (e.g. Counter) so JSX can distinguish them from HTML elements.",
+      file: relFile(exp.file),
+      eslintRule: "@eslint-react/no-missing-component-display-name",
+    });
   }
 
-  for (const hook of exports.filter((e) => e.type === "hook")) {
-    if (!/^use[A-Z]/.test(hook.name)) {
-      insights.push({
-        severity: "warning",
-        title: `Hook naming: ${hook.name}`,
-        detail:
-          'Custom hooks should start with "use" so callers know Hook rules apply.',
-        file: relFile(hook.file),
-        eslintRule: "@eslint-react/rules-of-hooks",
-      });
-    }
+  for (const hook of exports) {
+    if (!shouldFlagHookNaming(hook)) continue;
+
+    insights.push({
+      severity: "warning",
+      title: `Hook naming: ${hook.name}`,
+      detail:
+        'Custom hooks should start with "use" so callers know Hook rules apply.',
+      file: relFile(hook.file),
+      eslintRule: "@eslint-react/rules-of-hooks",
+    });
   }
 
   for (const edge of importEdges) {

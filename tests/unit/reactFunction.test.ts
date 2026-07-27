@@ -57,6 +57,31 @@ describe("reactFunction", () => {
       expect(classifyExport("useCounter", declarations)).toBe("hook");
     });
 
+    it("prefers hook over component for use-prefixed exports that return JSX", () => {
+      const { declarations } = parseExport(
+        `export function useHandleError() { const [x] = useState(0); return <div />; }`,
+        "useHandleError",
+      );
+      expect(classifyExport("useHandleError", declarations)).toBe("hook");
+    });
+
+    it("classifies PascalCase hook callers as components", () => {
+      const { declarations } = parseExport(
+        `export function ToastContainer() { const [x] = useState(0); return <div />; }`,
+        "ToastContainer",
+      );
+      expect(classifyExport("ToastContainer", declarations)).toBe("component");
+    });
+
+    it("classifies renderWithRouter helpers as utilities", () => {
+      const { declarations, file } = parseExport(
+        `export const renderWithRouter = (ui: React.ReactElement) => render(<Router>{ui}</Router>);`,
+        "renderWithRouter",
+      );
+      const filePath = file.getFilePath().replace("test.tsx", "utils/hoc/renderWithRouter.tsx");
+      expect(classifyExport("renderWithRouter", declarations, filePath)).toBe("utility");
+    });
+
     it("classifies plain API helpers as utility", () => {
       const { declarations } = parseExport(
         `export async function fetchUser(id: string) { return fetch(id); }`,
