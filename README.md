@@ -288,4 +288,4 @@ Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the v
 
 ## License
 
-ISC
+MIT

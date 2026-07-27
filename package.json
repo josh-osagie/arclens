@@ -47,7 +47,7 @@
     "cli"
   ],
   "author": "JoshX <joshx.dev@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "packageManager": "pnpm@10.24.0",
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
