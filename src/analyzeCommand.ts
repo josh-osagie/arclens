@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Command } from "commander";
+import type { AnalysisResult } from "./analyzeProject";
 import { analyzeProject } from "./analyzeProject";
 import { UnsupportedProjectError } from "./discoverFiles";
 import { createAnalyzeProgressReporter } from "./analyzeProgress";
@@ -25,6 +26,102 @@ export type AnalyzeOptions = {
   withSnippets?: boolean;
   reanalyze?: boolean;
 };
+
+function formatWriteError(filePath: string, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `Could not write ${filePath}: ${message}`;
+}
+
+function printTerminalReport(
+  result: AnalysisResult,
+  options: AnalyzeOptions,
+  graphPath: string | null,
+  reportPath: string | null,
+): void {
+  if (options.focus) {
+    printFocusReport(result, options.focus, { color: options.color });
+    return;
+  }
+
+  printReport(result, {
+    verbose: options.verbose,
+    insights: options.insights,
+    quiet: options.quiet,
+    color: options.color,
+    graphOutput: graphPath,
+    reportOutput: reportPath,
+  });
+}
+
+function writeGraphFile(
+  result: AnalysisResult,
+  graphPath: string,
+): string | null {
+  try {
+    const insights = buildInsights(result);
+    fs.writeFileSync(
+      graphPath,
+      `${JSON.stringify(slimGraphForExport(result.graph, { insights }), null, 2)}\n`,
+    );
+    return null;
+  } catch (error) {
+    return formatWriteError(graphPath, error);
+  }
+}
+
+function writeReportFileSafe(
+  result: AnalysisResult,
+  reportPath: string,
+  options: AnalyzeOptions,
+  graphPath: string | null,
+): string | null {
+  try {
+    writeReportFile(result, reportPath, {
+      verbose: options.verbose,
+      insights: true,
+      color: false,
+      graphOutput: graphPath,
+      reportOutput: reportPath,
+    });
+    return null;
+  } catch (error) {
+    return formatWriteError(reportPath, error);
+  }
+}
+
+function writeSnippetSidecarsSafe(
+  targetDir: string,
+  result: AnalysisResult,
+  options: AnalyzeOptions,
+): string | null {
+  try {
+    const snippetCount = writeSnippetSidecars(
+      targetDir,
+      result.graph.nodes.map((node) => node.file),
+    );
+    if (!options.quiet) {
+      console.log(
+        `Wrote ${snippetCount} snippet sidecar(s) to ${path.join(targetDir, SNIPPETS_DIR)}`,
+      );
+    }
+    return null;
+  } catch (error) {
+    return formatWriteError(path.join(targetDir, SNIPPETS_DIR), error);
+  }
+}
+
+function reportWriteErrors(
+  errors: string[],
+  options: AnalyzeOptions,
+): void {
+  for (const error of errors) {
+    if (options.quiet) {
+      console.error(`arclens: ${error}`);
+    } else {
+      console.error(`\narclens: ${error}`);
+    }
+  }
+}
 
 export function addAnalyzeOptions(command: Command): Command {
   return command
@@ -91,56 +188,32 @@ export function runAnalyze(
     const graphPath = shouldWriteGraph
       ? path.resolve(process.cwd(), options.output ?? "graph.json")
       : null;
-
-    if (graphPath) {
-      const insights = buildInsights(result);
-      fs.writeFileSync(
-        graphPath,
-        `${JSON.stringify(
-          slimGraphForExport(result.graph, { insights }),
-          null,
-          2,
-        )}\n`,
-      );
-    }
-
-    if (options.withSnippets) {
-      const snippetCount = writeSnippetSidecars(
-        targetDir,
-        result.graph.nodes.map((node) => node.file),
-      );
-      if (!options.quiet) {
-        console.log(
-          `Wrote ${snippetCount} snippet sidecar(s) to ${path.join(targetDir, SNIPPETS_DIR)}`,
-        );
-      }
-    }
-
     const reportPath = options.reportFile
       ? path.resolve(process.cwd(), options.reportFile)
       : null;
 
-    if (reportPath) {
-      writeReportFile(result, reportPath, {
-        verbose: options.verbose,
-        insights: true,
-        color: false,
-        graphOutput: graphPath,
-        reportOutput: reportPath,
-      });
+    printTerminalReport(result, options, graphPath, reportPath);
+
+    const writeErrors: string[] = [];
+
+    if (graphPath) {
+      const error = writeGraphFile(result, graphPath);
+      if (error) writeErrors.push(error);
     }
 
-    if (options.focus) {
-      printFocusReport(result, options.focus, { color: options.color });
-    } else {
-      printReport(result, {
-        verbose: options.verbose,
-        insights: options.insights,
-        quiet: options.quiet,
-        color: options.color,
-        graphOutput: graphPath,
-        reportOutput: reportPath,
-      });
+    if (reportPath) {
+      const error = writeReportFileSafe(result, reportPath, options, graphPath);
+      if (error) writeErrors.push(error);
+    }
+
+    if (options.withSnippets) {
+      const error = writeSnippetSidecarsSafe(targetDir, result, options);
+      if (error) writeErrors.push(error);
+    }
+
+    if (writeErrors.length > 0) {
+      reportWriteErrors(writeErrors, options);
+      return 1;
     }
 
     return 0;
