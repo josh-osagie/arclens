@@ -8,6 +8,7 @@ import {
   folderFromClusterId,
   isClusterId,
   listExpandedFolders,
+  revealNodeForSpotlight,
 } from "../../viewer/src/clusterGraph";
 import type { AtlasGraph } from "../../viewer/src/types";
 
@@ -80,5 +81,12 @@ describe("clusterGraph", () => {
 
     expect(next.fullyExpandedFolders.size).toBe(0);
     expect(next.partialReveals.size).toBe(0);
+  });
+
+  it("reveals a spotlight target and its in-folder neighbors", () => {
+    const target = graph.nodes[0]!;
+    const next = revealNodeForSpotlight(target, graph, new Map());
+
+    expect(next.get("src/components")).toEqual(new Set(["n1"]));
   });
 });

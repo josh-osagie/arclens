@@ -218,3 +218,28 @@ export function collapseAllClusterFoldersState(): {
 } {
   return { fullyExpandedFolders: new Set(), partialReveals: new Map() };
 }
+
+/** Ensure a target node (and its in-folder neighbors) appear when a folder is clustered. */
+export function revealNodeForSpotlight(
+  node: AtlasGraphNode,
+  graph: AtlasGraph,
+  partialReveals: Map<string, Set<string>>,
+): Map<string, Set<string>> {
+  if (node.file === "external") return partialReveals;
+
+  const folder = folderKey(node.file);
+  const members = groupNodesByFolder(graph.nodes).get(folder) ?? [];
+  const memberIds = new Set(members.map((member) => member.id));
+  const next = new Map(partialReveals);
+  const revealed = new Set(next.get(folder) ?? []);
+
+  revealed.add(node.id);
+
+  for (const edge of graph.edges) {
+    if (edge.from === node.id && memberIds.has(edge.to)) revealed.add(edge.to);
+    if (edge.to === node.id && memberIds.has(edge.from)) revealed.add(edge.from);
+  }
+
+  next.set(folder, revealed);
+  return next;
+}

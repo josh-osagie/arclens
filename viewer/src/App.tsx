@@ -43,9 +43,11 @@ import {
   isClusterId,
   listExpandedFolders,
   nextClusterReveal,
+  revealNodeForSpotlight,
 } from "./clusterGraph";
 import { FocusOnSelect } from "./FocusOnSelect";
 import { computeFolderSpotlightIds } from "./folderSpotlight";
+import { computeNodeSpotlightIds } from "./nodeSpotlight";
 import { filterEdgesByVisibility } from "./edgeVisibility";
 import {
   loadEdgeVisibility,
@@ -323,6 +325,7 @@ export default function App() {
   const [neighborhoodFocus, setNeighborhoodFocus] = useState(false);
   const [neighborhoodHops, setNeighborhoodHops] = useState(DEFAULT_NEIGHBORHOOD_HOPS);
   const [spotlightFolder, setSpotlightFolder] = useState<string | null>(null);
+  const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
   const [relayoutNonce, setRelayoutNonce] = useState(0);
   const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() => loadLayoutPreset());
@@ -335,7 +338,6 @@ export default function App() {
   const baseEdgesRef = useRef<Edge[]>([]);
   const hasSavedViewportRef = useRef(false);
   const savedNodePositionsRef = useRef<ReturnType<typeof loadNodePositions>>(null);
-  const prevSearchRef = useRef("");
   const neighborhoodFocusTouchedRef = useRef(false);
 
   const deferredSearch = useDeferredValue(search);
@@ -353,6 +355,7 @@ export default function App() {
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
     setSpotlightFolder(null);
+    setSpotlightNodeId(null);
     setNeighborhoodFocus(defaultNeighborhoodFocusEnabled(large));
   }, [graphKey]);
 
@@ -414,6 +417,16 @@ export default function App() {
     return computeFolderSpotlightIds(spotlightFolder, graph.nodes, clusteredGraph.nodes);
   }, [spotlightFolder, graph, clusteredGraph.nodes]);
 
+  const nodeSpotlightIds = useMemo(() => {
+    if (!spotlightNodeId || !graph) return null;
+    return computeNodeSpotlightIds(
+      spotlightNodeId,
+      graph.nodes,
+      clusteredGraph.nodes,
+      graph.edges,
+    );
+  }, [spotlightNodeId, graph, clusteredGraph.nodes]);
+
   const selectionHighlightIds = useMemo(
     () =>
       resolveHighlightIds(
@@ -430,18 +443,27 @@ export default function App() {
     if (selectionHighlightIds && selectionHighlightIds.size > 0) {
       return selectionHighlightIds;
     }
+    if (nodeSpotlightIds && nodeSpotlightIds.size > 0) {
+      return nodeSpotlightIds;
+    }
     if (folderSpotlightIds && folderSpotlightIds.size > 0) {
       return folderSpotlightIds;
     }
     return selectionHighlightIds;
-  }, [selectionHighlightIds, folderSpotlightIds]);
+  }, [selectionHighlightIds, nodeSpotlightIds, folderSpotlightIds]);
 
-  const shouldHighlightEdges = Boolean(selected) || Boolean(spotlightFolder);
+  const shouldHighlightEdges =
+    Boolean(selected) || Boolean(spotlightFolder) || Boolean(spotlightNodeId);
 
-  const spotlightFitIds = useMemo(
-    () => (folderSpotlightIds ? [...folderSpotlightIds] : null),
-    [folderSpotlightIds],
-  );
+  const spotlightFitIds = useMemo(() => {
+    if (folderSpotlightIds && folderSpotlightIds.size > 0) {
+      return [...folderSpotlightIds];
+    }
+    if (nodeSpotlightIds && nodeSpotlightIds.size > 0) {
+      return [...nodeSpotlightIds];
+    }
+    return null;
+  }, [folderSpotlightIds, nodeSpotlightIds]);
 
   const expandedFolders = useMemo(
     () => listExpandedFolders(fullyExpandedFolders, partialReveals),
@@ -489,14 +511,6 @@ export default function App() {
     hasSavedViewportRef.current = Boolean(graphKey && loadViewport(graphKey));
     savedNodePositionsRef.current = graphKey ? loadNodePositions(graphKey) : null;
   }, [graphKey]);
-
-  useEffect(() => {
-    if (prevSearchRef.current && !searchLower) {
-      setSelected(null);
-      setSpotlightFolder(null);
-    }
-    prevSearchRef.current = searchLower;
-  }, [searchLower]);
 
   useEffect(() => {
     loadGraph();
@@ -624,6 +638,7 @@ export default function App() {
     setPartialReveals(next.partialReveals);
     setSelected(null);
     setSpotlightFolder(null);
+    setSpotlightNodeId(null);
     setCanvasFocusId(null);
   }, []);
 
@@ -631,16 +646,23 @@ export default function App() {
     (node: AtlasGraphNode) => {
       if (!graph) return;
 
-      if (isLargeGraph && !FORCE_FULL_GRAPH) {
-        setSearch(node.name);
+      if (spotlightNodeId === node.id) {
+        setSpotlightNodeId(null);
+        setSelected(null);
+        return;
       }
 
-      setSelected(enrichNodeForDetails(node, graph, nodeById));
+      if (isLargeGraph && clusterMode && node.file !== "external") {
+        setPartialReveals((prev) => revealNodeForSpotlight(node, graph, prev));
+      }
+
+      setSpotlightNodeId(node.id);
       setSpotlightFolder(null);
+      setSelected(enrichNodeForDetails(node, graph, nodeById));
       setFocusOnSelect(true);
       setCanvasFocusId(null);
     },
-    [graph, isLargeGraph, nodeById],
+    [graph, isLargeGraph, clusterMode, spotlightNodeId, nodeById],
   );
 
   const onOverviewFolderClick = useCallback(
@@ -651,6 +673,7 @@ export default function App() {
       }
 
       setSpotlightFolder(folder.folder);
+      setSpotlightNodeId(null);
       setSelected(null);
       if (!clusterMode) setClusterMode(true);
       expandClusterFolder(folder.folder);
@@ -687,6 +710,7 @@ export default function App() {
       if (!base) return;
       setCanvasFocusId(null);
       setSpotlightFolder(null);
+      setSpotlightNodeId(null);
       if (
         shouldAutoEnableNeighborhoodFocus(
           isLargeGraph,
@@ -709,6 +733,7 @@ export default function App() {
   const onPaneClick = useCallback(() => {
     setSelected(null);
     setSpotlightFolder(null);
+    setSpotlightNodeId(null);
     setHelperLines([]);
   }, []);
 
@@ -759,16 +784,13 @@ export default function App() {
     setClusterMode(false);
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
-    if (isLargeGraph && !FORCE_FULL_GRAPH) {
-      setSearch(entry.name);
-    } else {
-      setSearch("");
-    }
+    setSearch("");
     setSelected(enrichNodeForDetails(entry, graph, nodeById));
     setSpotlightFolder(null);
+    setSpotlightNodeId(entry.id);
     setFocusOnSelect(true);
     setCanvasFocusId(null);
-  }, [graph, nodeById, isLargeGraph]);
+  }, [graph, nodeById]);
 
   const applyLayout = useCallback(
     (preset: LayoutPreset) => {
@@ -955,8 +977,12 @@ export default function App() {
           skip={hasSavedViewportRef.current && relayoutNonce === 0}
         />
         <FocusOnSelect
-          nodeId={spotlightFolder ? null : canvasFocusId ?? selected?.id ?? null}
-          nodeIds={spotlightFolder ? spotlightFitIds : null}
+          nodeId={
+            spotlightFolder || spotlightNodeId
+              ? null
+              : canvasFocusId ?? selected?.id ?? null
+          }
+          nodeIds={spotlightFitIds}
           enabled={focusOnSelect}
         />
         {selected && !selected.cluster && (
@@ -1035,6 +1061,7 @@ export default function App() {
               folders={overviewFolders}
               hubs={overviewHubs}
               spotlightFolder={spotlightFolder}
+              spotlightNodeId={spotlightNodeId}
               onEntryClick={onOverviewEntryClick}
               onFolderClick={onOverviewFolderClick}
               onHubClick={onOverviewHubClick}
@@ -1084,6 +1111,19 @@ export default function App() {
 
             <GraphLegend types={legendTypes} typeColors={typeColors} />
 
+            {spotlightNodeId && !selected && (
+              <p className="graph-sidebar__hint">
+                <span className="graph-sidebar__hint-label">
+                  <span className="field-label">
+                    <span className="field-label__text">Node spotlight</span>
+                    <InfoTip text="This node and its nearby connections stay fully visible; everything else is dimmed. Click the canvas or the same shortcut again to clear." />
+                  </span>
+                </span>
+                {nodeById.get(spotlightNodeId)?.name ?? spotlightNodeId} ·{" "}
+                {highlightIds?.size ?? 0} node
+                {(highlightIds?.size ?? 0) === 1 ? "" : "s"} highlighted
+              </p>
+            )}
             {spotlightFolder && !selected && (
               <p className="graph-sidebar__hint">
                 <span className="graph-sidebar__hint-label">

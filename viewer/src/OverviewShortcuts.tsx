@@ -19,6 +19,7 @@ type Props = {
   folders: FolderOverview[];
   hubs: HubOverview[];
   spotlightFolder?: string | null;
+  spotlightNodeId?: string | null;
   onEntryClick: (node: AtlasGraphNode) => void;
   onFolderClick: (folder: FolderOverview) => void;
   onHubClick: (node: AtlasGraphNode) => void;
@@ -108,6 +109,7 @@ export function OverviewShortcuts({
   folders,
   hubs,
   spotlightFolder,
+  spotlightNodeId,
   onEntryClick,
   onFolderClick,
   onHubClick,
@@ -131,7 +133,7 @@ export function OverviewShortcuts({
       <OverviewSection
         sectionKey="entries"
         title="Entry points"
-        tip="Where the app starts — main.tsx, createRoot bootstrap, or Next.js root layouts. Test files are excluded."
+        tip="Where the app starts — main.tsx, createRoot bootstrap, or Next.js root layouts. Click to spotlight on the canvas; click again to clear."
         items={entries}
         expanded={sectionPrefs.entries}
         onToggleSection={onToggleSection}
@@ -144,8 +146,9 @@ export function OverviewShortcuts({
           return (
             <button
               type="button"
-              className="overview-shortcuts__btn"
+              className={`overview-shortcuts__btn${spotlightNodeId === entry.node.id ? " overview-shortcuts__btn--active" : ""}`}
               onClick={() => onEntryClick(entry.node)}
+              aria-pressed={spotlightNodeId === entry.node.id}
             >
               <span className="overview-shortcuts__label">{entry.node.name}</span>
               <span className="overview-shortcuts__meta" title={relativePath}>
@@ -183,7 +186,7 @@ export function OverviewShortcuts({
       <OverviewSection
         sectionKey="hubs"
         title="Hub nodes"
-        tip="Most connected nodes by incoming and outgoing edges."
+        tip="Most connected nodes by incoming and outgoing edges. Click to spotlight on the canvas; click again to clear."
         items={hubs}
         expanded={sectionPrefs.hubs}
         onToggleSection={onToggleSection}
@@ -191,8 +194,9 @@ export function OverviewShortcuts({
         renderItem={({ node, degree }) => (
           <button
             type="button"
-            className="overview-shortcuts__btn"
+            className={`overview-shortcuts__btn${spotlightNodeId === node.id ? " overview-shortcuts__btn--active" : ""}`}
             onClick={() => onHubClick(node)}
+            aria-pressed={spotlightNodeId === node.id}
           >
             <span className="overview-shortcuts__label">{node.name}</span>
             <span className="overview-shortcuts__meta">
