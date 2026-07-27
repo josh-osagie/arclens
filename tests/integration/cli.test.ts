@@ -97,4 +97,20 @@ describe("CLI (developer workflow)", () => {
     expect(viewHelp).toContain("Open the architecture graph viewer");
     expect(viewHelp).toContain("--graph");
   });
+
+  it("prints an ascii version banner for -v and --version", () => {
+    const short = runCli(["-v"]);
+    const long = runCli(["--version"]);
+
+    for (const { output } of [short, long]) {
+      expect(output).toContain("Version");
+      expect(output).toContain("Interactive architecture explorer");
+      expect(output).toMatch(/Version \d+\.\d+\.\d+/);
+    }
+  });
+
+  it("registers update subcommand", () => {
+    const { output } = runCli(["update", "-h"]);
+    expect(output).toContain("update a global npm install");
+  });
 });

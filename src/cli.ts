@@ -1,15 +1,41 @@
 import path from "node:path";
 import { Command } from "commander";
 import { addAnalyzeOptions, runAnalyze, type AnalyzeOptions } from "./analyzeCommand";
+import { runUpdate } from "./updateCommand";
 import { runView } from "./viewServer";
 import { runWatch } from "./watchCommand";
+import { formatVersionBanner, getPackageVersion } from "./versionBanner";
 
 const program = new Command();
+const version = getPackageVersion();
+
+function wantsVersion(argv: string[]): boolean {
+  if (!argv.includes("-v") && !argv.includes("--version")) {
+    return false;
+  }
+
+  const commands = new Set(["analyze", "watch", "view", "update", "help"]);
+  return !argv.some((arg) => commands.has(arg));
+}
+
+const argv = process.argv.slice(2);
+if (wantsVersion(argv)) {
+  console.log(formatVersionBanner(version));
+  process.exit(0);
+}
 
 program
   .name("arclens")
   .description("Interactive architecture explorer for React/TypeScript")
-  .version("1.0.0");
+  .option("-v, --version", "show version information");
+
+program
+  .command("update")
+  .description("update a global npm install to the latest version")
+  .option("--no-color", "disable ANSI colors")
+  .action((options: { color?: boolean }) => {
+    process.exitCode = runUpdate({ color: options.color });
+  });
 
 const analyzeCmd = program
   .command("analyze")
