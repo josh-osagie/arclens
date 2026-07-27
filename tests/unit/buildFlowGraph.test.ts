@@ -23,7 +23,7 @@ function graphExtent(nodes: { position: { x: number; y: number } }[]) {
 }
 
 const sampleGraph: AtlasGraph = {
-  meta: { isReactProject: true },
+  meta: { isReactProject: true, entryNodeIds: ["a"] },
   nodes: [
     { id: "a", name: "App", file: "src/App.tsx", type: "component" },
     { id: "b", name: "Header", file: "src/Header.tsx", type: "component" },
@@ -33,14 +33,14 @@ const sampleGraph: AtlasGraph = {
   edges: [
     { from: "a", to: "b", type: "renders" },
     { from: "a", to: "c", type: "renders" },
-    { from: "b", to: "d", type: "uses" },
+    { from: "b", to: "d", type: "renders" },
   ],
 };
 
 describe("buildFlowGraph relayout", () => {
   it("assigns positions to every visible node", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const relaid = relayoutFlowNodes(nodes, edges, { mode: "compact" });
+    const relaid = relayoutFlowNodes(nodes, edges, { mode: "dagre-tb", entryIds: ["a"] });
 
     expect(relaid).toHaveLength(nodes.length);
     for (const node of relaid) {
@@ -49,22 +49,54 @@ describe("buildFlowGraph relayout", () => {
     }
   });
 
-  it("produces a tighter bounding box than the default layout", () => {
-    const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const defaultExtent = graphExtent(nodes);
-    const compactExtent = graphExtent(
-      relayoutFlowNodes(nodes, edges, { mode: "compact" }),
-    );
+  it("uses smoothstep edges", () => {
+    const { edges } = buildFlowGraph(sampleGraph);
+    expect(edges[0]?.type).toBe("smoothstep");
+  });
 
-    expect(compactExtent.maxX).toBeLessThanOrEqual(defaultExtent.maxX);
-    expect(compactExtent.maxY).toBeLessThanOrEqual(defaultExtent.maxY);
-    expect(compactExtent.area).toBeLessThan(defaultExtent.area);
+  it("lays out cluster nodes when they lack embedded graph.json layout", () => {
+    const graphWithLayout: AtlasGraph = {
+      meta: { isReactProject: true, entryNodeIds: ["a"] },
+      nodes: [
+        {
+          id: "a",
+          name: "App",
+          file: "src/App.tsx",
+          type: "component",
+          layout: { x: 200, y: 100 },
+        },
+        {
+          id: "cluster::src/components",
+          name: "+3",
+          file: "src/components",
+          type: "utility",
+          cluster: { folder: "src/components", count: 3 },
+        },
+        {
+          id: "cluster::src/utils",
+          name: "+2",
+          file: "src/utils",
+          type: "utility",
+          cluster: { folder: "src/utils", count: 2 },
+        },
+      ],
+      edges: [{ from: "a", to: "cluster::src/components", type: "renders" }],
+    };
+
+    const { nodes } = buildFlowGraph(graphWithLayout);
+    const clusterPositions = nodes
+      .filter((node) => node.id.startsWith("cluster::"))
+      .map((node) => node.position);
+
+    expect(clusterPositions).toHaveLength(2);
+    expect(clusterPositions.every((position) => position.x !== 0 || position.y !== 0)).toBe(true);
+    expect(new Set(clusterPositions.map((position) => `${position.x},${position.y}`)).size).toBe(2);
   });
 
   it("returns stable positions for the same input", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const first = relayoutFlowNodes(nodes, edges, { mode: "compact" });
-    const second = relayoutFlowNodes(nodes, edges, { mode: "compact" });
+    const first = relayoutFlowNodes(nodes, edges, { mode: "dagre-tb", entryIds: ["a"] });
+    const second = relayoutFlowNodes(nodes, edges, { mode: "dagre-tb", entryIds: ["a"] });
 
     for (let index = 0; index < first.length; index++) {
       expect(first[index]?.position).toEqual(second[index]?.position);
@@ -75,21 +107,21 @@ describe("buildFlowGraph relayout", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
     const spread = nodes.map((node, index) => ({
       ...node,
-      position: { x: index * 800, y: index * 600 },
+      position: { x: index * 800, y: index *  600 },
     }));
 
-    const relaid = relayoutFlowNodes(spread, edges, { mode: "compact" });
-    const compactExtent = graphExtent(relaid);
+    const relaid = relayoutFlowNodes(spread, edges, { mode: "dagre-tb", entryIds: ["a"] });
+    const relaidExtent = graphExtent(relaid);
     const spreadExtent = graphExtent(spread);
 
-    expect(compactExtent.area).toBeLessThan(spreadExtent.area);
+    expect(relaidExtent.area).toBeLessThan(spreadExtent.area);
   });
 });
 
 describe("layoutPresets", () => {
   it("cycles through layout presets", () => {
-    expect(nextLayoutPreset("tree-down")).toBe("tree-right");
-    expect(nextLayoutPreset("compact")).toBe("tree-down");
+    expect(nextLayoutPreset("dagre-tb")).toBe("dagre-lr");
+    expect(nextLayoutPreset("dagre-lr")).toBe("dagre-tb");
   });
 
   it("persists layout preset in localStorage", () => {
@@ -101,16 +133,15 @@ describe("layoutPresets", () => {
       },
     });
 
-    saveLayoutPreset("by-type");
-    expect(loadLayoutPreset()).toBe("by-type");
+    saveLayoutPreset("dagre-lr");
+    expect(loadLayoutPreset()).toBe("dagre-lr");
     saveLayoutPreset(DEFAULT_LAYOUT_PRESET);
     vi.unstubAllGlobals();
   });
 
-  it("layers nodes by depth from entry nodes", () => {
+  it("ranks nodes by depth from entry nodes", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const layoutTargets = nodes.filter((node) => node.type !== "cluster");
-    const layered = layoutNodesByPreset(layoutTargets, edges, "layers-from-entry", {
+    const layered = layoutNodesByPreset(nodes, edges, "dagre-tb", {
       entryIds: ["a"],
     });
 
@@ -121,31 +152,9 @@ describe("layoutPresets", () => {
 
   it("places tree-right layout wider than tree-down", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const layoutTargets = nodes.filter((node) => node.type !== "cluster");
-    const down = layoutNodesByPreset(layoutTargets, edges, "tree-down");
-    const right = layoutNodesByPreset(layoutTargets, edges, "tree-right");
+    const down = layoutNodesByPreset(nodes, edges, "dagre-tb", { entryIds: ["a"] });
+    const right = layoutNodesByPreset(nodes, edges, "dagre-lr", { entryIds: ["a"] });
 
     expect(graphExtent(right).maxX).toBeGreaterThan(graphExtent(down).maxX);
-  });
-
-  it("groups nodes by folder with horizontal separation", () => {
-    const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const layoutTargets = nodes.filter((node) => node.type !== "cluster");
-    const byFolder = layoutNodesByPreset(layoutTargets, edges, "by-folder", {
-      graph: sampleGraph,
-    });
-
-    const positions = new Map(byFolder.map((node) => [node.id, node.position]));
-    expect(positions.get("a")!.x).not.toBe(positions.get("d")!.x);
-  });
-
-  it("groups nodes by type into separate columns", () => {
-    const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const layoutTargets = nodes.filter((node) => node.type !== "cluster");
-    const byType = layoutNodesByPreset(layoutTargets, edges, "by-type");
-
-    const hook = byType.find((node) => node.id === "d")!.position;
-    const component = byType.find((node) => node.id === "a")!.position;
-    expect(hook.x).toBeGreaterThan(component.x);
   });
 });

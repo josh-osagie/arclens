@@ -1,9 +1,9 @@
-import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
 import {
+  DEFAULT_LAYOUT_PRESET,
+  getDagreLayoutedNodes,
   layoutNodesByPreset,
-  NODE_H,
-  NODE_W,
+  nodeLayoutDimensions,
   type LayoutContext,
   type LayoutPreset,
 } from "./layoutPresets";
@@ -13,7 +13,6 @@ import {
   primaryEdgeType,
   strokeColorForEdgeTypes,
 } from "./mergeFlowEdges";
-import { DAGRE_LAYOUT_THRESHOLD } from "./viewerConfig";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 
 export { edgeColors, nodeTypes, typeColors, typeLabels } from "./design/tokens";
@@ -36,135 +35,44 @@ export type ClusterNodeData = {
   dimmed?: boolean;
 };
 
-const GRID_GAP_X = 24;
-const GRID_GAP_Y = 24;
-const COMPACT_GRID_GAP_X = 12;
-const COMPACT_GRID_GAP_Y = 12;
-
-const DAGRE_DEFAULT = { nodesep: 70, ranksep: 90, marginx: 40, marginy: 40 };
-const DAGRE_COMPACT = { nodesep: 35, ranksep: 45, marginx: 20, marginy: 20 };
-
-function dagreLayout(
+function layoutNodes(
+  graph: AtlasGraph,
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
-  compact = false,
+  entryIds: string[] = [],
 ) {
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", ...(compact ? DAGRE_COMPACT : DAGRE_DEFAULT) });
+  if (nodes.length === 0) return nodes;
 
-  for (const node of nodes) {
-    g.setNode(node.id, { width: NODE_W, height: NODE_H });
-  }
-
-  const seen = new Set<string>();
-  for (const edge of edges) {
-    const key = `${edge.source}|${edge.target}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    g.setEdge(edge.source, edge.target);
-  }
-
-  dagre.layout(g);
-
-  return nodes.map((node) => {
-    const position = g.node(node.id);
-    return {
-      ...node,
-      position: {
-        x: position.x - NODE_W / 2,
-        y: position.y - NODE_H / 2,
-      },
-    };
-  });
-}
-
-function gridLayout(nodes: Node<AtlasNodeData>[], compact = false) {
-  const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
-  const gapX = compact ? COMPACT_GRID_GAP_X : GRID_GAP_X;
-  const gapY = compact ? COMPACT_GRID_GAP_Y : GRID_GAP_Y;
-  const cellW = NODE_W + gapX;
-  const cellH = NODE_H + gapY;
-
-  return nodes.map((node, index) => ({
-    ...node,
-    position: {
-      x: (index % cols) * cellW,
-      y: Math.floor(index / cols) * cellH,
-    },
-  }));
-}
-
-function layoutFromSaved(graph: AtlasGraph, nodes: Node<AtlasNodeData>[]) {
-  const positions = new Map(
+  const positionById = new Map(
     graph.nodes
       .filter((node) => node.layout)
       .map((node) => [node.id, node.layout!]),
   );
 
-  if (positions.size === 0) return null;
+  // Cluster bubbles and filtered views lack graph.json layout — use dagre for everyone.
+  const allHaveEmbeddedLayout =
+    positionById.size > 0 && nodes.every((node) => positionById.has(node.id));
 
-  return nodes.map((node) => {
-    const saved = positions.get(node.id);
-    if (!saved) return node;
-    return {
-      ...node,
-      position: {
-        x: saved.x - NODE_W / 2,
-        y: saved.y - NODE_H / 2,
-      },
-    };
-  });
-}
-
-function applyNodePositions(
-  nodes: Node<AtlasNodeData>[],
-  positions: Map<string, { x: number; y: number }>,
-  compact = false,
-) {
-  const gapX = compact ? COMPACT_GRID_GAP_X : GRID_GAP_X;
-  const gapY = compact ? COMPACT_GRID_GAP_Y : GRID_GAP_Y;
-  const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
-  const cellW = NODE_W + gapX;
-  const cellH = NODE_H + gapY;
-
-  return nodes.map((node, index) => {
-    if (node.type === "cluster") {
+  if (allHaveEmbeddedLayout) {
+    return nodes.map((node) => {
+      const saved = positionById.get(node.id)!;
+      const { width, height } = nodeLayoutDimensions(node);
       return {
         ...node,
         position: {
-          x: (index % cols) * cellW,
-          y: Math.floor(index / cols) * cellH,
+          x: saved.x - width / 2,
+          y: saved.y - height / 2,
         },
       };
-    }
-    return {
-      ...node,
-      position: positions.get(node.id) ?? node.position,
-    };
-  });
-}
+    });
+  }
 
-function layoutNodes(
-  graph: AtlasGraph,
-  nodes: Node<AtlasNodeData>[],
-  edges: Edge[],
-) {
-  if (nodes.length === 0) return nodes;
-
-  const layoutTargets = nodes.filter((node) => node.type !== "cluster");
-  const saved = layoutFromSaved(graph, layoutTargets);
-  const laidOut = saved ?? (layoutTargets.length <= DAGRE_LAYOUT_THRESHOLD
-    ? dagreLayout(layoutTargets, edges)
-    : gridLayout(layoutTargets));
-
-  const positions = new Map(laidOut.map((node) => [node.id, node.position]));
-  return applyNodePositions(nodes, positions);
+  return getDagreLayoutedNodes(nodes, edges, "TB", entryIds);
 }
 
 export type RelayoutOptions = LayoutContext & {
   mode?: LayoutPreset;
-  /** @deprecated Use mode: "compact" instead */
+  /** @deprecated Use mode instead */
   compact?: boolean;
 };
 
@@ -176,26 +84,23 @@ export function relayoutFlowNodes(
 ): Node<AtlasNodeData>[] {
   if (nodes.length === 0) return nodes;
 
-  const mode = options.mode ?? (options.compact ? "compact" : "tree-down");
-  const compact = mode === "compact";
-  const layoutTargets = nodes.filter((node) => node.type !== "cluster");
-  const laidOut = layoutNodesByPreset(layoutTargets, edges, mode, {
+  const mode = options.mode ?? DEFAULT_LAYOUT_PRESET;
+  return layoutNodesByPreset(nodes, edges, mode, {
     entryIds: options.entryIds,
     graph: options.graph,
   });
-
-  const positions = new Map(laidOut.map((node) => [node.id, node.position]));
-  return applyNodePositions(nodes, positions, compact);
 }
 
 export function buildFlowGraph(
   graph: AtlasGraph,
-  options: { compact?: boolean } = {},
+  options: { compact?: boolean; entryIds?: string[] } = {},
 ): {
   nodes: Node<AtlasNodeData>[];
   edges: Edge[];
 } {
   const compact = options.compact ?? false;
+  const entryIds = options.entryIds ?? graph.meta?.entryNodeIds ?? [];
+
   const initialNodes: Node<AtlasNodeData>[] = graph.nodes.map((node) => {
     if (node.cluster) {
       return {
@@ -240,8 +145,8 @@ export function buildFlowGraph(
         edgeTypes: edge.types,
       },
       label: compact ? undefined : formatEdgeTypeLabel(edge.types),
-      type: "default",
-      // Never use stroke-dasharray bulk animation — costly at scale (see Liam ERD).
+      type: "smoothstep",
+      pathOptions: { borderRadius: 0, offset: 24 },
       animated: false,
       style: {
         stroke,
@@ -270,7 +175,7 @@ export function buildFlowGraph(
   });
 
   return {
-    nodes: layoutNodes(graph, initialNodes, initialEdges),
+    nodes: layoutNodes(graph, initialNodes, initialEdges, entryIds),
     edges: initialEdges,
   };
 }

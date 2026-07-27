@@ -45,7 +45,7 @@ const paletteState = {
   clusterMode: false,
   neighborhoodFocus: true,
   layoutDisabled: false,
-  layoutPreset: "tree-down" as const,
+  layoutPreset: "dagre-tb" as const,
   selected: sampleNodes[0]!,
   hasEntryNodes: true,
   edgeVisibility: {
@@ -67,7 +67,7 @@ describe("commandRegistry", () => {
 
     const grouped = groupCommandActions(built);
     expect(grouped.get("navigate")).toHaveLength(1);
-    expect(grouped.get("graph")).toHaveLength(16);
+    expect(grouped.get("graph")).toHaveLength(12);
     expect(grouped.get("selection")).toHaveLength(3);
 
     const dimAction = built.find((action) => action.id === "toggle-dim-distant");

@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { AtlasNodeData } from "./buildFlowGraph";
 import { typeColors, typeLabels } from "./buildFlowGraph";
 
-function AtlasNodeComponent({ data, selected, dragging }: NodeProps) {
+function AtlasNodeComponent({ data, selected, dragging, sourcePosition, targetPosition }: NodeProps) {
   const nodeData = data as AtlasNodeData & {
     selected?: boolean;
     dimmed?: boolean;
@@ -12,6 +12,8 @@ function AtlasNodeComponent({ data, selected, dragging }: NodeProps) {
   const type = nodeData.type in typeLabels ? nodeData.type : "utility";
   const accent = typeColors[type];
   const isSelected = selected || nodeData.selected;
+  const targetPos = targetPosition ?? Position.Top;
+  const sourcePos = sourcePosition ?? Position.Bottom;
 
   return (
     <div
@@ -28,7 +30,7 @@ function AtlasNodeComponent({ data, selected, dragging }: NodeProps) {
     >
       <Handle
         type="target"
-        position={Position.Top}
+        position={targetPos}
         className="atlas-handle"
         isConnectable={false}
       />
@@ -44,7 +46,7 @@ function AtlasNodeComponent({ data, selected, dragging }: NodeProps) {
       </div>
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={sourcePos}
         className="atlas-handle"
         isConnectable={false}
       />

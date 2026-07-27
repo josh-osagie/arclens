@@ -8,20 +8,22 @@ export type ClusterNodeData = {
   selected?: boolean;
 };
 
-function ClusterNodeComponent({ data, selected }: NodeProps) {
+function ClusterNodeComponent({ data, selected, sourcePosition, targetPosition }: NodeProps) {
   const nodeData = data as ClusterNodeData & { selected?: boolean };
   const isSelected = selected || nodeData.selected;
   const showFolderPath = nodeData.folder !== nodeData.label;
+  const targetPos = targetPosition ?? Position.Top;
+  const sourcePos = sourcePosition ?? Position.Bottom;
 
   return (
     <div className={`atlas-cluster ${isSelected ? "atlas-cluster--selected" : ""}`}>
-      <Handle type="target" position={Position.Top} className="atlas-handle" isConnectable={false} />
+      <Handle type="target" position={targetPos} className="atlas-handle" isConnectable={false} />
       <div className="atlas-cluster__count">{nodeData.count}</div>
       <div className="atlas-cluster__label">{nodeData.label}</div>
       {showFolderPath && (
         <div className="atlas-cluster__folder">{nodeData.folder}</div>
       )}
-      <Handle type="source" position={Position.Bottom} className="atlas-handle" isConnectable={false} />
+      <Handle type="source" position={sourcePos} className="atlas-handle" isConnectable={false} />
     </div>
   );
 }

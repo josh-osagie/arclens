@@ -68,20 +68,37 @@ describe("nodePositionStorage", () => {
     });
   });
 
-  it("prefers in-memory positions over saved defaults", () => {
+  it("uses fresh layout over stale current positions", () => {
     const next = [makeNode("a", 0, 0), makeNode("b", 0, 0)];
     const current = [makeNode("a", 100, 200)];
     const saved = { b: { x: 50, y: 60 } };
 
     const merged = mergeNodePositions(next, current, saved);
 
-    expect(merged[0].position).toEqual({ x: 100, y: 200 });
+    expect(merged[0].position).toEqual({ x: 0, y: 0 });
     expect(merged[1].position).toEqual({ x: 50, y: 60 });
+  });
+
+  it("keeps dragged node positions over fresh layout", () => {
+    const next = [makeNode("a", 12, 34)];
+    const current = [makeNode("a", 100, 200)];
+
+    expect(mergeNodePositions(next, current, null, new Set(["a"]))[0].position).toEqual({
+      x: 100,
+      y: 200,
+    });
   });
 
   it("falls back to layout positions when nothing is saved", () => {
     const next = [makeNode("a", 12, 34)];
 
     expect(mergeNodePositions(next, [], null)[0].position).toEqual({ x: 12, y: 34 });
+  });
+
+  it("ignores saved positions for cluster folder nodes", () => {
+    const next = [makeNode("cluster::src/components", 12, 34)];
+    const saved = { "cluster::src/components": { x: 0, y: 0 } };
+
+    expect(mergeNodePositions(next, [], saved)[0].position).toEqual({ x: 12, y: 34 });
   });
 });

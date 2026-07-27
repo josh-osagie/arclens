@@ -1,5 +1,6 @@
 import type { Node } from "@xyflow/react";
 import type { AtlasNodeData } from "./buildFlowGraph";
+import { isClusterId } from "./clusterGraph";
 import { readLocalStorage, writeLocalStorage } from "./storageCompat";
 
 export type NodePositions = Record<string, { x: number; y: number }>;
@@ -48,6 +49,7 @@ export function saveNodePositions(graphKey: string, positions: NodePositions): v
 export function nodePositionsFromNodes(nodes: Node<AtlasNodeData>[]): NodePositions {
   const positions: NodePositions = {};
   for (const node of nodes) {
+    if (isClusterId(node.id)) continue;
     positions[node.id] = { x: node.position.x, y: node.position.y };
   }
   return positions;
@@ -57,20 +59,23 @@ export function mergeNodePositions(
   nextNodes: Node<AtlasNodeData>[],
   currentNodes: Node<AtlasNodeData>[],
   savedPositions: NodePositions | null = null,
+  draggedNodeIds: ReadonlySet<string> = new Set(),
 ): Node<AtlasNodeData>[] {
-  const positions = new Map(currentNodes.map((node) => [node.id, node.position]));
+  const currentById = new Map(currentNodes.map((node) => [node.id, node]));
 
-  if (savedPositions) {
-    for (const node of nextNodes) {
-      if (!positions.has(node.id) && savedPositions[node.id]) {
-        positions.set(node.id, savedPositions[node.id]);
+  return nextNodes.map((node) => {
+    if (draggedNodeIds.has(node.id)) {
+      const current = currentById.get(node.id);
+      if (current) {
+        return { ...node, position: current.position, draggable: true };
       }
     }
-  }
 
-  return nextNodes.map((node) => ({
-    ...node,
-    position: positions.get(node.id) ?? node.position,
-    draggable: true,
-  }));
+    const saved = savedPositions?.[node.id];
+    if (saved && !isClusterId(node.id)) {
+      return { ...node, position: saved, draggable: true };
+    }
+
+    return { ...node, position: node.position, draggable: true };
+  });
 }

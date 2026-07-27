@@ -95,7 +95,7 @@ export function GraphActions({
             <label className="graph-controls__field-label" htmlFor="layout-preset">
               <span className="field-label">
                 <span className="field-label__text">Layout</span>
-                <InfoTip text="Choose how nodes are arranged on the canvas. Fit view runs automatically after changing layout." />
+                <InfoTip text="Ranked dagre layout (React Flow guide). Uses render edges for positioning — on large graphs, imports and uses are hidden automatically for a clean tree. Re-enable them under Edge visibility." />
               </span>
             </label>
             <select
