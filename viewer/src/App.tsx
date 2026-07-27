@@ -10,6 +10,7 @@ import {
 import {
   Background,
   BackgroundVariant,
+  ConnectionLineType,
   MiniMap,
   Panel,
   ReactFlow,
@@ -36,12 +37,15 @@ import {
   clusterNodeId,
   collapseAllClusterFoldersState,
   collapseClusterFolderState,
+  computeSearchHighlightIds,
   findEntryNodes,
+  findSearchMatchingNodeIds,
   folderFromClusterId,
   folderKey,
   groupNodesByFolder,
   isClusterId,
   listExpandedFolders,
+  mergeSearchPartialReveals,
   nextClusterReveal,
   revealNodeForSpotlight,
 } from "./clusterGraph";
@@ -118,6 +122,7 @@ import { loadViewport } from "./viewportStorage";
 import {
   FORCE_FULL_GRAPH,
   GRAPH_POLL_MS,
+  GRAPH_POLL_MS_LARGE,
   LARGE_GRAPH_THRESHOLD,
   OVERVIEW_HUB_NODES,
   OVERVIEW_TOP_FOLDERS,
@@ -128,6 +133,7 @@ import {
   loadLayoutPreset,
   nextLayoutPreset,
   saveLayoutPreset,
+  spreadCoincidentNodes,
   type LayoutPreset,
 } from "./layoutPresets";
 import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
@@ -137,7 +143,8 @@ const flowNodeTypes = { atlas: AtlasNode, cluster: AtlasClusterNode };
 const PRO_OPTIONS = { hideAttribution: true } as const;
 const COMPACT_EDGE_DEFAULTS = {
   animated: false,
-  type: "default" as const,
+  type: "smoothstep" as const,
+  pathOptions: { borderRadius: 0, offset: 24 },
 } as const;
 
 function nodeOpacity(
@@ -327,6 +334,7 @@ export default function App() {
   const [spotlightFolder, setSpotlightFolder] = useState<string | null>(null);
   const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
+  const [folderExpandFocus, setFolderExpandFocus] = useState<string | null>(null);
   const [relayoutNonce, setRelayoutNonce] = useState(0);
   const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() => loadLayoutPreset());
   const [edgeVisibility, setEdgeVisibility] = useState<EdgeVisibilityPrefs>(() =>
@@ -338,6 +346,8 @@ export default function App() {
   const baseEdgesRef = useRef<Edge[]>([]);
   const hasSavedViewportRef = useRef(false);
   const savedNodePositionsRef = useRef<ReturnType<typeof loadNodePositions>>(null);
+  const applySavedLayoutRef = useRef(true);
+  const draggedNodeIdsRef = useRef<Set<string>>(new Set());
   const neighborhoodFocusTouchedRef = useRef(false);
 
   const deferredSearch = useDeferredValue(search);
@@ -370,22 +380,32 @@ export default function App() {
     return selectVisibleGraph(graph, searchLower, isLargeGraph);
   }, [graph, searchLower, isLargeGraph]);
 
+  const effectivePartialReveals = useMemo(() => {
+    if (!graph || !searchLower || !isLargeGraph || !clusterMode) {
+      return partialReveals;
+    }
+    return mergeSearchPartialReveals(graph, searchLower, partialReveals);
+  }, [graph, searchLower, isLargeGraph, clusterMode, partialReveals]);
+
   const clusteredGraph = useMemo(() => {
     if (!graph) return viewSelection.graph;
     return applyClusterView(
       viewSelection.graph,
       clusterMode,
       fullyExpandedFolders,
-      partialReveals,
+      effectivePartialReveals,
     );
-  }, [graph, viewSelection.graph, clusterMode, fullyExpandedFolders, partialReveals]);
+  }, [graph, viewSelection.graph, clusterMode, fullyExpandedFolders, effectivePartialReveals]);
 
-  const partialRevealKey = [...partialReveals.entries()]
+  const partialRevealKey = [...effectivePartialReveals.entries()]
     .map(([folder, ids]) => `${folder}:${[...ids].sort().join(",")}`)
     .sort()
     .join("|");
 
   const viewKey = `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${[...fullyExpandedFolders].sort().join(",")}:${partialRevealKey}`;
+
+  /** Fit-all viewport key — excludes folder expand/collapse and search so local focus is not overridden. */
+  const fitViewKey = `${graphKey}:${clusterMode}:r${relayoutNonce}`;
 
   const nodeById = useMemo(
     () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
@@ -427,6 +447,17 @@ export default function App() {
     );
   }, [spotlightNodeId, graph, clusteredGraph.nodes]);
 
+  const searchHighlightIds = useMemo(() => {
+    if (!searchLower || !graph) return null;
+    return computeSearchHighlightIds(
+      graph,
+      viewSelection.graph,
+      searchLower,
+      clusterMode,
+      fullyExpandedFolders,
+    );
+  }, [searchLower, graph, viewSelection.graph, clusterMode, fullyExpandedFolders]);
+
   const selectionHighlightIds = useMemo(
     () =>
       resolveHighlightIds(
@@ -449,11 +480,17 @@ export default function App() {
     if (folderSpotlightIds && folderSpotlightIds.size > 0) {
       return folderSpotlightIds;
     }
+    if (searchHighlightIds && searchHighlightIds.size > 0) {
+      return searchHighlightIds;
+    }
     return selectionHighlightIds;
-  }, [selectionHighlightIds, nodeSpotlightIds, folderSpotlightIds]);
+  }, [selectionHighlightIds, nodeSpotlightIds, folderSpotlightIds, searchHighlightIds]);
 
   const shouldHighlightEdges =
-    Boolean(selected) || Boolean(spotlightFolder) || Boolean(spotlightNodeId);
+    Boolean(selected) ||
+    Boolean(spotlightFolder) ||
+    Boolean(spotlightNodeId) ||
+    Boolean(searchLower && searchHighlightIds && searchHighlightIds.size > 0);
 
   const spotlightFitIds = useMemo(() => {
     if (folderSpotlightIds && folderSpotlightIds.size > 0) {
@@ -464,6 +501,40 @@ export default function App() {
     }
     return null;
   }, [folderSpotlightIds, nodeSpotlightIds]);
+
+  const expandFocusNodeIds = useMemo(() => {
+    if (!folderExpandFocus || !graph) return null;
+    const visible = new Set(clusteredGraph.nodes.map((node) => node.id));
+    const members = groupNodesByFolder(graph.nodes).get(folderExpandFocus) ?? [];
+    const ids = members.filter((member) => visible.has(member.id)).map((member) => member.id);
+    return ids.length > 0 ? ids : null;
+  }, [folderExpandFocus, graph, clusteredGraph.nodes]);
+
+  const searchFitNodeIds = useMemo(() => {
+    if (!searchLower || !graph) return null;
+    const matches = findSearchMatchingNodeIds(graph, searchLower);
+    if (matches.size === 0) return null;
+
+    const visible = new Set(clusteredGraph.nodes.map((node) => node.id));
+    const visibleMatches = [...matches].filter((id) => visible.has(id));
+    if (visibleMatches.length > 0) return visibleMatches;
+
+    if (!clusterMode) return null;
+
+    const clusterIds = new Set<string>();
+    for (const id of matches) {
+      const node = nodeById.get(id);
+      if (!node || node.file === "external") continue;
+      clusterIds.add(clusterNodeId(folderKey(node.file)));
+    }
+    return clusterIds.size > 0 ? [...clusterIds] : null;
+  }, [searchLower, graph, clusteredGraph.nodes, clusterMode, nodeById]);
+
+  const autoFitNodeIds = spotlightFitIds ?? expandFocusNodeIds ?? searchFitNodeIds;
+  const autoFitNodeId =
+    spotlightFolder || spotlightNodeId || autoFitNodeIds
+      ? null
+      : canvasFocusId ?? selected?.id ?? null;
 
   const expandedFolders = useMemo(
     () => listExpandedFolders(fullyExpandedFolders, partialReveals),
@@ -487,7 +558,7 @@ export default function App() {
 
   const loadGraph = useCallback(async () => {
     try {
-      const res = await fetch("/graph.json");
+      const res = await fetch(`/graph.json?_=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error("graph.json not found. Run `pnpm analyze` first.");
       const data: unknown = await res.json();
       const validated = validateGraphData(data);
@@ -510,12 +581,14 @@ export default function App() {
   useEffect(() => {
     hasSavedViewportRef.current = Boolean(graphKey && loadViewport(graphKey));
     savedNodePositionsRef.current = graphKey ? loadNodePositions(graphKey) : null;
+    applySavedLayoutRef.current = true;
+    draggedNodeIdsRef.current = new Set();
   }, [graphKey]);
 
   useEffect(() => {
     loadGraph();
-    if (isLargeGraph) return undefined;
-    const interval = window.setInterval(loadGraph, GRAPH_POLL_MS);
+    const pollMs = isLargeGraph ? GRAPH_POLL_MS_LARGE : GRAPH_POLL_MS;
+    const interval = window.setInterval(loadGraph, pollMs);
     return () => window.clearInterval(interval);
   }, [loadGraph, isLargeGraph]);
 
@@ -527,7 +600,7 @@ export default function App() {
     setIsBuilding(true);
 
     const timer = window.setTimeout(() => {
-      const built = buildFlowGraph(clusteredGraph, { compact: isLargeGraph });
+      const built = buildFlowGraph(clusteredGraph, { compact: isLargeGraph, entryIds });
       if (cancelled) return;
 
       buildSigRef.current = viewKey;
@@ -535,12 +608,20 @@ export default function App() {
 
       setNodes((current) =>
         patchNodePresentation(
-          mergeNodePositions(built.nodes, current, savedNodePositionsRef.current),
+          spreadCoincidentNodes(
+            mergeNodePositions(
+              built.nodes,
+              current,
+              applySavedLayoutRef.current ? savedNodePositionsRef.current : null,
+              draggedNodeIdsRef.current,
+            ),
+          ),
           searchLower,
           selected?.id ?? null,
           highlightIds,
         ),
       );
+      applySavedLayoutRef.current = false;
       setEdges(
         presentEdges(
           built.edges,
@@ -608,7 +689,8 @@ export default function App() {
         setFullyExpandedFolders((prev) => new Set([...prev, folder]));
       }
 
-      setCanvasFocusId(clusterNodeId(folder));
+      setCanvasFocusId(null);
+      setFolderExpandFocus(folder);
       setSelected(null);
     },
     [graph, isLargeGraph, clusterMode, viewSelection.graph, fullyExpandedFolders],
@@ -623,6 +705,7 @@ export default function App() {
       );
       setFullyExpandedFolders(next.fullyExpandedFolders);
       setPartialReveals(next.partialReveals);
+      setFolderExpandFocus(null);
       setCanvasFocusId(clusterNodeId(folder));
       setSelected((current) => {
         if (!current || current.file === "external") return current;
@@ -639,6 +722,7 @@ export default function App() {
     setSelected(null);
     setSpotlightFolder(null);
     setSpotlightNodeId(null);
+    setFolderExpandFocus(null);
     setCanvasFocusId(null);
   }, []);
 
@@ -747,6 +831,7 @@ export default function App() {
 
   const onNodeDragStop: OnNodeDrag<Node<AtlasNodeData>> = useCallback(
     (_event, dragged) => {
+      draggedNodeIdsRef.current.add(dragged.id);
       setNodes((current) => {
         const { snapX, snapY } = computeHelperLines(dragged as Node<AtlasNodeData>, current);
         const next =
@@ -803,6 +888,22 @@ export default function App() {
     (preset: LayoutPreset) => {
       setLayoutPreset(preset);
       saveLayoutPreset(preset);
+
+      if (preset === "dagre-tb" && nodes.length > 25) {
+        setEdgeVisibility((prev) => {
+          const next = { imports: false, renders: true, uses: false };
+          if (
+            prev.imports === next.imports &&
+            prev.renders === next.renders &&
+            prev.uses === next.uses
+          ) {
+            return prev;
+          }
+          saveEdgeVisibility(next);
+          return next;
+        });
+      }
+
       setNodes((current) =>
         relayoutFlowNodes(current, baseEdgesRef.current, {
           mode: preset,
@@ -813,7 +914,7 @@ export default function App() {
       setRelayoutNonce((value) => value + 1);
       setFocusOnSelect(true);
     },
-    [setNodes, entryIds, graph],
+    [setNodes, entryIds, graph, nodes.length],
   );
 
   const cycleLayout = useCallback(() => {
@@ -959,6 +1060,7 @@ export default function App() {
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         defaultEdgeOptions={COMPACT_EDGE_DEFAULTS}
+        connectionLineType={ConnectionLineType.SmoothStep}
         nodesDraggable
         nodesConnectable={false}
         elementsSelectable
@@ -979,18 +1081,18 @@ export default function App() {
         <ExportBridge projectName={graph.meta?.projectName} graphKey={graphKey} />
         <FitViewBridge />
         <FitViewOnce
-          viewKey={`${viewKey}:r${relayoutNonce}`}
+          viewKey={fitViewKey}
           nodeCount={nodes.length}
           skip={hasSavedViewportRef.current && relayoutNonce === 0}
         />
         <FocusOnSelect
-          nodeId={
-            spotlightFolder || spotlightNodeId
-              ? null
-              : canvasFocusId ?? selected?.id ?? null
-          }
-          nodeIds={spotlightFitIds}
+          nodeId={autoFitNodeId}
+          nodeIds={autoFitNodeIds}
           enabled={focusOnSelect}
+          layoutReady={!isBuilding}
+          onFocused={
+            folderExpandFocus ? () => setFolderExpandFocus(null) : undefined
+          }
         />
         {selected && !selected.cluster && (
           <NodeToolbarActions

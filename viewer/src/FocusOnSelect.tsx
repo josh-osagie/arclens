@@ -5,13 +5,23 @@ type Props = {
   nodeId: string | null;
   nodeIds?: string[] | null;
   enabled?: boolean;
+  /** Wait until the graph finished rebuilding before fitting (cluster expand, etc.). */
+  layoutReady?: boolean;
+  /** Called after a successful fit — use to clear one-shot expand focus state. */
+  onFocused?: () => void;
 };
 
-export function FocusOnSelect({ nodeId, nodeIds, enabled = true }: Props) {
+export function FocusOnSelect({
+  nodeId,
+  nodeIds,
+  enabled = true,
+  layoutReady = true,
+  onFocused,
+}: Props) {
   const { fitView, getNode } = useReactFlow();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !layoutReady) return;
 
     const ids =
       nodeIds && nodeIds.length > 0
@@ -23,16 +33,21 @@ export function FocusOnSelect({ nodeId, nodeIds, enabled = true }: Props) {
     if (ids.length === 0) return;
 
     const timer = window.setTimeout(() => {
-      fitView({
-        nodes: ids.map((id) => ({ id })),
-        padding: ids.length > 1 ? 0.28 : 0.55,
+      const resolved = ids.filter((id) => Boolean(getNode(id)));
+      if (resolved.length === 0) return;
+
+      void fitView({
+        nodes: resolved.map((id) => ({ id })),
+        padding: resolved.length > 1 ? 0.28 : 0.55,
         duration: 350,
-        maxZoom: ids.length > 1 ? 1.2 : 1.4,
+        maxZoom: resolved.length > 1 ? 1.2 : 1.4,
+      }).then(() => {
+        onFocused?.();
       });
-    }, 40);
+    }, 80);
 
     return () => window.clearTimeout(timer);
-  }, [nodeId, nodeIds, enabled, fitView, getNode]);
+  }, [nodeId, nodeIds, enabled, layoutReady, fitView, getNode, onFocused]);
 
   return null;
 }
