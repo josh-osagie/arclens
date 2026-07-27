@@ -37,6 +37,18 @@ This command:
 
 Use `--insights` to include architecture suggestions and ESLint-style hints in the terminal output. Insights are always embedded in `graph.json` for the viewer.
 
+## Gitignore
+
+Arclens writes generated files into your project. Add these to `.gitignore` so they are not committed by mistake:
+
+```gitignore
+.arclens/
+graph.json
+```
+
+- `.arclens/` — parse cache and optional snippet sidecars (with `--with-snippets`)
+- `graph.json` — graph output from `analyze` or `watch`
+
 ## Open the viewer
 
 After analysis, start the bundled viewer:

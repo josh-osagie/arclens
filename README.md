@@ -58,6 +58,18 @@ Open the URL printed in the terminal (default `http://127.0.0.1:5173`).
 
 This prints a terminal report, writes `graph.json` in the current working directory, and loads that graph in the viewer.
 
+### Gitignore
+
+Arclens writes generated files into your project. Add these to `.gitignore` so they are not committed by mistake:
+
+```gitignore
+.arclens/
+graph.json
+```
+
+- `.arclens/` — parse cache and optional snippet sidecars (with `--with-snippets`)
+- `graph.json` — graph output from `analyze` or `watch`
+
 From this repo:
 
 ```bash

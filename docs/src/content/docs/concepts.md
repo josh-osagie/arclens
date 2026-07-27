@@ -101,6 +101,8 @@ Insights reference optional `eslintRule` ids where applicable (e.g. `import/no-u
 
 Analyze stores parse metadata in `.arclens/cache.json` inside the target project. Use `--no-cache` to force a full re-parse after changing extractors or when debugging stale results.
 
+Add `.arclens/` and `graph.json` to your project's `.gitignore` — both are generated locally and should not be committed. See [Getting started](/getting-started/#gitignore) for details.
+
 ## What is not analyzed
 
 - Runtime behavior (effects, conditional renders at runtime)
