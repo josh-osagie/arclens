@@ -26,7 +26,6 @@ const features = [
 	},
 ];
 
-const featureRows = [features.slice(0, 2), features.slice(2, 4)];
 ---
 
 <section class="feature-cards" aria-labelledby="features-heading">
@@ -34,23 +33,19 @@ const featureRows = [features.slice(0, 2), features.slice(2, 4)];
 	<p class="feature-cards__lead">
 		From first scan to interactive exploration, everything runs locally on your machine.
 	</p>
-	<div class="feature-cards__rows">
+	<div class="feature-cards__list">
 		{
-			featureRows.map((row) => (
-				<div class="feature-cards__row">
-					{row.map((feature) => (
-						<article class={`feature-card feature-card--${feature.accent}`}>
-							<div class="feature-card__inner">
-								<span class="feature-card__type">
-									<span class="feature-card__type-dot" aria-hidden="true" />
-									{feature.accent}
-								</span>
-								<h3 class="feature-card__title">{feature.title}</h3>
-								<p class="feature-card__desc" set:html={feature.descriptionHtml} />
-							</div>
-						</article>
-					))}
-				</div>
+			features.map((feature) => (
+				<article class={`feature-card feature-card--${feature.accent}`}>
+					<div class="feature-card__inner">
+						<span class="feature-card__type">
+							<span class="feature-card__type-dot" aria-hidden="true" />
+							{feature.accent}
+						</span>
+						<h3 class="feature-card__title">{feature.title}</h3>
+						<p class="feature-card__desc" set:html={feature.descriptionHtml} />
+					</div>
+				</article>
 			))
 		}
 	</div>
@@ -80,9 +75,5 @@ const featureRows = [features.slice(0, 2), features.slice(2, 4)];
 		line-height: 1.6;
 		text-align: center;
 		color: var(--al-muted);
-	}
-
-	.feature-cards__rows {
-		margin-top: 1.75rem;
 	}
 </style>
