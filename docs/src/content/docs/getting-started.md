@@ -92,7 +92,7 @@ npx arclens watch ./src --insights --no-cache
 To work on Arclens itself, clone the repo and use pnpm:
 
 ```bash
-git clone https://github.com/JCalmCrasher/arclens.git
+git clone https://github.com/josh-osagie/arclens.git
 cd arclens
 pnpm install
 ```

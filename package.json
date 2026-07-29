@@ -70,11 +70,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JCalmCrasher/arclens.git"
+    "url": "git+https://github.com/josh-osagie/arclens.git"
   },
   "homepage": "https://arclens.vercel.app",
   "bugs": {
-    "url": "https://github.com/JCalmCrasher/arclens/issues"
+    "url": "https://github.com/josh-osagie/arclens/issues"
   },
   "engines": {
     "node": ">=18"

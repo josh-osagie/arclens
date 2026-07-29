@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/JCalmCrasher/arclens/main/assets/arclens-logo.png" alt="Arclens" width="48" />
+  <img src="https://raw.githubusercontent.com/josh-osagie/arclens/main/assets/arclens-logo.png" alt="Arclens" width="48" />
 </p>
 
 # Arclens

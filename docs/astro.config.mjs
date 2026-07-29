@@ -20,11 +20,11 @@ export default defineConfig({
 				{
 					icon: 'github',
 					label: 'GitHub',
-					href: 'https://github.com/JCalmCrasher/arclens',
+					href: 'https://github.com/josh-osagie/arclens',
 				},
 			],
 			editLink: {
-				baseUrl: 'https://github.com/JCalmCrasher/arclens/edit/main/docs/',
+				baseUrl: 'https://github.com/josh-osagie/arclens/edit/main/docs/',
 			},
 			head: [
 				{

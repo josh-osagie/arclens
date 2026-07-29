@@ -17,8 +17,8 @@ describe("release-utils", () => {
 
   it("derives GitHub tag URL from repository field", () => {
     expect(
-      releaseTagUrl("git+https://github.com/JCalmCrasher/arclens.git", "2.1.0"),
-    ).toBe("https://github.com/JCalmCrasher/arclens/releases/tag/v2.1.0");
+      releaseTagUrl("git+https://github.com/josh-osagie/arclens.git", "2.1.0"),
+    ).toBe("https://github.com/josh-osagie/arclens/releases/tag/v2.1.0");
     expect(releaseTagUrl(undefined, "1.0.0")).toBeNull();
   });
 });
