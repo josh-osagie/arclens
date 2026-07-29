@@ -15,8 +15,6 @@ Think in three layers:
 | **Feature slice** | One expanded folder + neighbors | Understanding a module |
 | **Node** | Single component/hook + details panel | "What does this file actually do?" |
 
-Trying to expand everything and read the full render tree is what causes the lost feeling. That is expected: no layout makes 500+ nodes feel simple.
-
 ## Recommended setup
 
 Turn these on and leave them on for large projects (500+ nodes):
