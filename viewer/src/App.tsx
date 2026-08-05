@@ -26,8 +26,9 @@ import { AtlasClusterNode } from "./AtlasClusterNode";
 import { AtlasNode } from "./AtlasNode";
 import {
   buildFlowGraph,
+  layoutFlowGraphNodesAsync,
   nodeTypes as legendTypes,
-  relayoutFlowNodes,
+  relayoutFlowNodesAsync,
   type AtlasNodeData,
   typeColors,
 } from "./buildFlowGraph";
@@ -130,6 +131,7 @@ import {
 } from "./viewerConfig";
 import "./graph.css";
 import {
+  LayoutCancelledError,
   loadLayoutPreset,
   nextLayoutPreset,
   saveLayoutPreset,
@@ -343,6 +345,7 @@ export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
+  const buildingGenRef = useRef(0);
   const baseEdgesRef = useRef<Edge[]>([]);
   const hasSavedViewportRef = useRef(false);
   const savedNodePositionsRef = useRef<ReturnType<typeof loadNodePositions>>(null);
@@ -597,41 +600,62 @@ export default function App() {
     if (buildSigRef.current === viewKey) return;
 
     let cancelled = false;
+    const buildingGen = ++buildingGenRef.current;
     setIsBuilding(true);
 
     const timer = window.setTimeout(() => {
-      const built = buildFlowGraph(clusteredGraph, { compact: isLargeGraph, entryIds });
-      if (cancelled) return;
+      void (async () => {
+        try {
+          const built = buildFlowGraph(clusteredGraph, {
+            compact: isLargeGraph,
+            entryIds,
+            skipLayout: true,
+          });
+          const layoutedNodes = await layoutFlowGraphNodesAsync(
+            clusteredGraph,
+            built.nodes,
+            built.edges,
+            entryIds,
+          );
+          if (cancelled) return;
 
-      buildSigRef.current = viewKey;
-      baseEdgesRef.current = built.edges;
+          buildSigRef.current = viewKey;
+          baseEdgesRef.current = built.edges;
 
-      setNodes((current) =>
-        patchNodePresentation(
-          spreadCoincidentNodes(
-            mergeNodePositions(
-              built.nodes,
-              current,
-              applySavedLayoutRef.current ? savedNodePositionsRef.current : null,
-              draggedNodeIdsRef.current,
+          setNodes((current) =>
+            patchNodePresentation(
+              spreadCoincidentNodes(
+                mergeNodePositions(
+                  layoutedNodes,
+                  current,
+                  applySavedLayoutRef.current ? savedNodePositionsRef.current : null,
+                  draggedNodeIdsRef.current,
+                ),
+              ),
+              searchLower,
+              selected?.id ?? null,
+              highlightIds,
             ),
-          ),
-          searchLower,
-          selected?.id ?? null,
-          highlightIds,
-        ),
-      );
-      applySavedLayoutRef.current = false;
-      setEdges(
-        presentEdges(
-          built.edges,
-          edgeVisibility,
-          highlightIds,
-          pathEdges,
-          shouldHighlightEdges,
-        ),
-      );
-      setIsBuilding(false);
+          );
+          applySavedLayoutRef.current = false;
+          setEdges(
+            presentEdges(
+              built.edges,
+              edgeVisibility,
+              highlightIds,
+              pathEdges,
+              shouldHighlightEdges,
+            ),
+          );
+        } catch (error) {
+          if (cancelled || error instanceof LayoutCancelledError) return;
+          console.error("Failed to layout graph view", error);
+        } finally {
+          if (!cancelled && buildingGen === buildingGenRef.current) {
+            setIsBuilding(false);
+          }
+        }
+      })();
     }, 0);
 
     return () => {
@@ -904,17 +928,33 @@ export default function App() {
         });
       }
 
-      setNodes((current) =>
-        relayoutFlowNodes(current, baseEdgesRef.current, {
-          mode: preset,
-          entryIds,
-          graph: graph ?? undefined,
-        }),
-      );
-      setRelayoutNonce((value) => value + 1);
-      setFocusOnSelect(true);
+      const snapshot = nodes;
+      const edgesSnapshot = baseEdgesRef.current;
+      const buildingGen = ++buildingGenRef.current;
+      setIsBuilding(true);
+
+      void (async () => {
+        try {
+          const layouted = await relayoutFlowNodesAsync(snapshot, edgesSnapshot, {
+            mode: preset,
+            entryIds,
+            graph: graph ?? undefined,
+          });
+          if (buildingGen !== buildingGenRef.current) return;
+          setNodes(layouted);
+          setRelayoutNonce((value) => value + 1);
+          setFocusOnSelect(true);
+        } catch (error) {
+          if (error instanceof LayoutCancelledError) return;
+          console.error("Failed to apply layout", error);
+        } finally {
+          if (buildingGen === buildingGenRef.current) {
+            setIsBuilding(false);
+          }
+        }
+      })();
     },
-    [setNodes, entryIds, graph, nodes.length],
+    [setNodes, entryIds, graph, nodes],
   );
 
   const cycleLayout = useCallback(() => {

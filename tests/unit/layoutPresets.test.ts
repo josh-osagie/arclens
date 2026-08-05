@@ -1,15 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   filterEdgesForDagreLayout,
   getDagreLayoutedNodes,
+  getDagreLayoutedNodesAsync,
   layoutIncludesClusterNodes,
   layoutNodesByPreset,
+  layoutNodesByPresetAsync,
   loadLayoutPreset,
   nextLayoutPreset,
+  resetLayoutWorkerForTests,
   saveLayoutPreset,
   DEFAULT_LAYOUT_PRESET,
 } from "../../viewer/src/layoutPresets";
-import type { AtlasNodeData } from "../../viewer/src/buildFlowGraph";
 
 type TestNode = Parameters<typeof layoutNodesByPreset>[0][number];
 type TestEdge = Parameters<typeof layoutNodesByPreset>[1][number];
@@ -31,6 +33,10 @@ function flowNode(
 }
 
 describe("layoutPresets", () => {
+  afterEach(() => {
+    resetLayoutWorkerForTests();
+  });
+
   it("cycles between dagre directions", () => {
     expect(nextLayoutPreset("dagre-tb")).toBe("dagre-lr");
     expect(nextLayoutPreset("dagre-lr")).toBe("dagre-tb");
@@ -118,5 +124,35 @@ describe("layoutPresets", () => {
     const filtered = filterEdgesForDagreLayout(edges);
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.id).toBe("e2");
+  });
+
+  it("async layout falls back to sync when workers are unavailable", async () => {
+    const nodes: TestNode[] = [flowNode("entry"), flowNode("child")];
+    const edges: TestEdge[] = [{ id: "e1", source: "entry", target: "child" }];
+
+    const sync = getDagreLayoutedNodes(nodes, edges, "TB", ["entry"]);
+    const asyncResult = await getDagreLayoutedNodesAsync(nodes, edges, "TB", ["entry"]);
+
+    expect(asyncResult).toHaveLength(sync.length);
+    for (const node of sync) {
+      const match = asyncResult.find((item) => item.id === node.id)!;
+      expect(match.position).toEqual(node.position);
+      expect(match.sourcePosition).toBe(node.sourcePosition);
+      expect(match.targetPosition).toBe(node.targetPosition);
+    }
+  });
+
+  it("async preset layout matches sync preset layout", async () => {
+    const nodes: TestNode[] = [flowNode("a"), flowNode("b")];
+    const edges: TestEdge[] = [{ id: "e1", source: "a", target: "b" }];
+
+    const sync = layoutNodesByPreset(nodes, edges, "dagre-lr", { entryIds: ["a"] });
+    const asyncResult = await layoutNodesByPresetAsync(nodes, edges, "dagre-lr", {
+      entryIds: ["a"],
+    });
+
+    expect(asyncResult.map((node) => node.position)).toEqual(
+      sync.map((node) => node.position),
+    );
   });
 });

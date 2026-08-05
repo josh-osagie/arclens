@@ -1,7 +1,15 @@
-import dagre from "@dagrejs/dagre";
 import { Position, type Edge, type Node } from "@xyflow/react";
 import type { AtlasGraph } from "./types";
 import type { AtlasNodeData } from "./buildFlowGraph";
+import {
+  computeDagreLayout,
+  spreadCoincidentPositions,
+  type DagreDirection,
+  type DagreLayoutRequest,
+  type DagreLayoutResponse,
+  type LayoutWorkerRequest,
+  type LayoutWorkerResponse,
+} from "./layoutDagreCore";
 import { readLocalStorage, writeLocalStorage } from "./storageCompat";
 
 export const LAYOUT_PRESETS = [
@@ -31,17 +39,17 @@ export const NODE_H = 88;
 export const CLUSTER_NODE_W = 168;
 export const CLUSTER_NODE_H = 104;
 
-const DAGRE_GRAPH = {
-  nodesep: 60,
-  ranksep: 90,
-  marginx: 20,
-  marginy: 20,
-};
-
 export type LayoutContext = {
   entryIds?: string[];
   graph?: AtlasGraph;
 };
+
+export class LayoutCancelledError extends Error {
+  constructor() {
+    super("Layout cancelled");
+    this.name = "LayoutCancelledError";
+  }
+}
 
 /** Prefer render-tree edges for ranked layout — matches React Flow dagre examples. */
 export function filterEdgesForDagreLayout(edges: Edge[]): Edge[] {
@@ -65,6 +73,50 @@ export function layoutIncludesClusterNodes(_mode: LayoutPreset): boolean {
   return true;
 }
 
+function toDagreRequest(
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  direction: DagreDirection,
+  entryIds: string[],
+): DagreLayoutRequest {
+  const layoutEdges = filterEdgesForDagreLayout(edges);
+  return {
+    direction,
+    entryIds,
+    nodes: nodes.map((node) => ({
+      id: node.id,
+      ...nodeLayoutDimensions(node),
+    })),
+    edges: layoutEdges.map((edge) => ({
+      source: edge.source,
+      target: edge.target,
+    })),
+  };
+}
+
+function applyDagreResult(
+  nodes: Node<AtlasNodeData>[],
+  result: DagreLayoutResponse,
+): Node<AtlasNodeData>[] {
+  const byId = new Map(result.positions.map((position) => [position.id, position]));
+  const sourcePosition =
+    result.sourcePosition === "right" ? Position.Right : Position.Bottom;
+  const targetPosition =
+    result.targetPosition === "left" ? Position.Left : Position.Top;
+
+  return nodes.map((node) => {
+    const laidOut = byId.get(node.id);
+    return {
+      ...node,
+      targetPosition,
+      sourcePosition,
+      position: laidOut
+        ? { x: laidOut.x, y: laidOut.y }
+        : node.position,
+    };
+  });
+}
+
 /**
  * Dagre layout following https://reactflow.dev/examples/layout/dagre
  * — ranked nodes, top/bottom or left/right handles, centered anchor conversion.
@@ -76,73 +128,27 @@ export function getDagreLayoutedNodes(
   entryIds: string[] = [],
 ): Node<AtlasNodeData>[] {
   if (nodes.length === 0) return nodes;
-
-  const isHorizontal = direction === "LR";
-  const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: direction, ...DAGRE_GRAPH });
-
-  for (const node of nodes) {
-    g.setNode(node.id, nodeLayoutDimensions(node));
-  }
-
-  for (const id of entryIds) {
-    if (g.hasNode(id)) {
-      g.setNode(id, { ...g.node(id), rank: 0 });
-    }
-  }
-
-  const layoutEdges = filterEdgesForDagreLayout(edges);
-  const nodeIds = new Set(nodes.map((node) => node.id));
-  const seen = new Set<string>();
-  for (const edge of layoutEdges) {
-    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) continue;
-    const key = `${edge.source}|${edge.target}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    g.setEdge(edge.source, edge.target);
-  }
-
-  dagre.layout(g);
-
-  return spreadCoincidentNodes(
-    nodes.map((node) => {
-      const layoutNode = g.node(node.id);
-      const { width, height } = nodeLayoutDimensions(node);
-      return {
-        ...node,
-        targetPosition: isHorizontal ? Position.Left : Position.Top,
-        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
-        position: {
-          x: layoutNode.x - width / 2,
-          y: layoutNode.y - height / 2,
-        },
-      };
-    }),
-  );
+  return applyDagreResult(nodes, computeDagreLayout(toDagreRequest(nodes, edges, direction, entryIds)));
 }
 
 /** Nudge nodes that dagre placed at the same coordinates (common for isolated clusters). */
 export function spreadCoincidentNodes(
   nodes: Node<AtlasNodeData>[],
 ): Node<AtlasNodeData>[] {
-  const placed: { x: number; y: number; h: number }[] = [];
-  const GAP = 16;
+  const spread = spreadCoincidentPositions(
+    nodes.map((node) => ({
+      id: node.id,
+      x: node.position.x,
+      y: node.position.y,
+      height: nodeLayoutDimensions(node).height,
+    })),
+  );
+  const byId = new Map(spread.map((item) => [item.id, item]));
 
   return nodes.map((node) => {
-    const { height } = nodeLayoutDimensions(node);
-    let { x, y } = node.position;
-
-    const overlaps = () =>
-      placed.some(
-        (other) => Math.abs(other.x - x) < 8 && Math.abs(other.y - y) < 8,
-      );
-
-    while (overlaps()) {
-      y += height + GAP;
-    }
-
-    placed.push({ x, y, h: height });
-    return { ...node, position: { x, y } };
+    const next = byId.get(node.id);
+    if (!next) return node;
+    return { ...node, position: { x: next.x, y: next.y } };
   });
 }
 
@@ -154,6 +160,148 @@ export function layoutNodesByPreset(
 ): Node<AtlasNodeData>[] {
   const direction = mode === "dagre-lr" ? "LR" : "TB";
   return getDagreLayoutedNodes(nodes, edges, direction, context.entryIds ?? []);
+}
+
+type PendingLayout = {
+  resolve: (result: DagreLayoutResponse) => void;
+  reject: (error: Error) => void;
+};
+
+let layoutWorker: Worker | null | undefined;
+let nextWorkerRequestId = 0;
+let layoutGeneration = 0;
+const pendingLayouts = new Map<number, PendingLayout>();
+
+function settlePending(requestId: number, result: DagreLayoutResponse): void {
+  const pending = pendingLayouts.get(requestId);
+  if (!pending) return;
+  pendingLayouts.delete(requestId);
+  pending.resolve(result);
+}
+
+function rejectPending(requestId: number, error: Error): void {
+  const pending = pendingLayouts.get(requestId);
+  if (!pending) return;
+  pendingLayouts.delete(requestId);
+  pending.reject(error);
+}
+
+function getLayoutWorker(): Worker | null {
+  if (layoutWorker !== undefined) return layoutWorker;
+
+  try {
+    if (typeof Worker === "undefined") {
+      layoutWorker = null;
+      return null;
+    }
+
+    const worker = new Worker(new URL("./layout.worker.ts", import.meta.url), {
+      type: "module",
+    });
+
+    worker.onmessage = (event: MessageEvent<LayoutWorkerResponse>) => {
+      const { requestId, ...result } = event.data;
+      settlePending(requestId, result);
+    };
+
+    worker.onerror = () => {
+      for (const [requestId] of pendingLayouts) {
+        rejectPending(requestId, new Error("Layout worker failed"));
+      }
+      try {
+        worker.terminate();
+      } catch {
+        // ignore terminate errors
+      }
+      layoutWorker = null;
+    };
+
+    layoutWorker = worker;
+    return worker;
+  } catch {
+    layoutWorker = null;
+    return null;
+  }
+}
+
+function layoutViaWorker(request: DagreLayoutRequest): Promise<DagreLayoutResponse> {
+  const worker = getLayoutWorker();
+  if (!worker) {
+    return Promise.reject(new Error("Layout worker unavailable"));
+  }
+
+  const requestId = ++nextWorkerRequestId;
+  const message: LayoutWorkerRequest = { requestId, ...request };
+
+  return new Promise<DagreLayoutResponse>((resolve, reject) => {
+    pendingLayouts.set(requestId, { resolve, reject });
+    try {
+      worker.postMessage(message);
+    } catch (error) {
+      pendingLayouts.delete(requestId);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
+}
+
+async function computeDagreLayoutAsync(
+  request: DagreLayoutRequest,
+): Promise<DagreLayoutResponse> {
+  try {
+    return await layoutViaWorker(request);
+  } catch {
+    return computeDagreLayout(request);
+  }
+}
+
+/**
+ * Async dagre layout via Web Worker, with sync fallback when workers are unavailable.
+ * Newer calls cancel older in-flight results (throws LayoutCancelledError).
+ */
+export async function getDagreLayoutedNodesAsync(
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  direction: "TB" | "LR",
+  entryIds: string[] = [],
+): Promise<Node<AtlasNodeData>[]> {
+  if (nodes.length === 0) return nodes;
+
+  const generation = ++layoutGeneration;
+  const request = toDagreRequest(nodes, edges, direction, entryIds);
+  const result = await computeDagreLayoutAsync(request);
+
+  if (generation !== layoutGeneration) {
+    throw new LayoutCancelledError();
+  }
+
+  return applyDagreResult(nodes, result);
+}
+
+export async function layoutNodesByPresetAsync(
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  mode: LayoutPreset,
+  context: LayoutContext = {},
+): Promise<Node<AtlasNodeData>[]> {
+  const direction = mode === "dagre-lr" ? "LR" : "TB";
+  return getDagreLayoutedNodesAsync(nodes, edges, direction, context.entryIds ?? []);
+}
+
+/** Reset worker state (tests). */
+export function resetLayoutWorkerForTests(): void {
+  layoutGeneration += 1;
+  for (const [requestId] of pendingLayouts) {
+    rejectPending(requestId, new LayoutCancelledError());
+  }
+  if (layoutWorker) {
+    try {
+      layoutWorker.terminate();
+    } catch {
+      // ignore
+    }
+  }
+  layoutWorker = undefined;
+  nextWorkerRequestId = 0;
 }
 
 export function loadLayoutPreset(): LayoutPreset {

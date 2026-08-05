@@ -2,7 +2,9 @@ import type { Edge, Node } from "@xyflow/react";
 import {
   DEFAULT_LAYOUT_PRESET,
   getDagreLayoutedNodes,
+  getDagreLayoutedNodesAsync,
   layoutNodesByPreset,
+  layoutNodesByPresetAsync,
   nodeLayoutDimensions,
   type LayoutContext,
   type LayoutPreset,
@@ -35,14 +37,10 @@ export type ClusterNodeData = {
   dimmed?: boolean;
 };
 
-function layoutNodes(
+function applyEmbeddedLayouts(
   graph: AtlasGraph,
   nodes: Node<AtlasNodeData>[],
-  edges: Edge[],
-  entryIds: string[] = [],
-) {
-  if (nodes.length === 0) return nodes;
-
+): Node<AtlasNodeData>[] | null {
   const positionById = new Map(
     graph.nodes
       .filter((node) => node.layout)
@@ -53,21 +51,48 @@ function layoutNodes(
   const allHaveEmbeddedLayout =
     positionById.size > 0 && nodes.every((node) => positionById.has(node.id));
 
-  if (allHaveEmbeddedLayout) {
-    return nodes.map((node) => {
-      const saved = positionById.get(node.id)!;
-      const { width, height } = nodeLayoutDimensions(node);
-      return {
-        ...node,
-        position: {
-          x: saved.x - width / 2,
-          y: saved.y - height / 2,
-        },
-      };
-    });
-  }
+  if (!allHaveEmbeddedLayout) return null;
+
+  return nodes.map((node) => {
+    const saved = positionById.get(node.id)!;
+    const { width, height } = nodeLayoutDimensions(node);
+    return {
+      ...node,
+      position: {
+        x: saved.x - width / 2,
+        y: saved.y - height / 2,
+      },
+    };
+  });
+}
+
+function layoutNodes(
+  graph: AtlasGraph,
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  entryIds: string[] = [],
+) {
+  if (nodes.length === 0) return nodes;
+
+  const embedded = applyEmbeddedLayouts(graph, nodes);
+  if (embedded) return embedded;
 
   return getDagreLayoutedNodes(nodes, edges, "TB", entryIds);
+}
+
+/** Async layout for interactive builds — worker-backed dagre with sync fallback. */
+export async function layoutFlowGraphNodesAsync(
+  graph: AtlasGraph,
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  entryIds: string[] = [],
+): Promise<Node<AtlasNodeData>[]> {
+  if (nodes.length === 0) return nodes;
+
+  const embedded = applyEmbeddedLayouts(graph, nodes);
+  if (embedded) return embedded;
+
+  return getDagreLayoutedNodesAsync(nodes, edges, "TB", entryIds);
 }
 
 export type RelayoutOptions = LayoutContext & {
@@ -91,15 +116,31 @@ export function relayoutFlowNodes(
   });
 }
 
+/** Async re-layout for interactive preset changes. */
+export async function relayoutFlowNodesAsync(
+  nodes: Node<AtlasNodeData>[],
+  edges: Edge[],
+  options: RelayoutOptions = {},
+): Promise<Node<AtlasNodeData>[]> {
+  if (nodes.length === 0) return nodes;
+
+  const mode = options.mode ?? DEFAULT_LAYOUT_PRESET;
+  return layoutNodesByPresetAsync(nodes, edges, mode, {
+    entryIds: options.entryIds,
+    graph: options.graph,
+  });
+}
+
 export function buildFlowGraph(
   graph: AtlasGraph,
-  options: { compact?: boolean; entryIds?: string[] } = {},
+  options: { compact?: boolean; entryIds?: string[]; skipLayout?: boolean } = {},
 ): {
   nodes: Node<AtlasNodeData>[];
   edges: Edge[];
 } {
   const compact = options.compact ?? false;
   const entryIds = options.entryIds ?? graph.meta?.entryNodeIds ?? [];
+  const skipLayout = options.skipLayout ?? false;
 
   const initialNodes: Node<AtlasNodeData>[] = graph.nodes.map((node) => {
     if (node.cluster) {
@@ -175,7 +216,9 @@ export function buildFlowGraph(
   });
 
   return {
-    nodes: layoutNodes(graph, initialNodes, initialEdges, entryIds),
+    nodes: skipLayout
+      ? initialNodes
+      : layoutNodes(graph, initialNodes, initialEdges, entryIds),
     edges: initialEdges,
   };
 }
