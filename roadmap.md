@@ -20,7 +20,7 @@ Milestones
 - [x] Detect React components
 - [x] Detect hooks
 - [x] Detect contexts
-- [ ] Detect services
+- [x] Detect services
 - [x] Detect utilities
 
 ---
@@ -34,7 +34,7 @@ Milestones
 - [x] Imports
 - [x] Uses (hook calls)
 - [x] Renders (JSX)
-- [ ] Calls (general function call graph)
+- [x] Calls (general function call graph)
 - [x] Exports
 
 ---
