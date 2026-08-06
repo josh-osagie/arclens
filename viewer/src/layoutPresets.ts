@@ -248,8 +248,13 @@ async function computeDagreLayoutAsync(
   request: DagreLayoutRequest,
 ): Promise<DagreLayoutResponse> {
   try {
-    return await layoutViaWorker(request);
+    const result = await layoutViaWorker(request);
+    console.debug("[arclens] layout via worker", { nodes: request.nodes.length });
+    return result;
   } catch {
+    console.debug("[arclens] layout via sync fallback", {
+      nodes: request.nodes.length,
+    });
     return computeDagreLayout(request);
   }
 }
