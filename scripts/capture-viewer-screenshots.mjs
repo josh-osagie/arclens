@@ -13,7 +13,7 @@ import { chromium } from "playwright";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
-const OUT_DIR = path.join(ROOT, "docs/public/images/viewer");
+const OUT_DIR = path.join(ROOT, "www/public/images/viewer");
 const VIEWER_URL = process.env.VIEWER_URL ?? "http://localhost:5173";
 
 async function waitForGraph(page) {

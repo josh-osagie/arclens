@@ -208,6 +208,54 @@ function createStaticServer(
       return;
     }
 
+    if (url.pathname === "/api/license") {
+      if (req.method === "GET") {
+        const license = readLocalLicense();
+        sendJson(res, 200, {
+          plan: license ? license.variantName : "Free",
+          status: license ? license.status : "free",
+          email: license?.customerEmail ?? null,
+          instanceName: license?.instanceName ?? null,
+          expiresAt: license?.expiresAt ?? null,
+        });
+        return;
+      }
+
+      if (req.method === "POST") {
+        let bodyStr = "";
+        req.on("data", (chunk) => {
+          bodyStr += chunk;
+        });
+        req.on("end", async () => {
+          try {
+            const body = JSON.parse(bodyStr) as {
+              key?: string;
+              action?: string;
+            };
+            if (body.action === "deactivate") {
+              const deactRes = await deactivateLicense();
+              sendJson(res, 200, deactRes);
+              return;
+            }
+
+            if (!body.key) {
+              sendJson(res, 400, { error: "Missing license key" });
+              return;
+            }
+
+            const actRes = await activateLicense(body.key);
+            sendJson(res, actRes.success ? 200 : 400, actRes);
+          } catch {
+            sendJson(res, 400, { error: "Invalid JSON payload" });
+          }
+        });
+        return;
+      }
+
+      sendJson(res, 405, { error: "Method not allowed" });
+      return;
+    }
+
     if (serveStaticFile(distDir, url.pathname, res)) {
       return;
     }

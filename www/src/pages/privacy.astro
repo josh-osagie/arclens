@@ -1,0 +1,49 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<BaseLayout title="Privacy Policy - Arclens">
+  <Nav />
+  <main class="bg-ink py-12 text-text sm:py-16">
+    <div class="wrap max-w-3xl space-y-6">
+      <p class="font-mono text-xs tracking-wider text-accent uppercase">
+        Legal
+      </p>
+      <h1 class="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+        Privacy Policy
+      </h1>
+      <p class="text-sm text-text-muted">Last updated: August 2026</p>
+
+      <div class="space-y-4 text-sm leading-relaxed text-text-body">
+        <h2 class="font-display text-lg font-semibold text-text pt-4">
+          1. Local-First Data Commitment
+        </h2>
+        <p>
+          Arclens is built local-first. Static analysis of your React and
+          TypeScript source code is executed entirely on your machine. Your
+          source code, AST nodes, and dependency graphs are never uploaded to
+          remote servers.
+        </p>
+
+        <h2 class="font-display text-lg font-semibold text-text pt-4">
+          2. Analytics & Telemetry
+        </h2>
+        <p>
+          We do not collect telemetry, track user activity, or store remote
+          analytics from local CLI executions.
+        </p>
+
+        <h2 class="font-display text-lg font-semibold text-text pt-4">
+          3. Contact & Support Information
+        </h2>
+        <p>
+          If you contact us via email or GitHub issues, we use your contact
+          information solely to respond to your inquiries and support requests.
+        </p>
+      </div>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>

@@ -7,7 +7,7 @@ graph.json
 
 src/**/*.js
 
-# docs build output
+# docs build output (legacy; site lives in www/)
 docs/.astro/
 docs/dist/
 

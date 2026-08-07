@@ -51,20 +51,20 @@
   --sl-color-text-invert: var(--al-sidebar-active-text);
 }
 
-/* Dark mode (default) — viewer palette */
+/* Dark mode (default) — www & viewer matching palette */
 :root:not([data-theme="light"]) {
-  --al-canvas: #111111;
-  --al-surface: #1a1a1a;
-  --al-surface-raised: #111111;
-  --al-text: #f5f5f5;
-  --al-text-body: #d4d4d4;
-  --al-muted: #a3a3a3;
-  --al-border: rgba(255, 255, 255, 0.08);
-  --al-border-strong: rgba(255, 255, 255, 0.18);
+  --al-canvas: #070b12;
+  --al-surface: #0d1420;
+  --al-surface-raised: #121b2a;
+  --al-text: #e8eef6;
+  --al-text-body: #a8b6c8;
+  --al-muted: #6f8096;
+  --al-border: rgba(148, 178, 210, 0.14);
+  --al-border-strong: rgba(148, 178, 210, 0.28);
 
-  --al-accent: #60a5fa;
-  --al-accent-hover: #93c5fd;
-  --al-accent-muted: rgba(96, 165, 250, 0.12);
+  --al-accent: #4db0d8;
+  --al-accent-hover: #7cc8e8;
+  --al-accent-muted: rgba(77, 176, 216, 0.14);
 
   --al-shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
 
@@ -75,8 +75,8 @@
   --sl-color-black: var(--al-canvas);
   --sl-color-white: var(--al-text);
   --sl-color-gray-1: var(--al-muted);
-  --sl-color-gray-2: #737373;
-  --sl-color-gray-3: #525252;
+  --sl-color-gray-2: #8aa0bb;
+  --sl-color-gray-3: #566980;
   --sl-color-gray-4: var(--al-border-strong);
   --sl-color-gray-5: var(--al-border);
   --sl-color-gray-6: var(--al-surface);
@@ -87,6 +87,18 @@
   --sl-color-bg-nav: var(--al-surface);
   --sl-color-text-accent: var(--al-sidebar-active-bg);
   --sl-color-text-invert: var(--al-sidebar-active-text);
+
+  --sl-font: "Space Grotesk", system-ui, sans-serif;
+  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+h1,
+h2,
+h3,
+h4,
+.site-title {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
+  font-weight: 700 !important;
 }
 
 /* Sidebar: current page link — dark text on blue pill (dark), white on blue (light) */

@@ -9,6 +9,12 @@ import { runUpdate } from "./updateCommand";
 import { runView } from "./viewServer";
 import { runWatch } from "./watchCommand";
 import { formatVersionBanner, getPackageVersion } from "./versionBanner";
+import {
+  activateLicense,
+  deactivateLicense,
+  validateLicense,
+  readLocalLicense,
+} from "./license";
 
 const program = new Command();
 const version = getPackageVersion();
@@ -18,7 +24,16 @@ function wantsVersion(argv: string[]): boolean {
     return false;
   }
 
-  const commands = new Set(["analyze", "watch", "view", "update", "help"]);
+  const commands = new Set([
+    "analyze",
+    "watch",
+    "view",
+    "update",
+    "help",
+    "activate",
+    "deactivate",
+    "license",
+  ]);
   return !argv.some((arg) => commands.has(arg));
 }
 
@@ -32,6 +47,60 @@ program
   .name("arclens")
   .description("Interactive architecture explorer for React/TypeScript")
   .option("-v, --version", "show version information");
+
+program
+  .command("activate")
+  .description("Activate an Arclens Pro or Team license key")
+  .argument("<key>", "Lemon Squeezy license key")
+  .action(async (key: string) => {
+    console.log("Activating Arclens license key...");
+    const res = await activateLicense(key);
+    if (res.success && res.data) {
+      console.log(`\n✓ Arclens ${res.data.variantName} license activated!`);
+      console.log(`  Customer: ${res.data.customerEmail}`);
+      console.log(`  Instance: ${res.data.instanceName}`);
+      process.exitCode = 0;
+    } else {
+      console.error(`\n✗ License activation failed: ${res.error}`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("deactivate")
+  .description("Deactivate local machine license")
+  .action(async () => {
+    const res = await deactivateLicense();
+    if (res.success) {
+      console.log("\n✓ Local Arclens license deactivated.");
+      process.exitCode = 0;
+    } else {
+      console.error(`\n✗ Deactivation failed: ${res.error}`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("license")
+  .description("Display local license status and plan information")
+  .action(async () => {
+    const res = await validateLicense();
+    if (res.valid && res.data) {
+      console.log("\nArclens License Status:");
+      console.log(`  Plan:      ${res.data.variantName}`);
+      console.log(`  Status:    ${res.data.status}`);
+      console.log(`  Email:     ${res.data.customerEmail}`);
+      console.log(`  Machine:   ${res.data.instanceName}`);
+    } else {
+      console.log("\nArclens License Status:");
+      console.log("  Plan:      Free");
+      console.log("  Status:    Local-first free tier");
+      console.log(
+        "  Run 'arclens activate <key>' to unlock Pro/Team features."
+      );
+    }
+    process.exitCode = 0;
+  });
 
 program
   .command("update")

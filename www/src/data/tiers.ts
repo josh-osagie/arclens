@@ -28,12 +28,12 @@ export const tiers: Tier[] = [
     blurb: "Local analyze, graph, and viewer for mid-size React/TS apps.",
     featured: true,
     features: [
-      "Analyze, watch, and view locally",
-      "Components, hooks, contexts, utilities",
-      "Import, render, and use edge maps",
-      "Interactive search & cluster details",
-      "Focus neighborhoods & edge toggles",
-      "CLI insights & terminal reports",
+      "Unlimited local project analysis & AST mapping",
+      "Component, hook, context & utility extraction",
+      "Interactive graph viewer & neighborhood focus",
+      "CLI terminal reports & orphan detection",
+      "Export graph snapshot (.arclens/graph.json)",
+      "Community support & open documentation",
     ],
     cta: {
       label: "Get started",
@@ -47,19 +47,19 @@ export const tiers: Tier[] = [
     price: "$5",
     period: "/month",
     blurb:
-      "For repos that outgrow local limits: scale, focus, and framework depth.",
+      "For repos that outgrow local limits: scale, impact analysis, and framework depth.",
     recommended: true,
     features: [
       "Everything in Free tier",
-      "Higher file & node scaling limits",
-      "Large-graph performance mode",
-      "Faster incremental file watch engine",
-      "Deep impact analysis beyond --focus",
-      "Next.js framework depth support",
+      "Large codebase support (>1,000 files & nodes)",
+      "Fast incremental file-watcher engine",
+      "Deep impact analysis & dependency tracing",
+      "Next.js & Remix framework router depth",
+      "Priority email & GitHub issue support",
     ],
     cta: {
-      label: "Join waitlist",
-      href: "mailto:joshx.dev@gmail.com?subject=Arclens%20Pro%20waitlist",
+      label: "Get Pro",
+      href: "#get-started",
       kind: "secondary",
     },
   },
@@ -68,24 +68,24 @@ export const tiers: Tier[] = [
     name: "Team",
     price: "$10",
     period: "/month",
-    blurb: "CI, shared views, and architecture health for the squad.",
+    blurb: "CI integration, shared architecture views, and PR impact reports.",
     features: [
       "Everything in Pro tier",
-      "Automated CI & PR impact checks",
-      "Shared saved architecture views",
-      "Architecture health & debt reports",
-      "Monorepo & ownership overlays",
-      "Priority squad support & SLA",
+      "Automated GitHub Actions & CI impact checks",
+      "Shared team architecture graph views",
+      "PR change risk & architecture debt reports",
+      "Monorepo multi-package graph workspace",
+      "Priority team support & setup assistance",
     ],
     cta: {
-      label: "Join waitlist",
-      href: "mailto:joshx.dev@gmail.com?subject=Arclens%20Team%20waitlist",
+      label: "Get Team",
+      href: "#get-started",
       kind: "ghost",
     },
   },
 ];
 
-export const DOCS_URL = "https://arclens.vercel.app";
+export const DOCS_URL = import.meta.env.PUBLIC_DOCS_URL || "/docs";
 export const GITHUB_URL = "https://github.com/josh-osagie/arclens";
 export const NPM_URL = "https://www.npmjs.com/package/arclens";
 export const INSTALL_CMD = "npm install -g arclens";

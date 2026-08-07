@@ -59,4 +59,4 @@ A developer should understand the architecture of an unfamiliar React applicatio
 
 ## Future vision
 
-Arclens is evolving toward a code intelligence platform with architecture health reports, impact analysis, circular dependency detection, dead code discovery, AI-assisted exploration, git history integration, and monorepo support. See the [Roadmap](../../../../roadmap.md) for current progress.
+Arclens is evolving toward a code intelligence platform with architecture health reports, impact analysis, circular dependency detection, dead code discovery, AI-assisted exploration, git history integration, and monorepo support. See the [Roadmap](/docs/roadmap) for current progress.

@@ -26,7 +26,7 @@ function tierClass(id: Tier["id"]) {
 
 export default function PricingGrid({
   headline = "Start free. Upgrade when it hurts.",
-  sub = "Open core. Local-first. Pay for scale, frameworks, and teams.",
+  sub = "Local-first. Pay for scale, framework depth, and team features.",
   className = "",
 }: Props) {
   return (
@@ -69,9 +69,27 @@ export default function PricingGrid({
               </header>
 
               {/* Features List */}
-              <ul className="feature-list pricing-features flex-1 border-t border-line py-5 space-y-2.5">
+              <ul className="pricing-features flex-1 border-t border-line py-5 space-y-3 list-none m-0 p-0">
                 {tier.features.map((feature) => (
-                  <li key={feature}>{feature}</li>
+                  <li
+                    key={feature}
+                    className="flex items-start gap-2.5 text-[0.8125rem] text-text-body leading-snug"
+                  >
+                    <svg
+                      className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <span>{feature}</span>
+                  </li>
                 ))}
               </ul>
 

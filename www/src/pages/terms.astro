@@ -1,0 +1,51 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<BaseLayout title="Terms of Service - Arclens">
+  <Nav />
+  <main class="bg-ink py-12 text-text sm:py-16">
+    <div class="wrap max-w-3xl space-y-6">
+      <p class="font-mono text-xs tracking-wider text-accent uppercase">
+        Legal
+      </p>
+      <h1 class="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+        Terms of Service
+      </h1>
+      <p class="text-sm text-text-muted">Last updated: August 2026</p>
+
+      <div class="space-y-4 text-sm leading-relaxed text-text-body">
+        <h2 class="font-display text-lg font-semibold text-text pt-4">
+          1. Acceptance of Terms
+        </h2>
+        <p>
+          By installing, downloading, or using Arclens software, CLI tools, or
+          web application services, you agree to be bound by these Terms of
+          Service.
+        </p>
+
+        <h2 class="font-display text-lg font-semibold text-text pt-4">
+          2. Use License & Open Core
+        </h2>
+        <p>
+          The core Arclens CLI analyzer and local visualization engine are
+          provided as open-core software under the MIT License. Paid tiers (Pro
+          and Team) provide additional enterprise scalability, CI integrations,
+          and team collaboration features.
+        </p>
+
+        <h2 class="font-display text-lg font-semibold text-text pt-4">
+          3. Disclaimer & Warranty
+        </h2>
+        <p>
+          Arclens is provided "as is" without warranty of any kind, express or
+          implied. In no event shall the authors or copyright holders be liable
+          for any claim, damages, or other liability.
+        </p>
+      </div>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>

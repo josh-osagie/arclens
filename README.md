@@ -264,7 +264,7 @@ pnpm arclens analyze ./samples --insights
 pnpm arclens watch ./samples --insights
 pnpm arclens view --dev   # Vite dev server with HMR (viewer/ source)
 pnpm build             # compile CLI + bundle viewer to dist/
-pnpm dev:docs          # start the docs site
+pnpm dev:www           # marketing site + docs (localhost:4321 and /docs)
 ```
 
 Shorthand scripts (same CLI, useful in this repo):
@@ -282,20 +282,24 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for pull request guidelines.
 
 ### Docs site & deployment
 
-The documentation and marketing landing page live in `docs/` (Astro + Starlight). Local preview:
+Marketing and docs share one Astro app in `www/` (landing at `/`, Starlight at `/docs`). Local preview:
 
 ```bash
-pnpm dev:docs
+pnpm dev:www
 ```
+
+Open `http://localhost:4321` for the landing page and `http://localhost:4321/docs` for documentation.
+
+`pnpm dev:docs` / `pnpm build:docs` are aliases for the same `www` app.
 
 ### Repo layout
 
-| Path       | Role                        |
-| ---------- | --------------------------- |
-| `src/`     | CLI + static analyzer       |
-| `viewer/`  | React Flow graph UI         |
-| `docs/`    | Documentation site          |
-| `samples/` | Sample project for analysis |
+| Path       | Role                                  |
+| ---------- | ------------------------------------- |
+| `src/`     | CLI + static analyzer                 |
+| `viewer/`  | React Flow graph UI                   |
+| `www/`     | Marketing site + docs (Astro/Starlight) |
+| `samples/` | Sample project for analysis           |
 
 Publishing runs `pnpm build`, which compiles the CLI to `dist/` and copies the viewer build to `dist/viewer/`. The `arclens` bin works from the compiled output or falls back to `tsx` when developing from source.
 

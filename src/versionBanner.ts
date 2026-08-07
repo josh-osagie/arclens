@@ -19,6 +19,8 @@ export function getPackageVersion(): string {
   return pkg.version ?? "0.0.0";
 }
 
+import { readLocalLicense } from "./license";
+
 export function formatVersionBanner(
   version: string = getPackageVersion(),
   options: { color?: boolean } = {}
@@ -27,12 +29,19 @@ export function formatVersionBanner(
   const accent = useColor ? pc.cyan : (value: string) => value;
   const muted = useColor ? pc.dim : (value: string) => value;
   const bold = useColor ? pc.bold : (value: string) => value;
+  const green = useColor ? pc.green : (value: string) => value;
+
+  const license = readLocalLicense();
+  const planTag =
+    license && license.status === "active"
+      ? green(`[${license.variantName.toUpperCase()}]`)
+      : muted("[FREE]");
 
   return [
     accent(BANNER),
     "",
     muted("Interactive architecture explorer for React/TypeScript"),
-    `${bold("Version")} ${version}`,
+    `${bold("Version")} ${version} ${planTag}`,
     muted("https://arclens.vercel.app"),
   ].join("\n");
 }
