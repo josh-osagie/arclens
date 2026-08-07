@@ -1,8 +1,5 @@
 import { SourceFile, SyntaxKind } from "ts-morph";
-import {
-  classifyExport,
-  resolveDefaultExportName,
-} from "./reactFunction";
+import { classifyExport, resolveDefaultExportName } from "./reactFunction";
 
 export type ExportRecord = {
   file: string;
@@ -45,7 +42,9 @@ export function extractImportEdges(sourceFile: SourceFile) {
   }));
 }
 
-export function extractExportsDeclarations(sourceFile: SourceFile): ExportRecord[] {
+export function extractExportsDeclarations(
+  sourceFile: SourceFile
+): ExportRecord[] {
   const exported = sourceFile.getExportedDeclarations();
   const filePath = sourceFile.getFilePath();
   const records: ExportRecord[] = [];

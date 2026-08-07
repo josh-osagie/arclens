@@ -36,7 +36,7 @@ function printTerminalReport(
   result: AnalysisResult,
   options: AnalyzeOptions,
   graphPath: string | null,
-  reportPath: string | null,
+  reportPath: string | null
 ): void {
   if (options.focus) {
     printFocusReport(result, options.focus, { color: options.color });
@@ -55,13 +55,13 @@ function printTerminalReport(
 
 function writeGraphFile(
   result: AnalysisResult,
-  graphPath: string,
+  graphPath: string
 ): string | null {
   try {
     const insights = buildInsights(result);
     fs.writeFileSync(
       graphPath,
-      `${JSON.stringify(slimGraphForExport(result.graph, { insights }), null, 2)}\n`,
+      `${JSON.stringify(slimGraphForExport(result.graph, { insights }), null, 2)}\n`
     );
     return null;
   } catch (error) {
@@ -73,7 +73,7 @@ function writeReportFileSafe(
   result: AnalysisResult,
   reportPath: string,
   options: AnalyzeOptions,
-  graphPath: string | null,
+  graphPath: string | null
 ): string | null {
   try {
     writeReportFile(result, reportPath, {
@@ -92,16 +92,16 @@ function writeReportFileSafe(
 function writeSnippetSidecarsSafe(
   targetDir: string,
   result: AnalysisResult,
-  options: AnalyzeOptions,
+  options: AnalyzeOptions
 ): string | null {
   try {
     const snippetCount = writeSnippetSidecars(
       targetDir,
-      result.graph.nodes.map((node) => node.file),
+      result.graph.nodes.map((node) => node.file)
     );
     if (!options.quiet) {
       console.log(
-        `Wrote ${snippetCount} snippet sidecar(s) to ${path.join(targetDir, SNIPPETS_DIR)}`,
+        `Wrote ${snippetCount} snippet sidecar(s) to ${path.join(targetDir, SNIPPETS_DIR)}`
       );
     }
     return null;
@@ -110,10 +110,7 @@ function writeSnippetSidecarsSafe(
   }
 }
 
-function reportWriteErrors(
-  errors: string[],
-  options: AnalyzeOptions,
-): void {
+function reportWriteErrors(errors: string[], options: AnalyzeOptions): void {
   for (const error of errors) {
     if (options.quiet) {
       console.error(`arclens: ${error}`);
@@ -127,45 +124,44 @@ export function addAnalyzeOptions(command: Command): Command {
   return command
     .option(
       "-o, --output [file]",
-      "write graph.json (default: graph.json unless --report-file is used alone)",
+      "write graph.json (default: graph.json unless --report-file is used alone)"
     )
     .option(
       "--report-file <file>",
-      "write a full report (.txt = human-readable, .json = structured data)",
+      "write a full report (.txt = human-readable, .json = structured data)"
     )
     .option("-v, --verbose", "show scanned files and export kind breakdown")
     .option(
       "--insights",
-      "show architecture suggestions and ESLint-style hints",
+      "show architecture suggestions and ESLint-style hints"
     )
     .option("-q, --quiet", "minimal output (written file paths only)")
     .option("--no-color", "disable ANSI colors in terminal output")
     .option(
       "--focus <name>",
-      "show who imports, renders, or uses a specific node (e.g. Button)",
+      "show who imports, renders, or uses a specific node (e.g. Button)"
     )
     .option(
       "--max-files <number>",
       "refuse to scan more than N files (safety guard)",
-      "3000",
+      "3000"
     )
-    .option("--no-cache", `re-parse all files and ignore ${CACHE_DIR}/cache.json`)
+    .option(
+      "--no-cache",
+      `re-parse all files and ignore ${CACHE_DIR}/cache.json`
+    )
     .option(
       "--with-snippets",
-      `write truncated source sidecars to ${SNIPPETS_DIR}/ in the analyzed project`,
+      `write truncated source sidecars to ${SNIPPETS_DIR}/ in the analyzed project`
     )
     .option("--reanalyze", "watch mode: show re-analyze progress", false);
 }
 
-export function runAnalyze(
-  inputPath: string,
-  options: AnalyzeOptions,
-): number {
+export function runAnalyze(inputPath: string, options: AnalyzeOptions): number {
   const progress = createAnalyzeProgressReporter({
     quiet: options.quiet,
     verbose: options.verbose,
-    reanalyze:
-      options.reanalyze || Boolean(process.env.ARCLENS_WATCH_TARGET),
+    reanalyze: options.reanalyze || Boolean(process.env.ARCLENS_WATCH_TARGET),
     color: options.color,
   });
 

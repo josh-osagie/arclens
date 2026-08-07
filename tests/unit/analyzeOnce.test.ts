@@ -16,7 +16,7 @@ type BashResult = {
 
 function runBash(
   script: string,
-  options: { expectFailure?: boolean; env?: NodeJS.ProcessEnv } = {},
+  options: { expectFailure?: boolean; env?: NodeJS.ProcessEnv } = {}
 ): BashResult {
   try {
     const stdout = execFileSync(bash, ["-lc", script], {
@@ -31,7 +31,11 @@ function runBash(
     return { status: 0, stdout, stderr: "" };
   } catch (error) {
     if (!options.expectFailure) throw error;
-    const execError = error as { status?: number; stdout?: string; stderr?: string };
+    const execError = error as {
+      status?: number;
+      stdout?: string;
+      stderr?: string;
+    };
     return {
       status: execError.status ?? 1,
       stdout: execError.stdout ?? "",
@@ -42,14 +46,17 @@ function runBash(
 
 function runAnalyzeOnce(
   target: string,
-  options: { watch?: boolean } = {},
+  options: { watch?: boolean } = {}
 ): BashResult {
   const quotedTarget = JSON.stringify(target);
   const env = options.watch ? { ARCLENS_WATCH_TARGET: target } : undefined;
-  return runBash(`bash ${JSON.stringify(analyzeOnce)} ${quotedTarget} --no-color`, {
-    expectFailure: true,
-    env,
-  });
+  return runBash(
+    `bash ${JSON.stringify(analyzeOnce)} ${quotedTarget} --no-color`,
+    {
+      expectFailure: true,
+      env,
+    }
+  );
 }
 
 describe("analyze-once.sh", () => {
@@ -65,7 +72,9 @@ describe("analyze-once.sh", () => {
   });
 
   it("shows still-watching hint only for watch-mode re-analyze failures", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-analyze-once-watch-"));
+    const dir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "arclens-analyze-once-watch-")
+    );
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
     const result = runAnalyzeOnce(dir, { watch: true });

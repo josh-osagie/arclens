@@ -36,7 +36,7 @@ export function runUpdate(options: { color?: boolean } = {}): number {
   } catch {
     console.error("");
     console.error(
-      "❌ Update failed. Try manually: `npm install -g arclens@latest`",
+      "❌ Update failed. Try manually: `npm install -g arclens@latest`"
     );
     return 1;
   }

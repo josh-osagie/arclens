@@ -15,7 +15,11 @@ import {
   isTestOrHocUtility,
 } from "./exportHeuristics";
 import type { GraphEdge, GraphNode } from "./types";
-import { isConfigFile, isCustomHookName, isPascalCase } from "./extractors/reactFunction";
+import {
+  isConfigFile,
+  isCustomHookName,
+  isPascalCase,
+} from "./extractors/reactFunction";
 
 export type InsightSeverity = "error" | "warning" | "info" | "tip";
 
@@ -36,7 +40,9 @@ const HOOK_RULES_DETAIL =
   "Hooks must run in the same order on every render - never inside conditions, loops, nested functions, or after early returns.";
 
 /** Group identical hook violations (same file, hook, context) into one insight with a count. */
-export function hookRuleViolationsToInsights(violations: HookRuleViolation[]): Insight[] {
+export function hookRuleViolationsToInsights(
+  violations: HookRuleViolation[]
+): Insight[] {
   const groups = new Map<string, HookRuleViolation[]>();
 
   for (const violation of violations) {
@@ -49,14 +55,18 @@ export function hookRuleViolationsToInsights(violations: HookRuleViolation[]): I
   return [...groups.values()].map((group) => {
     const first = group[0]!;
     const count = group.length;
-    const lines = group.map((violation) => violation.line).sort((a, b) => a - b);
+    const lines = group
+      .map((violation) => violation.line)
+      .sort((a, b) => a - b);
     const hookLabel = count > 1 ? `${count}× ${first.hook}` : first.hook;
 
     return {
       severity: "error" as const,
       title: `Rules of Hooks: ${hookLabel} called ${first.context}`,
       detail:
-        count > 1 ? `At lines ${lines.join(", ")}. ${HOOK_RULES_DETAIL}` : HOOK_RULES_DETAIL,
+        count > 1
+          ? `At lines ${lines.join(", ")}. ${HOOK_RULES_DETAIL}`
+          : HOOK_RULES_DETAIL,
       file: relFile(first.file),
       line: first.line,
       eslintRule: first.eslintRule,
@@ -71,7 +81,7 @@ function nodeNameFromId(id: string): string {
 
 function buildImportReferenceCounts(
   importEdges: ImportEdge[],
-  exports: ExportRecord[],
+  exports: ExportRecord[]
 ): Map<string, number> {
   const counts = new Map<string, number>();
 
@@ -110,7 +120,7 @@ function isRenderedAsJsx(targetId: string, edges: GraphEdge[]): boolean {
 function shouldFlagComponentNaming(
   exp: ExportRecord,
   edges: GraphEdge[],
-  exports: ExportRecord[],
+  exports: ExportRecord[]
 ): boolean {
   if (exp.type !== "component" || isConfigFile(exp.file)) return false;
   if (/^[A-Z]/.test(exp.name)) return false;
@@ -139,14 +149,16 @@ function isReExportStub(
   node: GraphNode,
   edges: GraphEdge[],
   importRefs: Map<string, number>,
-  exports: ExportRecord[],
+  exports: ExportRecord[]
 ): boolean {
   const canonical = exports.filter(
-    (exp) => exp.name === node.name && exp.file !== node.file,
+    (exp) => exp.name === node.name && exp.file !== node.file
   );
   return canonical.some((exp) => {
     const id = nodeId(exp);
-    return edges.some((edge) => edge.to === id) || (importRefs.get(id) ?? 0) > 0;
+    return (
+      edges.some((edge) => edge.to === id) || (importRefs.get(id) ?? 0) > 0
+    );
   });
 }
 
@@ -154,7 +166,7 @@ function shouldFlagOrphanExport(
   node: GraphNode,
   edges: GraphEdge[],
   importRefs: Map<string, number>,
-  exports: ExportRecord[],
+  exports: ExportRecord[]
 ): boolean {
   if (node.file === "external" || isConfigFile(node.file)) return false;
   if (node.type === "entry" || node.type === "config") return false;
@@ -175,7 +187,7 @@ function shouldFlagOrphanExport(
 
 function getOutgoingImportTargets(
   edges: GraphEdge[],
-  fromId: string,
+  fromId: string
 ): Set<string> {
   const targets = new Set<string>();
 
@@ -190,7 +202,7 @@ function getOutgoingImportTargets(
 
 function getOutgoingRenderTargets(
   edges: GraphEdge[],
-  fromId: string,
+  fromId: string
 ): Set<string> {
   const targets = new Set<string>();
 
@@ -211,7 +223,10 @@ function getOutgoingRenderTargets(
  *   so we skip them even when classification is wrong — but correct classification
  *   at analyze time is what keeps false positives out of other insights too.
  */
-function shouldFlagImportWithoutRender(target: GraphNode, symbolName: string): boolean {
+function shouldFlagImportWithoutRender(
+  target: GraphNode,
+  symbolName: string
+): boolean {
   if (target.type !== "component") return false;
   return isPascalCase(symbolName);
 }
@@ -252,7 +267,8 @@ export function buildInsights(result: AnalysisResult): Insight[] {
   }
 
   for (const node of graph.nodes) {
-    if (!shouldFlagOrphanExport(node, graph.edges, importRefs, exports)) continue;
+    if (!shouldFlagOrphanExport(node, graph.edges, importRefs, exports))
+      continue;
 
     insights.push({
       severity: "info",
@@ -323,7 +339,8 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       insights.push({
         severity: "tip",
         title: "Type-only React import",
-        detail: "No runtime React import needed for types - good for bundle size.",
+        detail:
+          "No runtime React import needed for types - good for bundle size.",
         file: relFile(edge.from),
         line: edge.line,
         eslintRule: "@typescript-eslint/consistent-type-imports",
@@ -337,7 +354,8 @@ export function buildInsights(result: AnalysisResult): Insight[] {
     insights.push({
       severity: "error",
       title: "Analyzing node_modules",
-      detail: "Never analyze dependency folders. Point at your app source instead.",
+      detail:
+        "Never analyze dependency folders. Point at your app source instead.",
       file: relFile(targetDir),
     });
   }
@@ -346,14 +364,14 @@ export function buildInsights(result: AnalysisResult): Insight[] {
 }
 
 export function countInsightsBySeverity(
-  insights: Insight[],
+  insights: Insight[]
 ): Record<InsightSeverity, number> {
   return insights.reduce(
     (counts, insight) => {
       counts[insight.severity] += 1;
       return counts;
     },
-    { error: 0, warning: 0, info: 0, tip: 0 },
+    { error: 0, warning: 0, info: 0, tip: 0 }
   );
 }
 

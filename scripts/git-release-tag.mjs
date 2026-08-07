@@ -83,7 +83,9 @@ function main() {
   if (pending) {
     run(`git commit -m "${commitMessage}"`);
   } else {
-    console.log("No tracked changes to commit (version may already be committed).");
+    console.log(
+      "No tracked changes to commit (version may already be committed)."
+    );
   }
 
   if (tagExistsLocally(tag)) {
@@ -99,7 +101,7 @@ function main() {
     run("git push --follow-tags");
   } catch (error) {
     warn(
-      `Branch push with --follow-tags failed (${error.message ?? error}). Continuing with explicit tag push.`,
+      `Branch push with --follow-tags failed (${error.message ?? error}). Continuing with explicit tag push.`
     );
   }
 
@@ -112,7 +114,9 @@ function main() {
         console.log(`Pushed tag ${tag} to origin.`);
       }
     } catch (error) {
-      warn(`Could not push tag ${tag} (${error.message ?? error}). Release may still be on npm.`);
+      warn(
+        `Could not push tag ${tag} (${error.message ?? error}). Release may still be on npm.`
+      );
     }
   }
 

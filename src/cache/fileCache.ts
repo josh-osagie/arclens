@@ -1,8 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sanitizeFileAnalysisPayload, type FileAnalysisPayload } from "../extractFileAnalysis";
+import {
+  sanitizeFileAnalysisPayload,
+  type FileAnalysisPayload,
+} from "../extractFileAnalysis";
 
-export { CACHE_DIR, CACHE_FILE, getCachePath, getWriteCacheFilePath, resolveCacheFilePath } from "../paths";
+export {
+  CACHE_DIR,
+  CACHE_FILE,
+  getCachePath,
+  getWriteCacheFilePath,
+  resolveCacheFilePath,
+} from "../paths";
 
 export const CACHE_VERSION = 1;
 
@@ -28,7 +37,10 @@ export function normalizePath(filePath: string): string {
 }
 
 export function toRelativeKey(targetDir: string, absolutePath: string): string {
-  return path.relative(targetDir, normalizePath(absolutePath)).split(path.sep).join("/");
+  return path
+    .relative(targetDir, normalizePath(absolutePath))
+    .split(path.sep)
+    .join("/");
 }
 
 export function readFileStat(filePath: string): FileStat {
@@ -36,7 +48,9 @@ export function readFileStat(filePath: string): FileStat {
   return { mtimeMs: stat.mtimeMs, size: stat.size };
 }
 
-export function tsConfigCacheKey(tsConfigPath: string | undefined): string | undefined {
+export function tsConfigCacheKey(
+  tsConfigPath: string | undefined
+): string | undefined {
   if (!tsConfigPath || !fs.existsSync(tsConfigPath)) {
     return undefined;
   }
@@ -47,7 +61,7 @@ export function tsConfigCacheKey(tsConfigPath: string | undefined): string | und
 
 export function isCacheEntryValid(
   entry: FileCacheEntry,
-  stat: FileStat,
+  stat: FileStat
 ): boolean {
   return entry.mtimeMs === stat.mtimeMs && entry.size === stat.size;
 }
@@ -58,7 +72,9 @@ export function readFileCache(cachePath: string): FileCacheFile | null {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(cachePath, "utf8")) as FileCacheFile;
+    const parsed = JSON.parse(
+      fs.readFileSync(cachePath, "utf8")
+    ) as FileCacheFile;
     if (parsed.version !== CACHE_VERSION || typeof parsed.files !== "object") {
       return null;
     }
@@ -84,7 +100,7 @@ export function partitionFilesByCache(
   targetDir: string,
   discoveredFiles: string[],
   cache: FileCacheFile | null,
-  tsConfigKey: string | undefined,
+  tsConfigKey: string | undefined
 ): CachePartition {
   if (!cache || cache.tsConfigKey !== tsConfigKey) {
     return {
@@ -128,7 +144,7 @@ export function buildCacheFile(
   targetDir: string,
   discoveredFiles: string[],
   payloads: FileAnalysisPayload[],
-  tsConfigKey: string | undefined,
+  tsConfigKey: string | undefined
 ): FileCacheFile {
   const files: Record<string, FileCacheEntry> = {};
 

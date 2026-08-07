@@ -14,19 +14,23 @@ describe("highlightLine", () => {
 
   it("highlights keywords and strings", () => {
     const parts = highlightLine('import React from "react"');
-    const classes = parts.filter((part) => part.className).map((part) => part.className);
+    const classes = parts
+      .filter((part) => part.className)
+      .map((part) => part.className);
     expect(classes).toContain("snippet-token--keyword");
     expect(classes).toContain("snippet-token--string");
   });
 
   it("highlights line comments", () => {
     const parts = highlightLine("// TODO: fix");
-    const comment = parts.find((part) => part.className === "snippet-token--comment");
+    const comment = parts.find(
+      (part) => part.className === "snippet-token--comment"
+    );
     expect(comment?.text).toBe("// TODO: fix");
   });
 
   it("reconstructs the original line text", () => {
-    const line = 'const count = 42; // answer';
+    const line = "const count = 42; // answer";
     const parts = highlightLine(line);
     expect(parts.map((part) => part.text).join("")).toBe(line);
   });

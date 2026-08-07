@@ -20,7 +20,7 @@ describe("enrichGraph", () => {
     expect(counter).toBeDefined();
 
     const rendersButton = counter!.connections.outgoing.some(
-      (conn) => conn.name === "Button" && conn.edgeType === "renders",
+      (conn) => conn.name === "Button" && conn.edgeType === "renders"
     );
     expect(rendersButton).toBe(true);
   });

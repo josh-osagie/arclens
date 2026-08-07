@@ -58,8 +58,16 @@ describe("snippets", () => {
   });
 
   it("reads snippet sidecars from legacy .react-atlas directory", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-snippet-legacy-"));
-    const legacySidecar = path.join(root, ".react-atlas", "snippets", "src", "App.tsx");
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "arclens-snippet-legacy-")
+    );
+    const legacySidecar = path.join(
+      root,
+      ".react-atlas",
+      "snippets",
+      "src",
+      "App.tsx"
+    );
     fs.mkdirSync(path.dirname(legacySidecar), { recursive: true });
     fs.writeFileSync(legacySidecar, "legacy sidecar\n", "utf8");
 
@@ -70,7 +78,7 @@ describe("snippets", () => {
 
   it("builds encoded snippet API URLs", () => {
     expect(buildSnippetApiUrl("src/ui/Button.tsx", 120)).toBe(
-      "/api/snippet?file=src%2Fui%2FButton.tsx&lines=120",
+      "/api/snippet?file=src%2Fui%2FButton.tsx&lines=120"
     );
   });
 

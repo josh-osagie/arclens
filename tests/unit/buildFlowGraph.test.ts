@@ -40,7 +40,10 @@ const sampleGraph: AtlasGraph = {
 describe("buildFlowGraph relayout", () => {
   it("assigns positions to every visible node", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const relaid = relayoutFlowNodes(nodes, edges, { mode: "dagre-tb", entryIds: ["a"] });
+    const relaid = relayoutFlowNodes(nodes, edges, {
+      mode: "dagre-tb",
+      entryIds: ["a"],
+    });
 
     expect(relaid).toHaveLength(nodes.length);
     for (const node of relaid) {
@@ -89,14 +92,25 @@ describe("buildFlowGraph relayout", () => {
       .map((node) => node.position);
 
     expect(clusterPositions).toHaveLength(2);
-    expect(clusterPositions.every((position) => position.x !== 0 || position.y !== 0)).toBe(true);
-    expect(new Set(clusterPositions.map((position) => `${position.x},${position.y}`)).size).toBe(2);
+    expect(
+      clusterPositions.every((position) => position.x !== 0 || position.y !== 0)
+    ).toBe(true);
+    expect(
+      new Set(clusterPositions.map((position) => `${position.x},${position.y}`))
+        .size
+    ).toBe(2);
   });
 
   it("returns stable positions for the same input", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const first = relayoutFlowNodes(nodes, edges, { mode: "dagre-tb", entryIds: ["a"] });
-    const second = relayoutFlowNodes(nodes, edges, { mode: "dagre-tb", entryIds: ["a"] });
+    const first = relayoutFlowNodes(nodes, edges, {
+      mode: "dagre-tb",
+      entryIds: ["a"],
+    });
+    const second = relayoutFlowNodes(nodes, edges, {
+      mode: "dagre-tb",
+      entryIds: ["a"],
+    });
 
     for (let index = 0; index < first.length; index++) {
       expect(first[index]?.position).toEqual(second[index]?.position);
@@ -107,10 +121,13 @@ describe("buildFlowGraph relayout", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
     const spread = nodes.map((node, index) => ({
       ...node,
-      position: { x: index * 800, y: index *  600 },
+      position: { x: index * 800, y: index * 600 },
     }));
 
-    const relaid = relayoutFlowNodes(spread, edges, { mode: "dagre-tb", entryIds: ["a"] });
+    const relaid = relayoutFlowNodes(spread, edges, {
+      mode: "dagre-tb",
+      entryIds: ["a"],
+    });
     const relaidExtent = graphExtent(relaid);
     const spreadExtent = graphExtent(spread);
 
@@ -152,8 +169,12 @@ describe("layoutPresets", () => {
 
   it("places tree-right layout wider than tree-down", () => {
     const { nodes, edges } = buildFlowGraph(sampleGraph);
-    const down = layoutNodesByPreset(nodes, edges, "dagre-tb", { entryIds: ["a"] });
-    const right = layoutNodesByPreset(nodes, edges, "dagre-lr", { entryIds: ["a"] });
+    const down = layoutNodesByPreset(nodes, edges, "dagre-tb", {
+      entryIds: ["a"],
+    });
+    const right = layoutNodesByPreset(nodes, edges, "dagre-lr", {
+      entryIds: ["a"],
+    });
 
     expect(graphExtent(right).maxX).toBeGreaterThan(graphExtent(down).maxX);
   });

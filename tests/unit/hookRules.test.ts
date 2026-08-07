@@ -46,7 +46,9 @@ describe("hookRules", () => {
       }
     `);
 
-    expect(violations.some((v) => v.context.includes("nested function"))).toBe(true);
+    expect(violations.some((v) => v.context.includes("nested function"))).toBe(
+      true
+    );
   });
 
   it("flags hooks after early return", () => {
@@ -58,7 +60,9 @@ describe("hookRules", () => {
       }
     `);
 
-    expect(violations.some((v) => v.context.includes("early return"))).toBe(true);
+    expect(violations.some((v) => v.context.includes("early return"))).toBe(
+      true
+    );
   });
 
   it("allows valid top-level hook usage", () => {

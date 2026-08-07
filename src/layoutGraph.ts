@@ -11,11 +11,17 @@ const NODE_H = 88;
 
 function dagreLayout(
   nodes: GraphNode[],
-  edges: GraphEdge[],
+  edges: GraphEdge[]
 ): Map<string, NodeLayout> {
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 70, ranksep: 90, marginx: 40, marginy: 40 });
+  g.setGraph({
+    rankdir: "TB",
+    nodesep: 70,
+    ranksep: 90,
+    marginx: 40,
+    marginy: 40,
+  });
 
   const ids = new Set(nodes.map((node) => node.id));
 
@@ -63,7 +69,7 @@ function folderGridLayout(nodes: GraphNode[]): Map<string, NodeLayout> {
 
 export function computeNodeLayouts(
   nodes: GraphNode[],
-  edges: GraphEdge[],
+  edges: GraphEdge[]
 ): Map<string, NodeLayout> {
   if (nodes.length === 0) return new Map();
   if (nodes.length <= DAGRE_THRESHOLD) {
@@ -74,7 +80,7 @@ export function computeNodeLayouts(
 
 export function attachLayoutToNodes(
   nodes: GraphNode[],
-  edges: GraphEdge[],
+  edges: GraphEdge[]
 ): GraphNode[] {
   const layouts = computeNodeLayouts(nodes, edges);
   return nodes.map((node) => ({

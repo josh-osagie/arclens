@@ -1,7 +1,13 @@
 import path from "node:path";
 import type { ExportRecord } from "./extractors/exports";
 import { nodeId } from "./extractors/find";
-import type { Graph, GraphConnection, GraphEdge, GraphNode, GraphProp } from "./types";
+import type {
+  Graph,
+  GraphConnection,
+  GraphEdge,
+  GraphNode,
+  GraphProp,
+} from "./types";
 
 function relFile(filePath: string): string {
   if (filePath === "external") return "external";
@@ -11,7 +17,7 @@ function relFile(filePath: string): string {
 function toConnection(
   peerId: string,
   edgeType: GraphEdge["type"],
-  nodeById: Map<string, GraphNode>,
+  nodeById: Map<string, GraphNode>
 ): GraphConnection {
   const peer = nodeById.get(peerId);
   return {
@@ -25,7 +31,7 @@ function toConnection(
 export function enrichGraph(
   graph: Graph,
   exports: ExportRecord[],
-  propsByNodeId: Map<string, GraphProp[]> = new Map(),
+  propsByNodeId: Map<string, GraphProp[]> = new Map()
 ): Graph {
   const exportById = new Map(exports.map((exp) => [nodeId(exp), exp]));
 
@@ -49,8 +55,12 @@ export function enrichGraph(
     const toNode = nodeById.get(edge.to);
     if (!fromNode || !toNode) continue;
 
-    fromNode.connections.outgoing.push(toConnection(edge.to, edge.type, nodeById));
-    toNode.connections.incoming.push(toConnection(edge.from, edge.type, nodeById));
+    fromNode.connections.outgoing.push(
+      toConnection(edge.to, edge.type, nodeById)
+    );
+    toNode.connections.incoming.push(
+      toConnection(edge.from, edge.type, nodeById)
+    );
   }
 
   for (const node of baseNodes) {

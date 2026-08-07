@@ -49,7 +49,12 @@ describe("graphValidation", () => {
     });
 
     it("accepts a valid graph and defaults missing edges to []", () => {
-      const node = { id: "a", name: "A", file: "a.tsx", type: "component" as const };
+      const node = {
+        id: "a",
+        name: "A",
+        file: "a.tsx",
+        type: "component" as const,
+      };
       const result = validateGraphData({ nodes: [node] });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
@@ -80,7 +85,7 @@ describe("graphValidation", () => {
       expect(
         isEmptyGraph({
           nodes: [{ id: "a", name: "A", file: "a.tsx", type: "component" }],
-        }),
+        })
       ).toBe(false);
     });
   });

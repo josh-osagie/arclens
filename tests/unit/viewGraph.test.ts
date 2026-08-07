@@ -32,6 +32,9 @@ describe("selectVisibleGraph", () => {
     const result = selectVisibleGraph(graph, "button", true);
     expect(result.mode).toBe("search");
     expect(result.matchCount).toBe(1);
-    expect(result.graph.nodes.map((node) => node.id).sort()).toEqual(["a", "b"]);
+    expect(result.graph.nodes.map((node) => node.id).sort()).toEqual([
+      "a",
+      "b",
+    ]);
   });
 });

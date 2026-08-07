@@ -10,7 +10,11 @@ import {
   type Insight,
 } from "./insights";
 import type { GraphEdge, GraphNode, Graph } from "./types";
-import { FILE_COUNT_SLOW, FILE_COUNT_WARNING, formatDuration } from "./discoverFiles";
+import {
+  FILE_COUNT_SLOW,
+  FILE_COUNT_WARNING,
+  formatDuration,
+} from "./discoverFiles";
 
 export type ReportOptions = {
   verbose?: boolean;
@@ -72,7 +76,9 @@ function relPath(filePath: string): string {
 }
 
 export function getReportFormat(reportFilePath: string): ReportFormat {
-  return path.extname(reportFilePath).toLowerCase() === ".json" ? "json" : "text";
+  return path.extname(reportFilePath).toLowerCase() === ".json"
+    ? "json"
+    : "text";
 }
 
 type NodeType = GraphNode["type"];
@@ -90,17 +96,19 @@ function countNodesByType(nodes: GraphNode[]): Record<NodeType, number> {
       counts[node.type] += 1;
       return counts;
     },
-    { component: 0, hook: 0, utility: 0, context: 0, entry: 0, config: 0 },
+    { component: 0, hook: 0, utility: 0, context: 0, entry: 0, config: 0 }
   );
 }
 
-function countEdgesByType(edges: GraphEdge[]): Record<GraphEdge["type"], number> {
+function countEdgesByType(
+  edges: GraphEdge[]
+): Record<GraphEdge["type"], number> {
   return edges.reduce(
     (counts, edge) => {
       counts[edge.type] += 1;
       return counts;
     },
-    { imports: 0, renders: 0, uses: 0 },
+    { imports: 0, renders: 0, uses: 0 }
   );
 }
 
@@ -120,7 +128,10 @@ function getExternalLibs(importEdges: ImportEdge[]): string[] {
 }
 
 function getTopConnections(edges: GraphEdge[], limit = 5) {
-  const grouped = new Map<string, { from: string; to: string; types: Set<string> }>();
+  const grouped = new Map<
+    string,
+    { from: string; to: string; types: Set<string> }
+  >();
 
   for (const edge of edges) {
     const key = `${edge.from}->${edge.to}`;
@@ -163,7 +174,7 @@ function formatNodeList(nodes: GraphNode[], type: NodeType): string {
 
 function severityColor(
   colors: typeof pc,
-  severity: Insight["severity"],
+  severity: Insight["severity"]
 ): (text: string) => string {
   switch (severity) {
     case "error":
@@ -184,7 +195,7 @@ function formatInsight(insight: Insight, colors: typeof pc): string {
     : "";
   const location = insight.file
     ? colors.dim(
-        `  at ${insight.file}${insight.line !== undefined ? `:${insight.line}` : ""}`,
+        `  at ${insight.file}${insight.line !== undefined ? `:${insight.line}` : ""}`
       )
     : null;
 
@@ -197,7 +208,7 @@ function formatInsight(insight: Insight, colors: typeof pc): string {
 
 export function formatReport(
   result: AnalysisResult,
-  options: ReportOptions = {},
+  options: ReportOptions = {}
 ): string {
   const colors = createColors(options.color !== false);
   const lines: string[] = [];
@@ -217,7 +228,9 @@ export function formatReport(
   const projectName = graph.meta?.projectName ?? path.basename(targetDir);
   const totalNodes = graph.nodes.length;
   const totalEdges = graph.edges.length;
-  const projectExports = graph.nodes.filter((node) => node.file !== "external").length;
+  const projectExports = graph.nodes.filter(
+    (node) => node.file !== "external"
+  ).length;
 
   if (!options.quiet) {
     lines.push("");
@@ -226,22 +239,22 @@ export function formatReport(
     lines.push(`${colors.dim("Project:")}   ${colors.white(projectName)}`);
     lines.push(`${colors.dim("Target:")}     ${colors.white(relTarget)}`);
     lines.push(
-      `${colors.dim("Files:")}      ${colors.white(String(fileCount))} TypeScript sources`,
+      `${colors.dim("Files:")}      ${colors.white(String(fileCount))} TypeScript sources`
     );
     lines.push(
-      `${colors.dim("Duration:")}   ${colors.white(formatDuration(durationMs))}`,
+      `${colors.dim("Duration:")}   ${colors.white(formatDuration(durationMs))}`
     );
     lines.push(
-      `${colors.dim("Tsconfig:")}   ${colors.white(tsConfigPath ? path.relative(process.cwd(), tsConfigPath) : "not found")}`,
+      `${colors.dim("Tsconfig:")}   ${colors.white(tsConfigPath ? path.relative(process.cwd(), tsConfigPath) : "not found")}`
     );
     if (options.graphOutput) {
       lines.push(
-        `${colors.dim("Graph:")}      ${colors.green(path.relative(process.cwd(), options.graphOutput) || options.graphOutput)}`,
+        `${colors.dim("Graph:")}      ${colors.green(path.relative(process.cwd(), options.graphOutput) || options.graphOutput)}`
       );
     }
     if (options.reportOutput) {
       lines.push(
-        `${colors.dim("Report:")}    ${colors.green(path.relative(process.cwd(), options.reportOutput) || options.reportOutput)}`,
+        `${colors.dim("Report:")}    ${colors.green(path.relative(process.cwd(), options.reportOutput) || options.reportOutput)}`
       );
     }
     if (!options.graphOutput && !options.reportOutput) {
@@ -250,10 +263,13 @@ export function formatReport(
     lines.push("");
     lines.push(colors.bold("Summary"));
     lines.push(
-      `${colors.dim("Nodes:")} ${totalNodes}  ${colors.dim("|")}  ${colors.dim("Edges:")} ${totalEdges}  ${colors.dim("|")}  ${colors.dim("Exports:")} ${projectExports}`,
+      `${colors.dim("Nodes:")} ${totalNodes}  ${colors.dim("|")}  ${colors.dim("Edges:")} ${totalEdges}  ${colors.dim("|")}  ${colors.dim("Exports:")} ${projectExports}`
     );
 
-    if (!result.reactAssessment.isReactProject && result.reactAssessment.message) {
+    if (
+      !result.reactAssessment.isReactProject &&
+      result.reactAssessment.message
+    ) {
       lines.push("");
       lines.push(colors.yellow(result.reactAssessment.message));
     }
@@ -261,33 +277,33 @@ export function formatReport(
     lines.push("");
     lines.push(colors.bold("Nodes by type"));
     lines.push(
-      `  ${colors.blue(String(nodeCounts.component))} ${colors.dim("component")}${nodeCounts.component === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "component")})`,
+      `  ${colors.blue(String(nodeCounts.component))} ${colors.dim("component")}${nodeCounts.component === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "component")})`
     );
     lines.push(
-      `  ${colors.magenta(String(nodeCounts.hook))} ${colors.dim("hook")}${nodeCounts.hook === 1 ? "" : "s"}       (${formatNodeList(graph.nodes, "hook")})`,
+      `  ${colors.magenta(String(nodeCounts.hook))} ${colors.dim("hook")}${nodeCounts.hook === 1 ? "" : "s"}       (${formatNodeList(graph.nodes, "hook")})`
     );
     lines.push(
-      `  ${colors.green(String(nodeCounts.utility))} ${colors.dim("utilit")}${nodeCounts.utility === 1 ? "y   " : "ies "}    (${formatNodeList(graph.nodes, "utility")})`,
+      `  ${colors.green(String(nodeCounts.utility))} ${colors.dim("utilit")}${nodeCounts.utility === 1 ? "y   " : "ies "}    (${formatNodeList(graph.nodes, "utility")})`
     );
     lines.push(
-      `  ${colors.cyan(String(nodeCounts.entry))} ${colors.dim("entr")}${nodeCounts.entry === 1 ? "y   " : "ies "}      (${formatNodeList(graph.nodes, "entry")})`,
+      `  ${colors.cyan(String(nodeCounts.entry))} ${colors.dim("entr")}${nodeCounts.entry === 1 ? "y   " : "ies "}      (${formatNodeList(graph.nodes, "entry")})`
     );
     lines.push(
-      `  ${colors.dim(String(nodeCounts.config))} ${colors.dim("config")}${nodeCounts.config === 1 ? "" : "s"}   (${formatNodeList(graph.nodes, "config")})`,
+      `  ${colors.dim(String(nodeCounts.config))} ${colors.dim("config")}${nodeCounts.config === 1 ? "" : "s"}   (${formatNodeList(graph.nodes, "config")})`
     );
     lines.push(
-      `  ${colors.yellow(String(nodeCounts.context))} ${colors.dim("context")}${nodeCounts.context === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "context")})`,
+      `  ${colors.yellow(String(nodeCounts.context))} ${colors.dim("context")}${nodeCounts.context === 1 ? "" : "s"}  (${formatNodeList(graph.nodes, "context")})`
     );
     lines.push("");
     lines.push(colors.bold("Relationships"));
     lines.push(
-      `  ${colors.white(String(edgeCounts.imports))} ${colors.dim("imports")}`,
+      `  ${colors.white(String(edgeCounts.imports))} ${colors.dim("imports")}`
     );
     lines.push(
-      `  ${colors.white(String(edgeCounts.renders))} ${colors.dim("renders")}`,
+      `  ${colors.white(String(edgeCounts.renders))} ${colors.dim("renders")}`
     );
     lines.push(
-      `  ${colors.white(String(edgeCounts.uses))} ${colors.dim("hook uses")}`,
+      `  ${colors.white(String(edgeCounts.uses))} ${colors.dim("hook uses")}`
     );
     lines.push("");
     lines.push(colors.bold("External libraries"));
@@ -305,7 +321,7 @@ export function formatReport(
     } else {
       for (const connection of topConnections) {
         lines.push(
-          `  ${colors.cyan(connection.from)} ${colors.dim("->")} ${colors.cyan(connection.to)}  ${colors.dim(`[${[...connection.types].join(", ")}]`)}`,
+          `  ${colors.cyan(connection.from)} ${colors.dim("->")} ${colors.cyan(connection.to)}  ${colors.dim(`[${[...connection.types].join(", ")}]`)}`
         );
       }
     }
@@ -316,7 +332,7 @@ export function formatReport(
     } else {
       for (const entry of mostUsed) {
         lines.push(
-          `  ${colors.white(entry.name)}  ${colors.dim(`(${entry.count} incoming)`)}`,
+          `  ${colors.white(entry.name)}  ${colors.dim(`(${entry.count} incoming)`)}`
         );
       }
     }
@@ -325,20 +341,24 @@ export function formatReport(
       lines.push("");
       lines.push(
         colors.yellow(
-          "Warning: Large scan - next time try a subfolder: pnpm arclens analyze ./src",
-        ),
+          "Warning: Large scan - next time try a subfolder: pnpm arclens analyze ./src"
+        )
       );
     } else if (fileCount >= FILE_COUNT_WARNING) {
       lines.push("");
       lines.push(
-        colors.dim("Tip: use --report-file out.txt or --report-file out.json to save results."),
+        colors.dim(
+          "Tip: use --report-file out.txt or --report-file out.json to save results."
+        )
       );
     }
 
     if (!options.insights && (insights.length > 0 || fileCount > 100)) {
       lines.push("");
       lines.push(
-        colors.dim("Run with --insights for architecture suggestions and ESLint-style hints."),
+        colors.dim(
+          "Run with --insights for architecture suggestions and ESLint-style hints."
+        )
       );
     }
   }
@@ -348,8 +368,8 @@ export function formatReport(
     lines.push(colors.bold("Insights"));
     lines.push(
       colors.dim(
-        `  ${insightCounts.error} errors, ${insightCounts.warning} warnings, ${insightCounts.info} info, ${insightCounts.tip} tips`,
-      ),
+        `  ${insightCounts.error} errors, ${insightCounts.warning} warnings, ${insightCounts.info} info, ${insightCounts.tip} tips`
+      )
     );
     for (const insight of insights) {
       lines.push(formatInsight(insight, colors));
@@ -376,7 +396,9 @@ export function formatReport(
 
   if (!options.quiet) {
     lines.push("");
-    lines.push(colors.dim("Static analysis only - code is parsed, never executed."));
+    lines.push(
+      colors.dim("Static analysis only - code is parsed, never executed.")
+    );
     lines.push("");
   }
 
@@ -385,7 +407,7 @@ export function formatReport(
 
 export function printReport(
   result: AnalysisResult,
-  options: ReportOptions = {},
+  options: ReportOptions = {}
 ): void {
   const text = formatReport(result, options);
 
@@ -402,7 +424,7 @@ export function printReport(
 
 export function buildJsonReport(
   result: AnalysisResult,
-  options: ReportOptions = {},
+  options: ReportOptions = {}
 ): JsonReport {
   const { graph, importEdges, targetDir, fileCount, tsConfigPath, durationMs } =
     result;
@@ -410,9 +432,7 @@ export function buildJsonReport(
   const edgeCounts = countEdgesByType(graph.edges);
   const insights = buildInsights(result);
   const insightCounts = countInsightsBySeverity(insights);
-  const graphOutput = options.graphOutput
-    ? relPath(options.graphOutput)
-    : null;
+  const graphOutput = options.graphOutput ? relPath(options.graphOutput) : null;
   const reportOutput = options.reportOutput
     ? relPath(options.reportOutput)
     : null;
@@ -421,14 +441,18 @@ export function buildJsonReport(
     ["component", "hook", "utility", "context", "entry", "config"] as const
   ).reduce(
     (acc, type) => {
-      const names = graph.nodes.filter((node) => node.type === type).map((n) => n.name);
+      const names = graph.nodes
+        .filter((node) => node.type === type)
+        .map((n) => n.name);
       acc[type] = { count: nodeCounts[type], names };
       return acc;
     },
-    {} as JsonReport["nodesByType"],
+    {} as JsonReport["nodesByType"]
   );
 
-  const projectExports = graph.nodes.filter((node) => node.file !== "external").length;
+  const projectExports = graph.nodes.filter(
+    (node) => node.file !== "external"
+  ).length;
 
   const report: JsonReport = {
     meta: {
@@ -477,7 +501,7 @@ export function buildJsonReport(
 export function writeReportFile(
   result: AnalysisResult,
   reportFilePath: string,
-  options: ReportOptions,
+  options: ReportOptions
 ): void {
   const fullOptions: ReportOptions = {
     ...options,
@@ -492,7 +516,7 @@ export function writeReportFile(
   if (format === "json") {
     fs.writeFileSync(
       reportFilePath,
-      `${JSON.stringify(buildJsonReport(result, fullOptions), null, 2)}\n`,
+      `${JSON.stringify(buildJsonReport(result, fullOptions), null, 2)}\n`
     );
     return;
   }

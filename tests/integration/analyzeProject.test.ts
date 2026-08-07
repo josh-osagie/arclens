@@ -20,8 +20,12 @@ describe("analyzeProject integration", () => {
 
     it("scans all sample TypeScript files", () => {
       expect(result.fileCount).toBe(5);
-      expect(result.scannedFiles.some((f) => f.endsWith("Counter.tsx"))).toBe(true);
-      expect(result.scannedFiles.some((f) => f.endsWith("ThemeContext.tsx"))).toBe(true);
+      expect(result.scannedFiles.some((f) => f.endsWith("Counter.tsx"))).toBe(
+        true
+      );
+      expect(
+        result.scannedFiles.some((f) => f.endsWith("ThemeContext.tsx"))
+      ).toBe(true);
     });
 
     it("detects components, hooks, and utilities", () => {
@@ -34,7 +38,9 @@ describe("analyzeProject integration", () => {
     it("builds import, render, and hook-use edges", () => {
       expect(hasEdge(result, "Counter", "Button", "imports")).toBe(true);
       expect(hasEdge(result, "Counter", "Button", "renders")).toBe(true);
-      expect(outgoingEdges(result, "Counter", "uses").length).toBeGreaterThan(0);
+      expect(outgoingEdges(result, "Counter", "uses").length).toBeGreaterThan(
+        0
+      );
     });
 
     it("tracks most-referenced nodes (Button is used twice in JSX)", () => {
@@ -43,12 +49,16 @@ describe("analyzeProject integration", () => {
 
     it("surfaces architecture insights developers care about", () => {
       const titles = insightTitles(result);
-      expect(titles.some((t) => t.includes("Orphan export: fetchUser"))).toBe(true);
+      expect(titles.some((t) => t.includes("Orphan export: fetchUser"))).toBe(
+        true
+      );
     });
 
     it("does not flag Counter as orphan", () => {
       const titles = insightTitles(result);
-      expect(titles.some((t) => t.includes("Orphan export: Counter"))).toBe(false);
+      expect(titles.some((t) => t.includes("Orphan export: Counter"))).toBe(
+        false
+      );
     });
   });
 
@@ -71,7 +81,9 @@ describe("analyzeProject integration", () => {
 
     it("does not warn about PascalCase default components", () => {
       const titles = insightTitles(result);
-      expect(titles.some((t) => t.includes("Component naming: default"))).toBe(false);
+      expect(titles.some((t) => t.includes("Component naming: default"))).toBe(
+        false
+      );
       expect(titles.some((t) => t.includes("Orphan export: App"))).toBe(false);
     });
   });
@@ -103,8 +115,12 @@ describe("analyzeProject integration", () => {
     const result = analyzeFixture("with-config");
 
     it("excludes vite.config.ts from analysis", () => {
-      expect(result.scannedFiles.some((f) => f.endsWith("vite.config.ts"))).toBe(false);
-      expect(result.graph.nodes.some((node) => node.type === "config")).toBe(false);
+      expect(
+        result.scannedFiles.some((f) => f.endsWith("vite.config.ts"))
+      ).toBe(false);
+      expect(result.graph.nodes.some((node) => node.type === "config")).toBe(
+        false
+      );
     });
 
     it("does not emit insights for config files", () => {
@@ -117,29 +133,43 @@ describe("analyzeProject integration", () => {
     const result = analyzeFixture("entry-points");
 
     it("classifies only main.tsx as entry, not test files or barrels", () => {
-      const entryNodes = result.graph.nodes.filter((node) => node.type === "entry");
-      expect(entryNodes.some((node) => node.file.endsWith("main.tsx"))).toBe(true);
-      expect(entryNodes.some((node) => node.file.endsWith(".test.tsx"))).toBe(false);
-      expect(entryNodes.some((node) => node.file.includes("Button/index.tsx"))).toBe(false);
+      const entryNodes = result.graph.nodes.filter(
+        (node) => node.type === "entry"
+      );
+      expect(entryNodes.some((node) => node.file.endsWith("main.tsx"))).toBe(
+        true
+      );
+      expect(entryNodes.some((node) => node.file.endsWith(".test.tsx"))).toBe(
+        false
+      );
+      expect(
+        entryNodes.some((node) => node.file.includes("Button/index.tsx"))
+      ).toBe(false);
     });
   });
 
   describe("safety guards", () => {
     it("refuses when file count exceeds maxFiles", () => {
-      expect(() => analyzeSamples({ maxFiles: 1 })).toThrow(/Refusing to analyze/);
+      expect(() => analyzeSamples({ maxFiles: 1 })).toThrow(
+        /Refusing to analyze/
+      );
     });
 
     it("throws UnsupportedProjectError for HTML-only folders", () => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-html-only-"));
       fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");
 
-      expect(() => analyzeProject(dir, { cache: false })).toThrow(UnsupportedProjectError);
+      expect(() => analyzeProject(dir, { cache: false })).toThrow(
+        UnsupportedProjectError
+      );
       try {
         analyzeProject(dir, { cache: false });
       } catch (error) {
         expect(error).toBeInstanceOf(UnsupportedProjectError);
         expect((error as UnsupportedProjectError).message).toMatch(/HTML file/);
-        expect((error as UnsupportedProjectError).message).toMatch(/not supported yet/);
+        expect((error as UnsupportedProjectError).message).toMatch(
+          /not supported yet/
+        );
       }
     });
   });

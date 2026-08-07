@@ -8,10 +8,10 @@ import {
 describe("storageCompat", () => {
   it("maps arclens keys to react-atlas legacy keys", () => {
     expect(toLegacyStorageKey("arclens-details-fields")).toBe(
-      "react-atlas-details-fields",
+      "react-atlas-details-fields"
     );
     expect(toLegacyStorageKey("arclens-panel:main")).toBe(
-      "react-atlas-panel:main",
+      "react-atlas-panel:main"
     );
   });
 

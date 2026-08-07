@@ -19,8 +19,18 @@ const edges: AtlasGraph["edges"] = [
 describe("nodeSpotlight", () => {
   it("spotlights the target and visible neighborhood", () => {
     const visible: AtlasGraphNode[] = [
-      { id: "a", name: "A", file: "src/components/ui/A.tsx", type: "component" },
-      { id: "b", name: "B", file: "src/components/ui/B.tsx", type: "component" },
+      {
+        id: "a",
+        name: "A",
+        file: "src/components/ui/A.tsx",
+        type: "component",
+      },
+      {
+        id: "b",
+        name: "B",
+        file: "src/components/ui/B.tsx",
+        type: "component",
+      },
       {
         id: "cluster::src/hooks",
         name: "hooks",
@@ -31,7 +41,7 @@ describe("nodeSpotlight", () => {
     ];
 
     expect(computeNodeSpotlightIds("a", nodes, visible, edges)).toEqual(
-      new Set(["a", "b"]),
+      new Set(["a", "b"])
     );
   });
 
@@ -47,7 +57,7 @@ describe("nodeSpotlight", () => {
     ];
 
     expect(computeNodeSpotlightIds("a", nodes, visible, edges)).toEqual(
-      new Set(["cluster::components/ui"]),
+      new Set(["cluster::components/ui"])
     );
   });
 

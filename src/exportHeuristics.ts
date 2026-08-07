@@ -17,7 +17,11 @@ export function isTestOrHocUtility(name: string, filePath: string): boolean {
   if (isNonProductionFile(filePath)) return true;
 
   const normalized = filePath.replace(/\\/g, "/");
-  if (/(^|\/)(hoc|test-utils|testing-utils|__tests__|__mocks__)(\/|$)/i.test(normalized)) {
+  if (
+    /(^|\/)(hoc|test-utils|testing-utils|__tests__|__mocks__)(\/|$)/i.test(
+      normalized
+    )
+  ) {
     return true;
   }
 

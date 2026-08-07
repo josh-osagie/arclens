@@ -48,7 +48,9 @@ describe("exportGraphSnapshot", () => {
       expect(isExcludedFromExport(elementWithClass(className))).toBe(true);
     }
 
-    expect(isExcludedFromExport(elementWithClass("react-flow__node"))).toBe(false);
+    expect(isExcludedFromExport(elementWithClass("react-flow__node"))).toBe(
+      false
+    );
   });
 
   it("keeps non-element DOM nodes in export filter", () => {

@@ -25,7 +25,7 @@ export function resolveTarget(inputPath: string): string {
   const dirName = path.basename(resolved);
   if (BLOCKED_DIR_NAMES.has(dirName)) {
     throw new Error(
-      `Refusing to analyze "${dirName}" directly. Point at your source folder (e.g. ./src).`,
+      `Refusing to analyze "${dirName}" directly. Point at your source folder (e.g. ./src).`
     );
   }
 

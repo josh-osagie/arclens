@@ -1,9 +1,4 @@
-import {
-  Node,
-  ParameterDeclaration,
-  SourceFile,
-  SyntaxKind,
-} from "ts-morph";
+import { Node, ParameterDeclaration, SourceFile, SyntaxKind } from "ts-morph";
 import type { ExportRecord } from "./exports";
 import { nodeId } from "./find";
 import { getExportFunctionNode, FUNCTION_KINDS } from "./reactFunction";
@@ -92,16 +87,19 @@ function extractPropsFromParameter(param: ParameterDeclaration): GraphProp[] {
 
 function exportDeclarationForRecord(
   sourceFile: SourceFile,
-  exportRecord: ExportRecord,
+  exportRecord: ExportRecord
 ): Node | undefined {
   const exported = sourceFile.getExportedDeclarations();
-  const key = exportRecord.exportKind === "default" ? "default" : exportRecord.name;
+  const key =
+    exportRecord.exportKind === "default" ? "default" : exportRecord.name;
   const declarations = exported.get(key);
   return declarations?.[0];
 }
 
 export function extractPropsFromDeclaration(declaration: Node): GraphProp[] {
-  const fn = getExportFunctionNode(declaration) ?? (FUNCTION_KINDS.has(declaration.getKind()) ? declaration : undefined);
+  const fn =
+    getExportFunctionNode(declaration) ??
+    (FUNCTION_KINDS.has(declaration.getKind()) ? declaration : undefined);
   if (!fn) return [];
 
   const [firstParam] = getFunctionParameters(fn);
@@ -112,10 +110,10 @@ export function extractPropsFromDeclaration(declaration: Node): GraphProp[] {
 
 export function extractComponentProps(
   sourceFiles: SourceFile[],
-  exports: ExportRecord[],
+  exports: ExportRecord[]
 ): Map<string, GraphProp[]> {
   const byFile = new Map<string, SourceFile>(
-    sourceFiles.map((file) => [String(file.getFilePath()), file]),
+    sourceFiles.map((file) => [String(file.getFilePath()), file])
   );
   const propsByNodeId = new Map<string, GraphProp[]>();
 

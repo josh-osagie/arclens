@@ -14,13 +14,20 @@ const nodes: AtlasGraphNode[] = [
 
 describe("folderSpotlight", () => {
   it("collects member ids by folderKey", () => {
-    expect(computeFolderMemberIds("components/ui", nodes)).toEqual(new Set(["a", "b"]));
+    expect(computeFolderMemberIds("components/ui", nodes)).toEqual(
+      new Set(["a", "b"])
+    );
     expect(computeFolderMemberIds("src/hooks", nodes)).toEqual(new Set(["c"]));
   });
 
   it("spotlights visible members and cluster bubble", () => {
     const visible: AtlasGraphNode[] = [
-      { id: "a", name: "A", file: "src/components/ui/A.tsx", type: "component" },
+      {
+        id: "a",
+        name: "A",
+        file: "src/components/ui/A.tsx",
+        type: "component",
+      },
       {
         id: "cluster::components/ui",
         name: "ui",
@@ -31,9 +38,9 @@ describe("folderSpotlight", () => {
       { id: "c", name: "C", file: "src/hooks/useC.ts", type: "hook" },
     ];
 
-    expect(
-      computeFolderSpotlightIds("components/ui", nodes, visible),
-    ).toEqual(new Set(["a", "cluster::components/ui"]));
+    expect(computeFolderSpotlightIds("components/ui", nodes, visible)).toEqual(
+      new Set(["a", "cluster::components/ui"])
+    );
   });
 
   it("reports when dimming should be active", () => {

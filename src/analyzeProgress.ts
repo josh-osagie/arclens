@@ -47,18 +47,31 @@ const CACHE_HIT_VERBS = [
 
 const START_VERBS = ["Charting", "Mapping", "Surveying", "Tracing"] as const;
 
-const PARSE_PHASE_VERBS = ["Distilling", "Decoding", "Sifting", "Forging"] as const;
+const PARSE_PHASE_VERBS = [
+  "Distilling",
+  "Decoding",
+  "Sifting",
+  "Forging",
+] as const;
 
-const MERGE_PHASE_VERBS = ["Stitching", "Weaving", "Linking", "Connecting"] as const;
+const MERGE_PHASE_VERBS = [
+  "Stitching",
+  "Weaving",
+  "Linking",
+  "Connecting",
+] as const;
 
 export function pickCycledVerb<T extends readonly string[]>(
   verbs: T,
-  index: number,
+  index: number
 ): T[number] {
   return verbs[(index - 1) % verbs.length]!;
 }
 
-function pickSeededVerb<T extends readonly string[]>(verbs: T, seed: string): T[number] {
+function pickSeededVerb<T extends readonly string[]>(
+  verbs: T,
+  seed: string
+): T[number] {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (hash + seed.charCodeAt(i) * (i + 1)) % verbs.length;
@@ -78,8 +91,18 @@ export type AnalyzeProgressReporter = {
   discoveryScan: (targetDir: string) => void;
   discoveryDone: (fileCount: number) => void;
   cacheSummary: (hits: number, misses: number) => void;
-  parseFile: (filePath: string, current: number, total: number, targetDir: string) => void;
-  cachedFile: (filePath: string, current: number, total: number, targetDir: string) => void;
+  parseFile: (
+    filePath: string,
+    current: number,
+    total: number,
+    targetDir: string
+  ) => void;
+  cachedFile: (
+    filePath: string,
+    current: number,
+    total: number,
+    targetDir: string
+  ) => void;
   phase: (message: string) => void;
   complete: (nodes: number, edges: number, durationMs: number) => void;
   fail: (message: string) => void;
@@ -96,19 +119,25 @@ function createColors(enabled: boolean) {
 export function formatTargetLabel(
   projectName: string,
   targetDir: string,
-  cwd = process.cwd(),
+  cwd = process.cwd()
 ): string {
   const rel = path.relative(cwd, targetDir) || path.basename(targetDir);
   return `${projectName} (${rel})`;
 }
 
-export function formatDiscoveryPattern(targetDir: string, cwd = process.cwd()): string {
+export function formatDiscoveryPattern(
+  targetDir: string,
+  cwd = process.cwd()
+): string {
   const rel = path.relative(cwd, targetDir) || ".";
   if (rel === ".") return "**/*.{ts,tsx}";
   return `${rel}/**/*.{ts,tsx}`;
 }
 
-export function formatDiscoveryScan(targetDir: string, cwd = process.cwd()): string {
+export function formatDiscoveryScan(
+  targetDir: string,
+  cwd = process.cwd()
+): string {
   const pattern = formatDiscoveryPattern(targetDir, cwd);
   return `Sweeping ${pattern}...`;
 }
@@ -127,7 +156,7 @@ export function formatCacheSummary(hits: number, misses: number): string {
 export function formatRelativeFile(
   filePath: string,
   targetDir: string,
-  cwd = process.cwd(),
+  cwd = process.cwd()
 ): string {
   const fromTarget = path.relative(targetDir, filePath);
   if (fromTarget && !fromTarget.startsWith("..")) return fromTarget;
@@ -139,7 +168,7 @@ export function formatParseProgress(
   current: number,
   total: number,
   targetDir: string,
-  cwd = process.cwd(),
+  cwd = process.cwd()
 ): string {
   const display = formatRelativeFile(filePath, targetDir, cwd);
   const verb = pickCycledVerb(FILE_ACTION_VERBS, current);
@@ -151,7 +180,7 @@ export function formatCachedFileProgress(
   current: number,
   total: number,
   targetDir: string,
-  cwd = process.cwd(),
+  cwd = process.cwd()
 ): string {
   const display = formatRelativeFile(filePath, targetDir, cwd);
   const verb = pickCycledVerb(CACHE_HIT_VERBS, current);
@@ -187,14 +216,18 @@ export function formatHooksCheckPhase(): string {
 export function shouldUpdateFileProgress(
   current: number,
   total: number,
-  lastUpdate: number,
+  lastUpdate: number
 ): boolean {
   if (total < LARGE_PROJECT_THRESHOLD) return true;
   if (current === 1 || current === total) return true;
   return current - lastUpdate >= PARSE_UPDATE_BATCH;
 }
 
-export function formatComplete(nodes: number, edges: number, durationMs: number): string {
+export function formatComplete(
+  nodes: number,
+  edges: number,
+  durationMs: number
+): string {
   return `Done - ${nodes} node${nodes === 1 ? "" : "s"}, ${edges} edge${edges === 1 ? "" : "s"} in ${formatDuration(durationMs)}`;
 }
 
@@ -202,7 +235,7 @@ export function formatStartMessage(
   projectName: string,
   targetDir: string,
   reanalyze: boolean,
-  cwd = process.cwd(),
+  cwd = process.cwd()
 ): string {
   const label = formatTargetLabel(projectName, targetDir, cwd);
   if (reanalyze) return `Re-mapping ${label}...`;
@@ -211,12 +244,15 @@ export function formatStartMessage(
 }
 
 export function isWatchProgressMode(
-  options: Pick<AnalyzeProgressReporterOptions, "reanalyze"> = {},
+  options: Pick<AnalyzeProgressReporterOptions, "reanalyze"> = {}
 ): boolean {
   return Boolean(options.reanalyze || process.env.ARCLENS_WATCH_TARGET);
 }
 
-export function formatPhaseHeartbeat(message: string, elapsedMs: number): string {
+export function formatPhaseHeartbeat(
+  message: string,
+  elapsedMs: number
+): string {
   const elapsed = formatDuration(elapsedMs);
   if (message.endsWith("...")) {
     return `${message.slice(0, -3)} (${elapsed})...`;
@@ -242,7 +278,7 @@ export function runWithPhaseHeartbeat<T>(
   progress: AnalyzeProgressReporter | undefined,
   message: string,
   work: () => T,
-  intervalMs = PHASE_HEARTBEAT_MS,
+  intervalMs = PHASE_HEARTBEAT_MS
 ): T {
   if (!progress) return work();
 
@@ -275,7 +311,9 @@ function createNoopReporter(): AnalyzeProgressReporter {
   };
 }
 
-function createLineReporter(options: AnalyzeProgressReporterOptions): AnalyzeProgressReporter {
+function createLineReporter(
+  options: AnalyzeProgressReporterOptions
+): AnalyzeProgressReporter {
   const colors = createColors(options.color !== false);
   const flushLines = isWatchProgressMode(options);
   let lastParseUpdate = 0;
@@ -289,7 +327,9 @@ function createLineReporter(options: AnalyzeProgressReporterOptions): AnalyzePro
     start(projectName, targetDir) {
       lastParseUpdate = 0;
       lastCachedUpdate = 0;
-      writeln(formatStartMessage(projectName, targetDir, Boolean(options.reanalyze)));
+      writeln(
+        formatStartMessage(projectName, targetDir, Boolean(options.reanalyze))
+      );
     },
 
     discoveryScan(targetDir) {
@@ -335,7 +375,9 @@ function createLineReporter(options: AnalyzeProgressReporterOptions): AnalyzePro
   };
 }
 
-function createSpinnerReporter(options: AnalyzeProgressReporterOptions): AnalyzeProgressReporter {
+function createSpinnerReporter(
+  options: AnalyzeProgressReporterOptions
+): AnalyzeProgressReporter {
   const colors = createColors(options.color !== false);
   let spinner: Ora | null = null;
   let lastParseUpdate = 0;
@@ -350,9 +392,15 @@ function createSpinnerReporter(options: AnalyzeProgressReporterOptions): Analyze
       lastParseUpdate = 0;
       lastCachedUpdate = 0;
       if (!spinner) {
-        spinner = ora({ color: "cyan", stream: process.stderr, spinner: "line" }).start();
+        spinner = ora({
+          color: "cyan",
+          stream: process.stderr,
+          spinner: "line",
+        }).start();
       }
-      setText(formatStartMessage(projectName, targetDir, Boolean(options.reanalyze)));
+      setText(
+        formatStartMessage(projectName, targetDir, Boolean(options.reanalyze))
+      );
     },
 
     discoveryScan(targetDir) {
@@ -412,7 +460,7 @@ function createSpinnerReporter(options: AnalyzeProgressReporterOptions): Analyze
 }
 
 export function createAnalyzeProgressReporter(
-  options: AnalyzeProgressReporterOptions = {},
+  options: AnalyzeProgressReporterOptions = {}
 ): AnalyzeProgressReporter {
   if (options.quiet) return createNoopReporter();
 

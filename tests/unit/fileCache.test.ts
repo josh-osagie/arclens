@@ -61,7 +61,9 @@ function samplePayload(filePath: string): FileAnalysisPayload {
 
 describe("fileCache", () => {
   it("validates entries by mtime and size", () => {
-    const dir = makeTempProject({ "App.tsx": "export function App() { return null; }" });
+    const dir = makeTempProject({
+      "App.tsx": "export function App() { return null; }",
+    });
     const filePath = path.join(dir, "App.tsx");
     const stat = readFileStat(filePath);
 
@@ -87,8 +89,18 @@ describe("fileCache", () => {
     const fileB = path.join(dir, "B.tsx");
     const statA = readFileStat(fileA);
 
-    const cache = buildCacheFile(dir, [fileA, fileB], [samplePayload(fileA)], undefined);
-    const partition = partitionFilesByCache(dir, [fileA, fileB], cache, undefined);
+    const cache = buildCacheFile(
+      dir,
+      [fileA, fileB],
+      [samplePayload(fileA)],
+      undefined
+    );
+    const partition = partitionFilesByCache(
+      dir,
+      [fileA, fileB],
+      cache,
+      undefined
+    );
 
     expect(partition.cacheHits).toBe(1);
     expect(partition.cacheMisses).toBe(1);
@@ -98,9 +110,16 @@ describe("fileCache", () => {
   });
 
   it("treats all files as misses when tsconfig key changes", () => {
-    const dir = makeTempProject({ "App.tsx": "export function App() { return null; }" });
+    const dir = makeTempProject({
+      "App.tsx": "export function App() { return null; }",
+    });
     const filePath = path.join(dir, "App.tsx");
-    const cache = buildCacheFile(dir, [filePath], [samplePayload(filePath)], "old-key");
+    const cache = buildCacheFile(
+      dir,
+      [filePath],
+      [samplePayload(filePath)],
+      "old-key"
+    );
 
     const partition = partitionFilesByCache(dir, [filePath], cache, "new-key");
     expect(partition.cacheHits).toBe(0);
@@ -108,7 +127,9 @@ describe("fileCache", () => {
   });
 
   it("removes deleted files when rebuilding cache", () => {
-    const dir = makeTempProject({ "App.tsx": "export function App() { return null; }" });
+    const dir = makeTempProject({
+      "App.tsx": "export function App() { return null; }",
+    });
     const filePath = path.join(dir, "App.tsx");
     const removedPath = path.join(dir, "Removed.tsx");
     const cachePath = getCachePath(dir);
@@ -129,11 +150,18 @@ describe("fileCache", () => {
       },
     });
 
-    const rebuilt = buildCacheFile(dir, [filePath], [samplePayload(filePath)], undefined);
+    const rebuilt = buildCacheFile(
+      dir,
+      [filePath],
+      [samplePayload(filePath)],
+      undefined
+    );
     writeFileCache(cachePath, rebuilt);
 
     const stored = readFileCache(cachePath);
-    expect(Object.keys(stored?.files ?? {})).toEqual([toRelativeKey(dir, filePath)]);
+    expect(Object.keys(stored?.files ?? {})).toEqual([
+      toRelativeKey(dir, filePath),
+    ]);
   });
 });
 
@@ -157,7 +185,9 @@ describe("analyzeProject cache integration", () => {
     const second = analyzeProject(dir, { cache: true });
     expect(second.cacheHits).toBe(1);
     expect(second.cacheMisses).toBe(0);
-    expect(second.graph.nodes.map((node) => node.name)).toEqual(first.graph.nodes.map((node) => node.name));
+    expect(second.graph.nodes.map((node) => node.name)).toEqual(
+      first.graph.nodes.map((node) => node.name)
+    );
   });
 
   it("re-parses changed files after mtime invalidation", () => {
@@ -170,12 +200,14 @@ describe("analyzeProject cache integration", () => {
 
     fs.writeFileSync(
       filePath,
-      "export function WidgetRenamed() { return null; }",
+      "export function WidgetRenamed() { return null; }"
     );
 
     const result = analyzeProject(dir, { cache: true });
     expect(result.cacheMisses).toBe(1);
-    expect(result.exports.some((exp) => exp.name === "WidgetRenamed")).toBe(true);
+    expect(result.exports.some((exp) => exp.name === "WidgetRenamed")).toBe(
+      true
+    );
   });
 
   it("bypasses cache with cache: false", () => {
@@ -195,17 +227,22 @@ describe("analyzeProject cache integration", () => {
     analyzeFixture("default-export-app", { cache: true });
 
     expect(cached.graph.nodes.map((node) => node.id).sort()).toEqual(
-      uncached.graph.nodes.map((node) => node.id).sort(),
+      uncached.graph.nodes.map((node) => node.id).sort()
     );
     expect(cached.graph.edges.length).toBe(uncached.graph.edges.length);
   });
 
   it("reads legacy .react-atlas cache when .arclens is absent", () => {
-    const dir = makeTempProject({ "App.tsx": "export function App() { return null; }" });
+    const dir = makeTempProject({
+      "App.tsx": "export function App() { return null; }",
+    });
     const filePath = path.join(dir, "App.tsx");
     const legacyCachePath = path.join(dir, ".react-atlas", "cache.json");
 
-    writeFileCache(legacyCachePath, buildCacheFile(dir, [filePath], [samplePayload(filePath)], undefined));
+    writeFileCache(
+      legacyCachePath,
+      buildCacheFile(dir, [filePath], [samplePayload(filePath)], undefined)
+    );
 
     const result = analyzeProject(dir, { cache: true });
     expect(result.cacheHits).toBe(1);

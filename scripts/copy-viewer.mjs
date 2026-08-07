@@ -8,7 +8,9 @@ const viewerDist = path.join(packageRoot, "viewer", "dist");
 const outDir = path.join(packageRoot, "dist", "viewer");
 
 if (!fs.existsSync(path.join(viewerDist, "index.html"))) {
-  console.error("copy-viewer: viewer/dist not found. Run pnpm build:viewer first.");
+  console.error(
+    "copy-viewer: viewer/dist not found. Run pnpm build:viewer first."
+  );
   process.exit(1);
 }
 

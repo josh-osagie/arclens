@@ -10,7 +10,7 @@ export function getPackageRoot(): string {
   while (true) {
     if (fs.existsSync(path.join(dir, "package.json"))) {
       const pkg = JSON.parse(
-        fs.readFileSync(path.join(dir, "package.json"), "utf8"),
+        fs.readFileSync(path.join(dir, "package.json"), "utf8")
       ) as { name?: string };
       if (pkg.name === "arclens") {
         return dir;

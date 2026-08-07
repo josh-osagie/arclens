@@ -1,6 +1,10 @@
 import path from "node:path";
 import { Command } from "commander";
-import { addAnalyzeOptions, runAnalyze, type AnalyzeOptions } from "./analyzeCommand";
+import {
+  addAnalyzeOptions,
+  runAnalyze,
+  type AnalyzeOptions,
+} from "./analyzeCommand";
 import { runUpdate } from "./updateCommand";
 import { runView } from "./viewServer";
 import { runWatch } from "./watchCommand";
@@ -64,16 +68,16 @@ program
   .option(
     "-g, --graph <file>",
     "path to graph.json (default: graph.json in cwd)",
-    "graph.json",
+    "graph.json"
   )
   .option(
     "--project-root <dir>",
-    "project root for source snippets (default: from graph meta)",
+    "project root for source snippets (default: from graph meta)"
   )
   .option("--open", "open the viewer in your default browser")
   .option(
     "--dev",
-    "run Vite dev server with HMR (auto-detected when viewer/ source exists)",
+    "run Vite dev server with HMR (auto-detected when viewer/ source exists)"
   )
   .action(
     async (options: {
@@ -105,7 +109,7 @@ program
         console.error(`arclens: ${message}`);
         process.exitCode = 1;
       }
-    },
+    }
   );
 
 program.parse();

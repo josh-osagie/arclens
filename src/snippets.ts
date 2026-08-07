@@ -1,9 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {
-  getWriteSnippetsDir,
-  resolveSnippetSidecarPath,
-} from "./paths";
+import { getWriteSnippetsDir, resolveSnippetSidecarPath } from "./paths";
 
 export { SNIPPETS_DIR } from "./paths";
 export const DEFAULT_SNIPPET_LINES = 120;
@@ -21,7 +18,7 @@ export function normalizeSlashes(filePath: string): string {
 
 export function isPathWithinRoot(
   rootDir: string,
-  candidatePath: string,
+  candidatePath: string
 ): boolean {
   const root = path.resolve(rootDir);
   const candidate = path.resolve(candidatePath);
@@ -37,7 +34,7 @@ export function isPathWithinRoot(
  */
 export function resolveRelativeFile(
   projectRoot: string,
-  filePath: string,
+  filePath: string
 ): string | null {
   if (!filePath || filePath === "external") {
     return null;
@@ -57,7 +54,7 @@ export function resolveRelativeFile(
 
 export function truncateLines(
   source: string,
-  maxLines: number = DEFAULT_SNIPPET_LINES,
+  maxLines: number = DEFAULT_SNIPPET_LINES
 ): TruncatedContent {
   const normalized = source.replace(/\r\n/g, "\n");
   const lines = normalized.split("\n");
@@ -75,7 +72,7 @@ export function truncateLines(
 export function readSnippetFromDisk(
   projectRoot: string,
   relativeFile: string,
-  maxLines: number = DEFAULT_SNIPPET_LINES,
+  maxLines: number = DEFAULT_SNIPPET_LINES
 ): TruncatedContent & { source: "live" | "sidecar" } {
   const root = path.resolve(projectRoot);
   const livePath = path.resolve(root, relativeFile);
@@ -107,18 +104,18 @@ export function readSnippetFromDisk(
 
 export function snippetSidecarPath(
   projectRoot: string,
-  relativeFile: string,
+  relativeFile: string
 ): string {
   return path.join(
     getWriteSnippetsDir(projectRoot),
-    ...relativeFile.split("/"),
+    ...relativeFile.split("/")
   );
 }
 
 export function writeSnippetSidecar(
   projectRoot: string,
   absoluteFilePath: string,
-  maxLines: number = DEFAULT_SNIPPET_LINES,
+  maxLines: number = DEFAULT_SNIPPET_LINES
 ): string | null {
   const relativeFile = resolveRelativeFile(projectRoot, absoluteFilePath);
   if (!relativeFile) {
@@ -132,7 +129,7 @@ export function writeSnippetSidecar(
 
   const { content } = truncateLines(
     fs.readFileSync(sourcePath, "utf8"),
-    maxLines,
+    maxLines
   );
   const outPath = snippetSidecarPath(projectRoot, relativeFile);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -146,7 +143,7 @@ export function writeSnippetSidecar(
 export function writeSnippetSidecars(
   projectRoot: string,
   filePaths: Iterable<string>,
-  maxLines: number = DEFAULT_SNIPPET_LINES,
+  maxLines: number = DEFAULT_SNIPPET_LINES
 ): number {
   const unique = new Set<string>();
   for (const filePath of filePaths) {
@@ -165,7 +162,7 @@ export function writeSnippetSidecars(
 }
 
 export function parseSnippetLinesParam(
-  value: string | null | undefined,
+  value: string | null | undefined
 ): number {
   const parsed = Number.parseInt(value ?? "", 10);
   if (Number.isNaN(parsed) || parsed <= 0) {
@@ -176,7 +173,7 @@ export function parseSnippetLinesParam(
 
 export function buildSnippetApiUrl(
   relativeFile: string,
-  maxLines: number,
+  maxLines: number
 ): string {
   const params = new URLSearchParams({
     file: relativeFile,

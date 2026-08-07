@@ -23,12 +23,14 @@ describe("runAnalyze", () => {
     vi.spyOn(console, "error").mockImplementation((...args) => {
       errors.push(args.join(" "));
     });
-    vi.spyOn(fs, "writeFileSync").mockImplementation((filePath, content, options) => {
-      if (String(filePath).endsWith(`${path.sep}graph.json`)) {
-        throw new Error("EPERM: operation not permitted");
+    vi.spyOn(fs, "writeFileSync").mockImplementation(
+      (filePath, content, options) => {
+        if (String(filePath).endsWith(`${path.sep}graph.json`)) {
+          throw new Error("EPERM: operation not permitted");
+        }
+        return originalWrite(filePath, content, options as fs.WriteFileOptions);
       }
-      return originalWrite(filePath, content, options as fs.WriteFileOptions);
-    });
+    );
 
     const status = runAnalyze(samples, {
       maxFiles: "3000",

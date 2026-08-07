@@ -14,20 +14,29 @@ export function fixturePath(name: string): string {
 
 export function analyzeFixture(
   name: string,
-  options?: { maxFiles?: number; cache?: boolean },
+  options?: { maxFiles?: number; cache?: boolean }
 ): AnalysisResult {
   return analyzeProject(fixturePath(name), { cache: false, ...options });
 }
 
-export function analyzeSamples(options?: { maxFiles?: number; cache?: boolean }): AnalysisResult {
+export function analyzeSamples(options?: {
+  maxFiles?: number;
+  cache?: boolean;
+}): AnalysisResult {
   return analyzeProject(samplesDir, { cache: false, ...options });
 }
 
-export function nodeByName(result: AnalysisResult, name: string): GraphNode | undefined {
+export function nodeByName(
+  result: AnalysisResult,
+  name: string
+): GraphNode | undefined {
   return result.graph.nodes.find((node) => node.name === name);
 }
 
-export function incomingCount(result: AnalysisResult, nodeName: string): number {
+export function incomingCount(
+  result: AnalysisResult,
+  nodeName: string
+): number {
   const node = nodeByName(result, nodeName);
   if (!node) return 0;
   return result.graph.edges.filter((edge) => edge.to === node.id).length;
@@ -36,12 +45,12 @@ export function incomingCount(result: AnalysisResult, nodeName: string): number 
 export function outgoingEdges(
   result: AnalysisResult,
   nodeName: string,
-  type?: "imports" | "renders" | "uses",
+  type?: "imports" | "renders" | "uses"
 ) {
   const node = nodeByName(result, nodeName);
   if (!node) return [];
   return result.graph.edges.filter(
-    (edge) => edge.from === node.id && (type ? edge.type === type : true),
+    (edge) => edge.from === node.id && (type ? edge.type === type : true)
   );
 }
 
@@ -53,12 +62,14 @@ export function hasEdge(
   result: AnalysisResult,
   fromName: string,
   toName: string,
-  type: "imports" | "renders" | "uses",
+  type: "imports" | "renders" | "uses"
 ): boolean {
   const from = nodeByName(result, fromName);
-  const to = nodeByName(result, toName) ?? result.graph.nodes.find((n) => n.id === toName);
+  const to =
+    nodeByName(result, toName) ??
+    result.graph.nodes.find((n) => n.id === toName);
   if (!from || !to) return false;
   return result.graph.edges.some(
-    (edge) => edge.from === from.id && edge.to === to.id && edge.type === type,
+    (edge) => edge.from === from.id && edge.to === to.id && edge.type === type
   );
 }

@@ -16,7 +16,9 @@ function run(command) {
 }
 
 function usage() {
-  console.error("Usage: node scripts/release.mjs <publish|patch|minor|major> [--dry-run]");
+  console.error(
+    "Usage: node scripts/release.mjs <publish|patch|minor|major> [--dry-run]"
+  );
   process.exit(1);
 }
 
@@ -26,7 +28,9 @@ if (!VALID_KINDS.has(kind)) {
 
 if (kind !== "publish") {
   if (dryRun) {
-    console.log(`\n> [dry-run] would run: npm version ${kind} --no-git-tag-version`);
+    console.log(
+      `\n> [dry-run] would run: npm version ${kind} --no-git-tag-version`
+    );
   } else {
     run(`npm version ${kind} --no-git-tag-version`);
   }

@@ -11,10 +11,20 @@ const graph: AtlasGraph = {
   meta: { entryNodeIds: ["entry"] },
   nodes: [
     { id: "entry", name: "App", file: "src/main.tsx", type: "entry" },
-    { id: "a1", name: "Alpha", file: "src/components/A.tsx", type: "component" },
+    {
+      id: "a1",
+      name: "Alpha",
+      file: "src/components/A.tsx",
+      type: "component",
+    },
     { id: "a2", name: "Beta", file: "src/components/B.tsx", type: "component" },
     { id: "u1", name: "Util", file: "src/utils/format.ts", type: "utility" },
-    { id: "hub", name: "Hub", file: "src/components/Hub.tsx", type: "component" },
+    {
+      id: "hub",
+      name: "Hub",
+      file: "src/components/Hub.tsx",
+      type: "component",
+    },
   ],
   edges: [
     { from: "entry", to: "hub", type: "renders" },
@@ -52,8 +62,18 @@ describe("graphOverview", () => {
       },
       nodes: [
         { id: "main", name: "bootstrap", file: "src/main.tsx", type: "entry" },
-        { id: "badge-a", name: "BadgeIcon", file: "src/components/badge/index.tsx", type: "component" },
-        { id: "badge-b", name: "BadgeLabel", file: "src/components/badge/index.tsx", type: "component" },
+        {
+          id: "badge-a",
+          name: "BadgeIcon",
+          file: "src/components/badge/index.tsx",
+          type: "component",
+        },
+        {
+          id: "badge-b",
+          name: "BadgeLabel",
+          file: "src/components/badge/index.tsx",
+          type: "component",
+        },
       ],
       edges: [],
     };
@@ -71,7 +91,12 @@ describe("graphOverview", () => {
       },
       nodes: [
         { id: "main", name: "bootstrap", file: "src/main.tsx", type: "entry" },
-        { id: "signin-test", name: "SigninTest", file: "src/Signin.test.tsx", type: "entry" },
+        {
+          id: "signin-test",
+          name: "SigninTest",
+          file: "src/Signin.test.tsx",
+          type: "entry",
+        },
       ],
       edges: [],
     };
@@ -107,9 +132,7 @@ describe("graphOverview", () => {
           stats: { incoming: 0, outgoing: 0 },
         },
       ],
-      edges: [
-        { from: "counter", to: "button", type: "renders" },
-      ],
+      edges: [{ from: "counter", to: "button", type: "renders" }],
     };
 
     const entries = computeEntryPoints(samplesGraph);

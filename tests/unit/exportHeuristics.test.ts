@@ -8,7 +8,9 @@ import {
 describe("exportHeuristics", () => {
   it("detects redux-style slice exports", () => {
     expect(isLikelyStateExport("appSlice", "/src/app/appSlice.ts")).toBe(true);
-    expect(isLikelyStateExport("toggleWebsiteNavbarOpen", "/src/app/appSlice.ts")).toBe(true);
+    expect(
+      isLikelyStateExport("toggleWebsiteNavbarOpen", "/src/app/appSlice.ts")
+    ).toBe(true);
     expect(isLikelyStateExport("fetchUser", "/src/api.ts")).toBe(false);
   });
 
@@ -16,8 +18,8 @@ describe("exportHeuristics", () => {
     expect(
       isTestOrHocUtility(
         "renderWithRouter",
-        "/src/utils/components/hoc/renderWithRouter.tsx",
-      ),
+        "/src/utils/components/hoc/renderWithRouter.tsx"
+      )
     ).toBe(true);
     expect(isTestOrHocUtility("App", "/src/App.test.tsx")).toBe(true);
   });

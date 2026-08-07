@@ -22,7 +22,7 @@ import {
   LARGE_PROJECT_THRESHOLD,
   PARSE_UPDATE_BATCH,
   pickCycledVerb,
-  shouldUpdateFileProgress
+  shouldUpdateFileProgress,
 } from "../../src/analyzeProgress";
 
 describe("analyzeProgress helpers", () => {
@@ -31,12 +31,14 @@ describe("analyzeProgress helpers", () => {
 
   it("formats project context label", () => {
     expect(formatTargetLabel("arclens", targetDir, cwd)).toBe(
-      "arclens (samples)",
+      "arclens (samples)"
     );
   });
 
   it("formats discovery scan pattern from target dir", () => {
-    expect(formatDiscoveryScan(targetDir, cwd)).toBe("Sweeping samples/**/*.{ts,tsx}...");
+    expect(formatDiscoveryScan(targetDir, cwd)).toBe(
+      "Sweeping samples/**/*.{ts,tsx}..."
+    );
     expect(formatDiscoveryScan(cwd, cwd)).toBe("Sweeping **/*.{ts,tsx}...");
   });
 
@@ -55,7 +57,7 @@ describe("analyzeProgress helpers", () => {
     const file = path.join(targetDir, "Button.tsx");
     const line = formatParseProgress(file, 3, 47, targetDir, cwd);
     expect(line).toBe(
-      `${pickCycledVerb(FILE_ACTION_VERBS, 3)} Button.tsx (3/47)...`,
+      `${pickCycledVerb(FILE_ACTION_VERBS, 3)} Button.tsx (3/47)...`
     );
     expect(FILE_ACTION_VERBS).toContain(line.split(" ")[0]);
   });
@@ -80,21 +82,25 @@ describe("analyzeProgress helpers", () => {
   it("prefers paths relative to target dir", () => {
     const file = path.join(targetDir, "components", "Button.tsx");
     expect(formatRelativeFile(file, targetDir, cwd)).toBe(
-      path.join("components", "Button.tsx"),
+      path.join("components", "Button.tsx")
     );
   });
 
   it("formats start vs re-analyze copy", () => {
-    expect(formatStartMessage("lendha-onboarding", targetDir, false, cwd)).toMatch(
-      /^(Charting|Mapping|Surveying|Tracing) lendha-onboarding \(samples\)...$/,
+    expect(
+      formatStartMessage("lendha-onboarding", targetDir, false, cwd)
+    ).toMatch(
+      /^(Charting|Mapping|Surveying|Tracing) lendha-onboarding \(samples\)...$/
     );
     expect(formatStartMessage("lendha-onboarding", targetDir, true, cwd)).toBe(
-      "Re-mapping lendha-onboarding (samples)...",
+      "Re-mapping lendha-onboarding (samples)..."
     );
   });
 
   it("formats completion with node and edge counts", () => {
-    expect(formatComplete(12, 8, 450)).toBe("Done - 12 nodes, 8 edges in 450ms");
+    expect(formatComplete(12, 8, 450)).toBe(
+      "Done - 12 nodes, 8 edges in 450ms"
+    );
   });
 
   it("batches parse updates for large projects", () => {
@@ -102,12 +108,20 @@ describe("analyzeProgress helpers", () => {
 
     expect(shouldUpdateFileProgress(1, total, 0)).toBe(true);
     expect(shouldUpdateFileProgress(PARSE_UPDATE_BATCH, total, 0)).toBe(true);
-    expect(shouldUpdateFileProgress(PARSE_UPDATE_BATCH + 5, total, PARSE_UPDATE_BATCH)).toBe(
-      false,
-    );
-    expect(shouldUpdateFileProgress(PARSE_UPDATE_BATCH * 2, total, PARSE_UPDATE_BATCH)).toBe(
-      true,
-    );
+    expect(
+      shouldUpdateFileProgress(
+        PARSE_UPDATE_BATCH + 5,
+        total,
+        PARSE_UPDATE_BATCH
+      )
+    ).toBe(false);
+    expect(
+      shouldUpdateFileProgress(
+        PARSE_UPDATE_BATCH * 2,
+        total,
+        PARSE_UPDATE_BATCH
+      )
+    ).toBe(true);
     expect(shouldUpdateFileProgress(total, total, total - 1)).toBe(true);
   });
 
@@ -118,11 +132,11 @@ describe("analyzeProgress helpers", () => {
 
   it("formats phase heartbeat with elapsed time", () => {
     expect(formatPhaseHeartbeat(formatBuildGraphPhase(), 4500)).toBe(
-      "Mapping dependency graph (4.5s)...",
+      "Mapping dependency graph (4.5s)..."
     );
-    expect(formatPhaseHeartbeat(formatCacheLoadPhase().slice(0, -3), 1200)).toBe(
-      "Unpacking cache (1.2s)...",
-    );
+    expect(
+      formatPhaseHeartbeat(formatCacheLoadPhase().slice(0, -3), 1200)
+    ).toBe("Unpacking cache (1.2s)...");
   });
 
   it("detects watch progress mode from env or reanalyze flag", () => {
@@ -144,7 +158,8 @@ describe("analyzeProgress helpers", () => {
 
 describe("createAnalyzeProgressReporter quiet mode", () => {
   it("suppresses progress output when quiet", async () => {
-    const { createAnalyzeProgressReporter } = await import("../../src/analyzeProgress");
+    const { createAnalyzeProgressReporter } =
+      await import("../../src/analyzeProgress");
     const reporter = createAnalyzeProgressReporter({ quiet: true });
 
     expect(() => {
@@ -179,12 +194,16 @@ describe("createAnalyzeProgressReporter line mode", () => {
   it("writes each progress step as its own line when stderr is not a TTY", async () => {
     const stderr = process.stderr as NodeJS.WriteStream & { isTTY?: boolean };
     const originalIsTTY = stderr.isTTY;
-    Object.defineProperty(stderr, "isTTY", { value: false, configurable: true });
+    Object.defineProperty(stderr, "isTTY", {
+      value: false,
+      configurable: true,
+    });
 
     const writes = captureProgressWrites();
 
     vi.resetModules();
-    const { createAnalyzeProgressReporter } = await import("../../src/analyzeProgress");
+    const { createAnalyzeProgressReporter } =
+      await import("../../src/analyzeProgress");
     const reporter = createAnalyzeProgressReporter({ reanalyze: true });
     const cwd = process.cwd();
     const targetDir = path.join(cwd, "samples");
@@ -197,7 +216,10 @@ describe("createAnalyzeProgressReporter line mode", () => {
     reporter.phase(formatBuildGraphPhase());
     reporter.complete(3, 4, 120);
 
-    Object.defineProperty(stderr, "isTTY", { value: originalIsTTY, configurable: true });
+    Object.defineProperty(stderr, "isTTY", {
+      value: originalIsTTY,
+      configurable: true,
+    });
 
     const output = writes.join("");
     expect(output).toContain("Re-mapping demo (samples)...\n");
@@ -205,7 +227,10 @@ describe("createAnalyzeProgressReporter line mode", () => {
     expect(output).toContain("Harvested 2 TypeScript files\n");
     expect(output).toContain("Cache: 1 hit, 1 miss\n");
     expect(output).toMatch(
-      new RegExp(`^${FILE_ACTION_VERBS.join("|")} App\\.tsx \\(1/2\\)...\\n`, "m"),
+      new RegExp(
+        `^${FILE_ACTION_VERBS.join("|")} App\\.tsx \\(1/2\\)...\\n`,
+        "m"
+      )
     );
     expect(output).toContain(formatBuildGraphPhase() + "\n");
     expect(output).toContain(formatComplete(3, 4, 120));
@@ -219,7 +244,8 @@ describe("createAnalyzeProgressReporter line mode", () => {
     const writes = captureProgressWrites();
 
     vi.resetModules();
-    const { createAnalyzeProgressReporter } = await import("../../src/analyzeProgress");
+    const { createAnalyzeProgressReporter } =
+      await import("../../src/analyzeProgress");
     const reporter = createAnalyzeProgressReporter({ reanalyze: true });
     const cwd = process.cwd();
     const targetDir = path.join(cwd, "samples");
@@ -230,7 +256,10 @@ describe("createAnalyzeProgressReporter line mode", () => {
     reporter.phase(formatBuildGraphPhase());
     reporter.complete(6, 5, 200);
 
-    Object.defineProperty(stderr, "isTTY", { value: originalIsTTY, configurable: true });
+    Object.defineProperty(stderr, "isTTY", {
+      value: originalIsTTY,
+      configurable: true,
+    });
 
     const output = writes.join("");
     expect(output).toContain("Re-mapping demo (samples)...\n");
@@ -246,7 +275,10 @@ describe("createAnalyzeProgressReporter line mode", () => {
     const originalWatchTarget = process.env.ARCLENS_WATCH_TARGET;
     const targetDir = path.join(process.cwd(), "watch-demo");
     process.env.ARCLENS_WATCH_TARGET = targetDir;
-    Object.defineProperty(stderr, "isTTY", { value: false, configurable: true });
+    Object.defineProperty(stderr, "isTTY", {
+      value: false,
+      configurable: true,
+    });
 
     const syncWrites: string[] = [];
     vi.spyOn(fs, "writeSync").mockImplementation(((_fd, data) => {
@@ -255,18 +287,24 @@ describe("createAnalyzeProgressReporter line mode", () => {
     }) as typeof fs.writeSync);
 
     vi.resetModules();
-    const { createAnalyzeProgressReporter } = await import("../../src/analyzeProgress");
+    const { createAnalyzeProgressReporter } =
+      await import("../../src/analyzeProgress");
     const reporter = createAnalyzeProgressReporter({ reanalyze: true });
     reporter.start("demo", targetDir);
 
-    Object.defineProperty(stderr, "isTTY", { value: originalIsTTY, configurable: true });
+    Object.defineProperty(stderr, "isTTY", {
+      value: originalIsTTY,
+      configurable: true,
+    });
     if (originalWatchTarget === undefined) {
       delete process.env.ARCLENS_WATCH_TARGET;
     } else {
       process.env.ARCLENS_WATCH_TARGET = originalWatchTarget;
     }
 
-    expect(syncWrites.join("")).toContain(`Re-mapping demo (${path.relative(process.cwd(), targetDir) || "watch-demo"})...\n`);
+    expect(syncWrites.join("")).toContain(
+      `Re-mapping demo (${path.relative(process.cwd(), targetDir) || "watch-demo"})...\n`
+    );
   });
 
   it("emits heartbeat lines during long phases", async () => {
@@ -274,15 +312,23 @@ describe("createAnalyzeProgressReporter line mode", () => {
     const writes = captureProgressWrites();
 
     vi.resetModules();
-    const { runWithPhaseHeartbeat, createAnalyzeProgressReporter, PHASE_HEARTBEAT_MS } =
-      await import("../../src/analyzeProgress");
+    const {
+      runWithPhaseHeartbeat,
+      createAnalyzeProgressReporter,
+      PHASE_HEARTBEAT_MS,
+    } = await import("../../src/analyzeProgress");
     const reporter = createAnalyzeProgressReporter({ reanalyze: true });
 
     const buildPhase = formatBuildGraphPhase();
-    const result = runWithPhaseHeartbeat(reporter, buildPhase, () => {
-      vi.advanceTimersByTime(PHASE_HEARTBEAT_MS * 2);
-      return "ok";
-    }, PHASE_HEARTBEAT_MS);
+    const result = runWithPhaseHeartbeat(
+      reporter,
+      buildPhase,
+      () => {
+        vi.advanceTimersByTime(PHASE_HEARTBEAT_MS * 2);
+        return "ok";
+      },
+      PHASE_HEARTBEAT_MS
+    );
 
     vi.useRealTimers();
     vi.restoreAllMocks();

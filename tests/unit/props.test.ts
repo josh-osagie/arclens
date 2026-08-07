@@ -1,6 +1,9 @@
 import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
-import { extractComponentProps, extractPropsFromDeclaration } from "../../src/extractors/props";
+import {
+  extractComponentProps,
+  extractPropsFromDeclaration,
+} from "../../src/extractors/props";
 import { extractExportsDeclarations } from "../../src/extractors/exports";
 import { analyzeSamples, nodeByName } from "../helpers";
 
@@ -9,13 +12,18 @@ describe("extractPropsFromDeclaration", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Button.tsx",
-      `export const Button = ({ onClick }: { onClick: () => void }) => <button onClick={onClick} />;`,
+      `export const Button = ({ onClick }: { onClick: () => void }) => <button onClick={onClick} />;`
     );
-    const [declaration] = sourceFile.getExportedDeclarations().get("Button") ?? [];
+    const [declaration] =
+      sourceFile.getExportedDeclarations().get("Button") ?? [];
     const props = extractPropsFromDeclaration(declaration!);
 
     expect(props).toEqual([
-      expect.objectContaining({ name: "onClick", type: "() => void", optional: false }),
+      expect.objectContaining({
+        name: "onClick",
+        type: "() => void",
+        optional: false,
+      }),
     ]);
   });
 
@@ -23,13 +31,18 @@ describe("extractPropsFromDeclaration", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Badge.tsx",
-      `export const Badge = ({ label = "new" }) => <span>{label}</span>;`,
+      `export const Badge = ({ label = "new" }) => <span>{label}</span>;`
     );
-    const [declaration] = sourceFile.getExportedDeclarations().get("Badge") ?? [];
+    const [declaration] =
+      sourceFile.getExportedDeclarations().get("Badge") ?? [];
     const props = extractPropsFromDeclaration(declaration!);
 
     expect(props).toEqual([
-      expect.objectContaining({ name: "label", optional: true, defaultValue: '"new"' }),
+      expect.objectContaining({
+        name: "label",
+        optional: true,
+        defaultValue: '"new"',
+      }),
     ]);
   });
 
@@ -42,9 +55,10 @@ describe("extractPropsFromDeclaration", () => {
         export function Card(props: CardProps) {
           return <div>{props.title}</div>;
         }
-      `,
+      `
     );
-    const [declaration] = sourceFile.getExportedDeclarations().get("Card") ?? [];
+    const [declaration] =
+      sourceFile.getExportedDeclarations().get("Card") ?? [];
     const props = extractPropsFromDeclaration(declaration!);
 
     expect(props.map((prop) => prop.name)).toEqual(["title", "count"]);
@@ -55,9 +69,10 @@ describe("extractPropsFromDeclaration", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Shell.tsx",
-      `export const Shell = () => <div />;`,
+      `export const Shell = () => <div />;`
     );
-    const [declaration] = sourceFile.getExportedDeclarations().get("Shell") ?? [];
+    const [declaration] =
+      sourceFile.getExportedDeclarations().get("Shell") ?? [];
     expect(extractPropsFromDeclaration(declaration!)).toEqual([]);
   });
 });
@@ -70,8 +85,12 @@ describe("extractComponentProps integration", () => {
     expect(button?.props).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "onClick", type: "() => void" }),
-        expect.objectContaining({ name: "label", type: "string | undefined", optional: true }),
-      ]),
+        expect.objectContaining({
+          name: "label",
+          type: "string | undefined",
+          optional: true,
+        }),
+      ])
     );
   });
 
@@ -87,7 +106,7 @@ describe("extractComponentProps map", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Widget.tsx",
-      `export const Widget = ({ label }: { label: string }) => <span>{label}</span>;`,
+      `export const Widget = ({ label }: { label: string }) => <span>{label}</span>;`
     );
     const exports = extractExportsDeclarations(sourceFile);
     const propsByNodeId = extractComponentProps([sourceFile], exports);

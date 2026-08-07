@@ -11,7 +11,11 @@ export type GraphExportOptions = {
 };
 
 export function findEntryNodeIds(graph: Graph): string[] {
-  return resolveEntryNodeIds(graph.nodes, graph.meta?.entryNodeIds, graph.edges);
+  return resolveEntryNodeIds(
+    graph.nodes,
+    graph.meta?.entryNodeIds,
+    graph.edges
+  );
 }
 
 /**
@@ -19,11 +23,11 @@ export function findEntryNodeIds(graph: Graph): string[] {
  */
 export function slimGraphForExport(
   graph: Graph,
-  options: GraphExportOptions = {},
+  options: GraphExportOptions = {}
 ): Pick<Graph, "meta" | "edges"> & { nodes: SlimGraphNode[] } {
   const laidOut = attachLayoutToNodes(graph.nodes, graph.edges);
   const nodes: SlimGraphNode[] = laidOut.map(
-    ({ connections: _connections, ...node }) => node,
+    ({ connections: _connections, ...node }) => node
   );
 
   const meta: GraphMeta = {

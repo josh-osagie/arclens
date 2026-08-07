@@ -29,7 +29,7 @@ describe("paths cache dir resolution", () => {
   it("writes to .arclens/cache.json", () => {
     const dir = makeTempDir();
     expect(getWriteCacheFilePath(dir)).toBe(
-      path.join(dir, CACHE_DIR, "cache.json"),
+      path.join(dir, CACHE_DIR, "cache.json")
     );
   });
 
@@ -49,7 +49,9 @@ describe("paths cache dir resolution", () => {
     fs.writeFileSync(legacyFile, "{}", "utf8");
 
     expect(resolveCacheFilePath(dir)).toBe(legacyFile);
-    expect(getWriteCacheFilePath(dir)).toBe(path.join(dir, CACHE_DIR, "cache.json"));
+    expect(getWriteCacheFilePath(dir)).toBe(
+      path.join(dir, CACHE_DIR, "cache.json")
+    );
   });
 
   it("prefers .arclens over .react-atlas when both exist", () => {
@@ -72,11 +74,19 @@ describe("paths cache dir resolution", () => {
 
   it("falls back to legacy snippet sidecars on read", () => {
     const dir = makeTempDir();
-    const legacySidecar = path.join(dir, LEGACY_CACHE_DIR, "snippets", "src", "App.tsx");
+    const legacySidecar = path.join(
+      dir,
+      LEGACY_CACHE_DIR,
+      "snippets",
+      "src",
+      "App.tsx"
+    );
     fs.mkdirSync(path.dirname(legacySidecar), { recursive: true });
     fs.writeFileSync(legacySidecar, "legacy snippet", "utf8");
 
     expect(resolveSnippetSidecarPath(dir, "src/App.tsx")).toBe(legacySidecar);
-    expect(getWriteSnippetsDir(dir)).toBe(path.join(dir, CACHE_DIR, "snippets"));
+    expect(getWriteSnippetsDir(dir)).toBe(
+      path.join(dir, CACHE_DIR, "snippets")
+    );
   });
 });

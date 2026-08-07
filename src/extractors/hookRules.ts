@@ -101,7 +101,7 @@ function statementContainsReturn(stmt: Statement): boolean {
 
 function findEarlyReturnViolation(
   call: CallExpression,
-  rootFn: Node,
+  rootFn: Node
 ): string | null {
   const body = getFunctionBodyBlock(rootFn);
   if (!body) return null;
@@ -126,7 +126,7 @@ function findEarlyReturnViolation(
 
 function findNestedFunctionViolation(
   call: CallExpression,
-  rootFn: Node,
+  rootFn: Node
 ): string | null {
   let node: Node | undefined = call.getParent();
 
@@ -143,7 +143,7 @@ function findNestedFunctionViolation(
 function findTryCatchViolation(
   call: CallExpression,
   hookName: string,
-  rootFn: Node,
+  rootFn: Node
 ): string | null {
   if (!isReactUseHook(hookName)) return null;
 
@@ -162,7 +162,7 @@ function findTryCatchViolation(
 function findConditionalOrLoopViolation(
   call: CallExpression,
   hookName: string,
-  rootFn: Node,
+  rootFn: Node
 ): string | null {
   if (isReactUseHook(hookName)) return null;
 
@@ -181,7 +181,7 @@ function findConditionalOrLoopViolation(
 
 function findHookRuleViolation(
   call: CallExpression,
-  hookName: string,
+  hookName: string
 ): string | null {
   const rootFn = findReactFunctionRoot(call);
   if (!rootFn) return null;
@@ -200,12 +200,14 @@ function findHookRuleViolation(
  * @see https://eslint-react.xyz/docs/rules/rules-of-hooks
  */
 export function detectHookRuleViolations(
-  sourceFiles: SourceFile[],
+  sourceFiles: SourceFile[]
 ): HookRuleViolation[] {
   const violations: HookRuleViolation[] = [];
 
   for (const sourceFile of sourceFiles) {
-    for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    for (const call of sourceFile.getDescendantsOfKind(
+      SyntaxKind.CallExpression
+    )) {
       const hookName = getHookCallName(call.getExpression());
       if (!hookName) continue;
 

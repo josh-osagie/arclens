@@ -1,9 +1,6 @@
 import path from "node:path";
 import { isAppEntryFile, isNonProductionFile } from "../entryPoints";
-import {
-  isLikelyStateExport,
-  isTestOrHocUtility,
-} from "../exportHeuristics";
+import { isLikelyStateExport, isTestOrHocUtility } from "../exportHeuristics";
 import {
   SyntaxKind,
   type CallExpression,
@@ -50,7 +47,9 @@ export function getHookCallName(expression: Node): string | null {
   }
 
   if (expression.getKind() === SyntaxKind.PropertyAccessExpression) {
-    const name = expression.getChildAtIndexIfKind(2, SyntaxKind.Identifier)?.getText();
+    const name = expression
+      .getChildAtIndexIfKind(2, SyntaxKind.Identifier)
+      ?.getText();
     if (name && (/^use[A-Z]\w*$/.test(name) || name === "use")) {
       return name;
     }
@@ -106,7 +105,7 @@ export function isReactFunctionNode(fn: Node): boolean {
 
 export function resolveDefaultExportName(
   declaration: Node | undefined,
-  filePath: string,
+  filePath: string
 ): string {
   const fallback = path.basename(filePath, path.extname(filePath));
 
@@ -136,7 +135,9 @@ export function resolveDefaultExportName(
 }
 
 export function isConfigFile(filePath: string): boolean {
-  return /\.config\.(ts|tsx|js|jsx|mts|mjs|cjs)$/i.test(path.basename(filePath));
+  return /\.config\.(ts|tsx|js|jsx|mts|mjs|cjs)$/i.test(
+    path.basename(filePath)
+  );
 }
 
 const ENTRY_FILE_NAMES = new Set(["main", "index"]);
@@ -155,7 +156,9 @@ function isTestingLibraryModule(moduleSpecifier: string): boolean {
   );
 }
 
-function collectTestingLibraryRenderBindings(sourceFile: SourceFile): Set<string> {
+function collectTestingLibraryRenderBindings(
+  sourceFile: SourceFile
+): Set<string> {
   const bindings = new Set<string>();
 
   for (const importDecl of sourceFile.getImportDeclarations()) {
@@ -178,7 +181,8 @@ function collectTestingLibraryRenderBindings(sourceFile: SourceFile): Set<string
 
 function isCreateRootRenderChain(call: CallExpression): boolean {
   const expression = call.getExpression();
-  if (expression.getKind() !== SyntaxKind.PropertyAccessExpression) return false;
+  if (expression.getKind() !== SyntaxKind.PropertyAccessExpression)
+    return false;
 
   const access = expression as PropertyAccessExpression;
   if (access.getName() !== "render") return false;
@@ -195,7 +199,8 @@ function isCreateRootRenderChain(call: CallExpression): boolean {
 
 function isLegacyReactDomMount(call: CallExpression): boolean {
   const expression = call.getExpression();
-  if (expression.getKind() !== SyntaxKind.PropertyAccessExpression) return false;
+  if (expression.getKind() !== SyntaxKind.PropertyAccessExpression)
+    return false;
 
   const access = expression as PropertyAccessExpression;
   const method = access.getName();
@@ -207,7 +212,7 @@ function isLegacyReactDomMount(call: CallExpression): boolean {
 
 function isAppBootstrapMountCall(
   call: CallExpression,
-  testingLibraryRenderBindings: Set<string>,
+  testingLibraryRenderBindings: Set<string>
 ): boolean {
   if (isCreateRootRenderChain(call) || isLegacyReactDomMount(call)) {
     return true;
@@ -227,9 +232,12 @@ export function sourceFileBootstrapsReact(sourceFile: SourceFile): boolean {
     return false;
   }
 
-  const testingLibraryRenderBindings = collectTestingLibraryRenderBindings(sourceFile);
+  const testingLibraryRenderBindings =
+    collectTestingLibraryRenderBindings(sourceFile);
 
-  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+  for (const call of sourceFile.getDescendantsOfKind(
+    SyntaxKind.CallExpression
+  )) {
     if (isAppBootstrapMountCall(call, testingLibraryRenderBindings)) {
       return true;
     }
@@ -239,7 +247,7 @@ export function sourceFileBootstrapsReact(sourceFile: SourceFile): boolean {
 }
 
 export function classifyFileModule(
-  sourceFile: SourceFile,
+  sourceFile: SourceFile
 ): "entry" | "config" | "utility" {
   const filePath = sourceFile.getFilePath();
 
@@ -354,7 +362,7 @@ export function isComponentExport(node: Node): boolean {
 export function classifyExport(
   name: string,
   declarations: Node[],
-  filePath?: string,
+  filePath?: string
 ): "component" | "hook" | "utility" | "context" | "entry" | "config" {
   if (filePath && isConfigFile(filePath)) {
     return "config";

@@ -24,7 +24,7 @@ describe("reactFunction", () => {
     it("detects JSX in arrow components", () => {
       const { declarations } = parseExport(
         `export const X = () => <div />;`,
-        "X",
+        "X"
       );
       expect(nodeHasJsx(declarations[0]!)).toBe(true);
       expect(nodeCallsHooks(declarations[0]!)).toBe(false);
@@ -33,7 +33,7 @@ describe("reactFunction", () => {
     it("detects hook calls in custom hooks", () => {
       const { declarations } = parseExport(
         `export function useAuth() { return useState(0); }`,
-        "useAuth",
+        "useAuth"
       );
       expect(nodeCallsHooks(declarations[0]!)).toBe(true);
       expect(nodeHasJsx(declarations[0]!)).toBe(false);
@@ -44,7 +44,7 @@ describe("reactFunction", () => {
     it("classifies lowercase JSX functions as components", () => {
       const { declarations } = parseExport(
         `export const counter = () => <div />;`,
-        "counter",
+        "counter"
       );
       expect(classifyExport("counter", declarations)).toBe("component");
     });
@@ -52,7 +52,7 @@ describe("reactFunction", () => {
     it("classifies use-prefixed hook exports", () => {
       const { declarations } = parseExport(
         `export function useCounter() { return useState(0); }`,
-        "useCounter",
+        "useCounter"
       );
       expect(classifyExport("useCounter", declarations)).toBe("hook");
     });
@@ -60,7 +60,7 @@ describe("reactFunction", () => {
     it("prefers hook over component for use-prefixed exports that return JSX", () => {
       const { declarations } = parseExport(
         `export function useHandleError() { const [x] = useState(0); return <div />; }`,
-        "useHandleError",
+        "useHandleError"
       );
       expect(classifyExport("useHandleError", declarations)).toBe("hook");
     });
@@ -68,7 +68,7 @@ describe("reactFunction", () => {
     it("classifies PascalCase hook callers as components", () => {
       const { declarations } = parseExport(
         `export function ToastContainer() { const [x] = useState(0); return <div />; }`,
-        "ToastContainer",
+        "ToastContainer"
       );
       expect(classifyExport("ToastContainer", declarations)).toBe("component");
     });
@@ -76,16 +76,20 @@ describe("reactFunction", () => {
     it("classifies renderWithRouter helpers as utilities", () => {
       const { declarations, file } = parseExport(
         `export const renderWithRouter = (ui: React.ReactElement) => render(<Router>{ui}</Router>);`,
-        "renderWithRouter",
+        "renderWithRouter"
       );
-      const filePath = file.getFilePath().replace("test.tsx", "utils/hoc/renderWithRouter.tsx");
-      expect(classifyExport("renderWithRouter", declarations, filePath)).toBe("utility");
+      const filePath = file
+        .getFilePath()
+        .replace("test.tsx", "utils/hoc/renderWithRouter.tsx");
+      expect(classifyExport("renderWithRouter", declarations, filePath)).toBe(
+        "utility"
+      );
     });
 
     it("classifies plain API helpers as utility", () => {
       const { declarations } = parseExport(
         `export async function fetchUser(id: string) { return fetch(id); }`,
-        "fetchUser",
+        "fetchUser"
       );
       expect(classifyExport("fetchUser", declarations)).toBe("utility");
     });
@@ -93,23 +97,29 @@ describe("reactFunction", () => {
     it("classifies createContext exports as context", () => {
       const { declarations } = parseExport(
         `export const ThemeContext = createContext("light");`,
-        "ThemeContext",
+        "ThemeContext"
       );
       expect(classifyExport("ThemeContext", declarations)).toBe("context");
     });
 
     it("classifies config file exports as config", () => {
       const { declarations, file } = parseExport(
-        `export default { plugins: [] };`,
+        `export default { plugins: [] };`
       );
-      expect(classifyExport("default", declarations, file.getFilePath().replace("test.tsx", "vite.config.ts"))).toBe("config");
+      expect(
+        classifyExport(
+          "default",
+          declarations,
+          file.getFilePath().replace("test.tsx", "vite.config.ts")
+        )
+      ).toBe("config");
     });
 
     it("classifies bootstrap files as entry modules", () => {
       const project = new Project({ useInMemoryFileSystem: true });
       const file = project.createSourceFile(
         "/main.tsx",
-        `import { createRoot } from "react-dom/client";\nimport App from "./App";\ncreateRoot(document.getElementById("root")!).render(<App />);`,
+        `import { createRoot } from "react-dom/client";\nimport App from "./App";\ncreateRoot(document.getElementById("root")!).render(<App />);`
       );
       expect(classifyFileModule(file)).toBe("entry");
     });
@@ -118,7 +128,7 @@ describe("reactFunction", () => {
       const project = new Project({ useInMemoryFileSystem: true });
       const file = project.createSourceFile(
         "/src/Signin.test.tsx",
-        `import { render } from "@testing-library/react";\nimport App from "./App";\nit("renders", () => { render(<App />); });`,
+        `import { render } from "@testing-library/react";\nimport App from "./App";\nit("renders", () => { render(<App />); });`
       );
       expect(classifyFileModule(file)).toBe("utility");
     });
@@ -127,7 +137,7 @@ describe("reactFunction", () => {
       const project = new Project({ useInMemoryFileSystem: true });
       const file = project.createSourceFile(
         "/src/components/badge/index.tsx",
-        `export { BadgeIcon } from "./BadgeIcon";\nexport { BadgeLabel } from "./BadgeLabel";`,
+        `export { BadgeIcon } from "./BadgeIcon";\nexport { BadgeLabel } from "./BadgeLabel";`
       );
       expect(classifyFileModule(file)).toBe("utility");
     });
@@ -136,23 +146,27 @@ describe("reactFunction", () => {
   describe("resolveDefaultExportName", () => {
     it("resolves export default function App()", () => {
       const { declarations, file } = parseExport(
-        `export default function App() { return null; }`,
+        `export default function App() { return null; }`
       );
-      expect(resolveDefaultExportName(declarations[0], file.getFilePath())).toBe("App");
+      expect(
+        resolveDefaultExportName(declarations[0], file.getFilePath())
+      ).toBe("App");
     });
 
     it("resolves export default Identifier", () => {
       const { declarations, file } = parseExport(
-        `const Hero = () => null;\nexport default Hero;`,
+        `const Hero = () => null;\nexport default Hero;`
       );
-      expect(resolveDefaultExportName(declarations[0], file.getFilePath())).toBe("Hero");
+      expect(
+        resolveDefaultExportName(declarations[0], file.getFilePath())
+      ).toBe("Hero");
     });
 
     it("falls back to filename when anonymous", () => {
-      const { declarations, file } = parseExport(
-        `export default () => null;`,
-      );
-      expect(resolveDefaultExportName(declarations[0], file.getFilePath())).toBe("test");
+      const { declarations, file } = parseExport(`export default () => null;`);
+      expect(
+        resolveDefaultExportName(declarations[0], file.getFilePath())
+      ).toBe("test");
     });
   });
 
@@ -194,7 +208,7 @@ describe("reactFunction", () => {
       const project = new Project({ useInMemoryFileSystem: true });
       const file = project.createSourceFile(
         "/c.tsx",
-        `export const counter = () => <div />;`,
+        `export const counter = () => <div />;`
       );
       const arrow = file.getDescendantsOfKind(SyntaxKind.ArrowFunction)[0]!;
       expect(isReactFunctionNode(arrow)).toBe(true);

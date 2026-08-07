@@ -44,7 +44,10 @@ describe("assessReactProject", () => {
 
   it("warns when no React signals are found", () => {
     const project = new Project({ useInMemoryFileSystem: true });
-    project.createSourceFile("/utils/math.ts", `export function add(a: number, b: number) { return a + b; }`);
+    project.createSourceFile(
+      "/utils/math.ts",
+      `export function add(a: number, b: number) { return a + b; }`
+    );
 
     const result = mockResult({
       exports: [

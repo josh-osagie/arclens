@@ -7,7 +7,7 @@ import type { GraphInsight } from "../../viewer/src/types";
 
 const insight = (
   severity: GraphInsight["severity"],
-  title = "Test",
+  title = "Test"
 ): GraphInsight => ({
   severity,
   title,
@@ -59,7 +59,10 @@ describe("insightHelpers", () => {
     });
 
     it("uses warning tone when only warnings are present", () => {
-      const summary = insightBadgeSummary([insight("warning"), insight("warning")]);
+      const summary = insightBadgeSummary([
+        insight("warning"),
+        insight("warning"),
+      ]);
 
       expect(summary).toEqual({
         tone: "warning",

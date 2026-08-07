@@ -13,7 +13,9 @@ describe("entryPoints", () => {
   describe("isNonProductionFile", () => {
     it("flags test, spec, story, and mock paths", () => {
       expect(isNonProductionFile("src/Signin.test.tsx")).toBe(true);
-      expect(isNonProductionFile("src/CustomerOnboardingWizard.spec.tsx")).toBe(true);
+      expect(isNonProductionFile("src/CustomerOnboardingWizard.spec.tsx")).toBe(
+        true
+      );
       expect(isNonProductionFile("src/Button.stories.tsx")).toBe(true);
       expect(isNonProductionFile("src/__tests__/App.test.tsx")).toBe(true);
       expect(isNonProductionFile("src/__mocks__/react-router.tsx")).toBe(true);
@@ -62,10 +64,30 @@ describe("entryPoints", () => {
   describe("filterEntryNodes", () => {
     const nodes = [
       { id: "main", name: "bootstrap", file: "src/main.tsx", type: "entry" },
-      { id: "badge-a", name: "BadgeIcon", file: "src/components/badge/index.tsx", type: "component" },
-      { id: "badge-b", name: "BadgeLabel", file: "src/components/badge/index.tsx", type: "component" },
-      { id: "test", name: "SigninTest", file: "src/Signin.test.tsx", type: "entry" },
-      { id: "hub", name: "Hub", file: "src/components/Hub.tsx", type: "component" },
+      {
+        id: "badge-a",
+        name: "BadgeIcon",
+        file: "src/components/badge/index.tsx",
+        type: "component",
+      },
+      {
+        id: "badge-b",
+        name: "BadgeLabel",
+        file: "src/components/badge/index.tsx",
+        type: "component",
+      },
+      {
+        id: "test",
+        name: "SigninTest",
+        file: "src/Signin.test.tsx",
+        type: "entry",
+      },
+      {
+        id: "hub",
+        name: "Hub",
+        file: "src/components/Hub.tsx",
+        type: "component",
+      },
     ];
 
     it("ignores barrel exports even when meta lists them", () => {
@@ -123,8 +145,18 @@ describe("entryPoints", () => {
   describe("findFallbackEntryNodes", () => {
     it("prefers components over hooks among graph roots", () => {
       const nodes = [
-        { id: "hook", name: "useCounter", file: "src/useCounter.ts", type: "hook" },
-        { id: "app", name: "Counter", file: "src/Counter.tsx", type: "component" },
+        {
+          id: "hook",
+          name: "useCounter",
+          file: "src/useCounter.ts",
+          type: "hook",
+        },
+        {
+          id: "app",
+          name: "Counter",
+          file: "src/Counter.tsx",
+          type: "component",
+        },
       ];
       const edges = [
         { from: "app", to: "hook", type: "imports" },
@@ -139,7 +171,12 @@ describe("entryPoints", () => {
   describe("isEntryNode", () => {
     it("treats typed entry nodes as entries", () => {
       expect(
-        isEntryNode({ id: "x", name: "App", file: "src/App.tsx", type: "entry" }),
+        isEntryNode({
+          id: "x",
+          name: "App",
+          file: "src/App.tsx",
+          type: "entry",
+        })
       ).toBe(true);
     });
 
@@ -150,7 +187,7 @@ describe("entryPoints", () => {
           name: "BadgeIcon",
           file: "src/components/badge/index.tsx",
           type: "component",
-        }),
+        })
       ).toBe(false);
     });
 
@@ -161,7 +198,7 @@ describe("entryPoints", () => {
           name: "SigninTest",
           file: "src/Signin.test.tsx",
           type: "entry",
-        }),
+        })
       ).toBe(false);
     });
   });
@@ -170,9 +207,24 @@ describe("entryPoints", () => {
     it("groups exports from the same file and ranks by confidence", () => {
       const nodes = [
         { id: "main", name: "bootstrap", file: "src/main.tsx", type: "entry" },
-        { id: "badge-a", name: "BadgeIcon", file: "src/components/badge/index.tsx", type: "component" },
-        { id: "badge-b", name: "BadgeLabel", file: "src/components/badge/index.tsx", type: "component" },
-        { id: "pages", name: "RootLayout", file: "app/layout.tsx", type: "entry" },
+        {
+          id: "badge-a",
+          name: "BadgeIcon",
+          file: "src/components/badge/index.tsx",
+          type: "component",
+        },
+        {
+          id: "badge-b",
+          name: "BadgeLabel",
+          file: "src/components/badge/index.tsx",
+          type: "component",
+        },
+        {
+          id: "pages",
+          name: "RootLayout",
+          file: "app/layout.tsx",
+          type: "entry",
+        },
       ];
 
       const deduped = dedupeEntryPointsByFile(filterEntryNodes(nodes), 5);
@@ -184,7 +236,12 @@ describe("entryPoints", () => {
 
     it("shows multiple high-confidence entries when no clear main.tsx", () => {
       const nodes = [
-        { id: "layout", name: "RootLayout", file: "app/layout.tsx", type: "entry" },
+        {
+          id: "layout",
+          name: "RootLayout",
+          file: "app/layout.tsx",
+          type: "entry",
+        },
         { id: "page", name: "HomePage", file: "app/page.tsx", type: "entry" },
       ];
 

@@ -16,7 +16,14 @@ const IGNORED_DIRS = new Set([
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
-const UNSUPPORTED_HINT_EXTENSIONS = new Set([".html", ".htm", ".js", ".jsx", ".mjs", ".cjs"]);
+const UNSUPPORTED_HINT_EXTENSIONS = new Set([
+  ".html",
+  ".htm",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+]);
 
 function isIgnoredSourceFile(fileName: string): boolean {
   if (isConfigFile(fileName)) return true;
@@ -73,7 +80,7 @@ export class UnsupportedProjectError extends Error {
 export function formatUnsupportedProjectMessage(
   targetDir: string,
   hint?: string,
-  cwd = process.cwd(),
+  cwd = process.cwd()
 ): string {
   const rel = path.relative(cwd, targetDir) || targetDir;
   const lines = [
@@ -87,12 +94,17 @@ export function formatUnsupportedProjectMessage(
     lines.push("", hint);
   }
 
-  lines.push("", "Try pointing at a folder that contains .tsx/.ts files (often ./src).");
+  lines.push(
+    "",
+    "Try pointing at a folder that contains .tsx/.ts files (often ./src)."
+  );
   return lines.join("\n");
 }
 
 /** Best-effort hint when a folder has HTML/JS but no TS sources. */
-export function detectUnsupportedProjectHint(rootDir: string): string | undefined {
+export function detectUnsupportedProjectHint(
+  rootDir: string
+): string | undefined {
   const counts = new Map<string, number>();
 
   function walk(currentDir: string) {

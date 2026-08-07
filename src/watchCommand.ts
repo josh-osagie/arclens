@@ -23,7 +23,10 @@ const WATCH_HELP = `Watching for .ts/.tsx changes. Interactive commands:
 
 Ctrl+C also stops watch.`;
 
-export function getWatchGlobs(targetDir: string, packageRoot: string): string[] {
+export function getWatchGlobs(
+  targetDir: string,
+  packageRoot: string
+): string[] {
   const target = path.resolve(targetDir);
   const samplesDir = path.resolve(path.join(packageRoot, "samples"));
   const isSamples =
@@ -106,7 +109,7 @@ function startInteractiveControls(handlers: {
 
 export async function runWatch(
   inputPath: string,
-  analyzeOptions: AnalyzeOptions,
+  analyzeOptions: AnalyzeOptions
 ): Promise<number> {
   const packageRoot = getPackageRoot();
   const targetDir = resolveTarget(inputPath);

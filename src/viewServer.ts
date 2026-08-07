@@ -33,7 +33,7 @@ const MIME_TYPES: Record<string, string> = {
 function sendJson(
   res: http.ServerResponse,
   status: number,
-  body: unknown,
+  body: unknown
 ): void {
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json");
@@ -73,7 +73,11 @@ export function resolveViewerDist(packageRoot: string): string | null {
 
 function resolveViewerSourceDir(packageRoot: string): string | null {
   const viewerDir = path.join(packageRoot, "viewer");
-  for (const configName of ["vite.config.ts", "vite.config.mjs", "vite.config.js"]) {
+  for (const configName of [
+    "vite.config.ts",
+    "vite.config.mjs",
+    "vite.config.js",
+  ]) {
     if (fs.existsSync(path.join(viewerDir, configName))) {
       return viewerDir;
     }
@@ -84,7 +88,7 @@ function resolveViewerSourceDir(packageRoot: string): string | null {
 /** Use Vite HMR when developing from source; static dist/viewer in published installs. */
 export function shouldUseViteDev(
   packageRoot: string,
-  options: Pick<ViewOptions, "dev">,
+  options: Pick<ViewOptions, "dev">
 ): boolean {
   if (options.dev) {
     return true;
@@ -105,7 +109,7 @@ function resolveProjectRoot(options: ViewOptions): string | null {
 function serveStaticFile(
   distDir: string,
   requestPath: string,
-  res: http.ServerResponse,
+  res: http.ServerResponse
 ): boolean {
   const safePath = path
     .normalize(requestPath.replace(/^\/+/, ""))
@@ -121,7 +125,10 @@ function serveStaticFile(
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext = path.extname(filePath);
     res.statusCode = 200;
-    res.setHeader("Content-Type", MIME_TYPES[ext] ?? "application/octet-stream");
+    res.setHeader(
+      "Content-Type",
+      MIME_TYPES[ext] ?? "application/octet-stream"
+    );
     fs.createReadStream(filePath).pipe(res);
     return true;
   }
@@ -131,7 +138,7 @@ function serveStaticFile(
 
 function createStaticServer(
   distDir: string,
-  options: ViewOptions,
+  options: ViewOptions
 ): http.Server {
   return http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", `http://127.0.0.1:${options.port}`);
@@ -181,7 +188,11 @@ function createStaticServer(
       const maxLines = parseSnippetLinesParam(url.searchParams.get("lines"));
 
       try {
-        const snippet = readSnippetFromDisk(projectRoot, relativeFile, maxLines);
+        const snippet = readSnippetFromDisk(
+          projectRoot,
+          relativeFile,
+          maxLines
+        );
         sendJson(res, 200, {
           file: relativeFile,
           content: snippet.content,
@@ -222,20 +233,26 @@ async function openBrowser(url: string): Promise<void> {
 
 function startViteDevServer(
   options: ViewOptions,
-  packageRoot: string,
+  packageRoot: string
 ): Promise<number> {
   const viewerDir = resolveViewerSourceDir(packageRoot);
   if (!viewerDir) {
     throw new Error(
-      "Viewer source not found. Use a published install or clone the repo with viewer/.",
+      "Viewer source not found. Use a published install or clone the repo with viewer/."
     );
   }
 
-  const viteCli = path.join(viewerDir, "node_modules", "vite", "bin", "vite.js");
+  const viteCli = path.join(
+    viewerDir,
+    "node_modules",
+    "vite",
+    "bin",
+    "vite.js"
+  );
 
   if (!fs.existsSync(viteCli)) {
     throw new Error(
-      "Viewer dev dependencies missing. From source run `pnpm install` in the repo, or build with `pnpm build:viewer` for static assets.",
+      "Viewer dev dependencies missing. From source run `pnpm install` in the repo, or build with `pnpm build:viewer` for static assets."
     );
   }
 
@@ -283,7 +300,7 @@ export async function runView(options: ViewOptions): Promise<number> {
   const distDir = resolveViewerDist(packageRoot);
   if (!distDir) {
     throw new Error(
-      "Viewer not available. Run `pnpm build:viewer`, or from source use `arclens view --dev`.",
+      "Viewer not available. Run `pnpm build:viewer`, or from source use `arclens view --dev`."
     );
   }
 

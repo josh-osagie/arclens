@@ -36,7 +36,7 @@ describe("pathHighlight", () => {
   it("prefers path ids over connected ids for highlight", () => {
     const connected = new Set(["c", "x"]);
     expect(mergeHighlightIds(["a", "b", "c"], connected, "c")).toEqual(
-      new Set(["a", "b", "c"]),
+      new Set(["a", "b", "c"])
     );
   });
 });

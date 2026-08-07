@@ -14,7 +14,11 @@ import {
 
 const STORAGE_KEY = "arclens-edge-visibility";
 
-function edge(id: string, type: "imports" | "renders" | "uses", label?: string): Edge {
+function edge(
+  id: string,
+  type: "imports" | "renders" | "uses",
+  label?: string
+): Edge {
   return {
     id,
     source: "a",
@@ -48,9 +52,9 @@ describe("edgeVisibility", () => {
   });
 
   it("falls back to label when data is missing", () => {
-    expect(getFlowEdgeType({ id: "e1", source: "a", target: "b", label: "renders" })).toBe(
-      "renders",
-    );
+    expect(
+      getFlowEdgeType({ id: "e1", source: "a", target: "b", label: "renders" })
+    ).toBe("renders");
   });
 
   it("keeps edges whose type is enabled", () => {
@@ -71,13 +75,15 @@ describe("edgeVisibility", () => {
         imports: false,
         renders: false,
         uses: false,
-      }),
+      })
     ).toEqual([]);
   });
 
   it("keeps unknown edge types when any visibility is on", () => {
     const unknown = { id: "e4", source: "a", target: "b" } as Edge;
-    expect(filterEdgesByVisibility([unknown], DEFAULT_EDGE_VISIBILITY)).toEqual([unknown]);
+    expect(filterEdgesByVisibility([unknown], DEFAULT_EDGE_VISIBILITY)).toEqual(
+      [unknown]
+    );
   });
 });
 

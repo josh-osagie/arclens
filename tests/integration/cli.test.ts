@@ -10,7 +10,7 @@ const tsxCli = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
 
 function runCli(
   args: string[],
-  options: { expectFailure?: boolean } = {},
+  options: { expectFailure?: boolean } = {}
 ): { output: string; status: number } {
   try {
     const output = execFileSync(process.execPath, [tsxCli, cli, ...args], {
@@ -22,7 +22,11 @@ function runCli(
     return { output, status: 0 };
   } catch (error) {
     if (!options.expectFailure) throw error;
-    const execError = error as { status?: number; stdout?: string; stderr?: string };
+    const execError = error as {
+      status?: number;
+      stdout?: string;
+      stderr?: string;
+    };
     return {
       output: `${execError.stdout ?? ""}${execError.stderr ?? ""}`,
       status: execError.status ?? 1,
@@ -32,7 +36,12 @@ function runCli(
 
 describe("CLI (developer workflow)", () => {
   it("analyze ./samples prints architecture summary to terminal", () => {
-    const { output } = runCli(["analyze", "./samples", "--insights", "--no-color"]);
+    const { output } = runCli([
+      "analyze",
+      "./samples",
+      "--insights",
+      "--no-color",
+    ]);
 
     expect(output).toContain("Arclens");
     expect(output).toContain("Project:");
@@ -66,7 +75,9 @@ describe("CLI (developer workflow)", () => {
     runCli(["analyze", samples, "--report-file", json, "-q", "--no-color"]);
 
     expect(fs.readFileSync(txt, "utf8")).toContain("Arclens");
-    expect(fs.readFileSync(json, "utf8").trimStart().startsWith("{")).toBe(true);
+    expect(fs.readFileSync(json, "utf8").trimStart().startsWith("{")).toBe(
+      true
+    );
   });
 
   it("exits non-zero for invalid path", () => {

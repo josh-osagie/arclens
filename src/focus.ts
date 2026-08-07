@@ -23,7 +23,7 @@ function groupConnections(connections: GraphConnection[]) {
 
 function formatConnectionList(
   connections: GraphConnection[],
-  colors: typeof pc,
+  colors: typeof pc
 ): string[] {
   if (connections.length === 0) {
     return [`  ${colors.dim("none")}`];
@@ -31,7 +31,7 @@ function formatConnectionList(
 
   return connections.map(
     (conn) =>
-      `  ${colors.cyan(conn.name)} ${colors.dim(`(${conn.edgeType}, ${conn.file})`)}`,
+      `  ${colors.cyan(conn.name)} ${colors.dim(`(${conn.edgeType}, ${conn.file})`)}`
   );
 }
 
@@ -51,7 +51,7 @@ function formatNodeFocus(node: GraphNode, colors: typeof pc): string[] {
   }
   lines.push(
     `${colors.dim("Used by:")}   ${node.stats.incoming}`,
-    `${colors.dim("Depends on:")} ${node.stats.outgoing}`,
+    `${colors.dim("Depends on:")} ${node.stats.outgoing}`
   );
   lines.push("");
 
@@ -84,9 +84,12 @@ function formatNodeFocus(node: GraphNode, colors: typeof pc): string[] {
 export function formatFocusReport(
   result: AnalysisResult,
   focusName: string,
-  options: FocusOptions = {},
+  options: FocusOptions = {}
 ): string {
-  const colors = options.color === false ? new Proxy(pc, { get: () => (v: string) => v }) : pc;
+  const colors =
+    options.color === false
+      ? new Proxy(pc, { get: () => (v: string) => v })
+      : pc;
   const matches = findNodesByName(result.graph, focusName);
 
   if (matches.length === 0) {
@@ -103,7 +106,12 @@ export function formatFocusReport(
 
   const sections = matches.map((node, index) => {
     if (matches.length > 1 && index > 0) {
-      return ["", colors.dim("-".repeat(40)), "", ...formatNodeFocus(node, colors)].join("\n");
+      return [
+        "",
+        colors.dim("-".repeat(40)),
+        "",
+        ...formatNodeFocus(node, colors),
+      ].join("\n");
     }
     return formatNodeFocus(node, colors).join("\n");
   });
@@ -111,9 +119,9 @@ export function formatFocusReport(
   if (matches.length > 1) {
     sections.unshift(
       colors.yellow(
-        `Found ${matches.length} nodes named "${focusName}". Showing each match:`,
+        `Found ${matches.length} nodes named "${focusName}". Showing each match:`
       ),
-      "",
+      ""
     );
   }
 
@@ -123,7 +131,7 @@ export function formatFocusReport(
 export function printFocusReport(
   result: AnalysisResult,
   focusName: string,
-  options: FocusOptions = {},
+  options: FocusOptions = {}
 ): void {
   console.log(formatFocusReport(result, focusName, options));
   console.log("");

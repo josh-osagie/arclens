@@ -63,7 +63,10 @@ const CONFIDENCE_RANK: Record<EntryConfidence, number> = {
   low: 1,
 };
 
-export function entryFileConfidence(file: string, nodeType?: string): EntryConfidence {
+export function entryFileConfidence(
+  file: string,
+  nodeType?: string
+): EntryConfidence {
   if (isNonProductionFile(file)) return "low";
 
   const normalized = normalizeFilePath(file);
@@ -102,7 +105,7 @@ const FALLBACK_TYPE_RANK: Record<string, number> = {
 
 function nodeIncomingCount(
   node: EntryNodeLike,
-  incoming?: Map<string, number>,
+  incoming?: Map<string, number>
 ): number {
   if (node.stats?.incoming !== undefined) return node.stats.incoming;
   return incoming?.get(node.id) ?? 0;
@@ -110,7 +113,7 @@ function nodeIncomingCount(
 
 function nodeOutgoingCount(
   node: EntryNodeLike,
-  outgoing?: Map<string, number>,
+  outgoing?: Map<string, number>
 ): number {
   if (node.stats?.outgoing !== undefined) return node.stats.outgoing;
   return outgoing?.get(node.id) ?? 0;
@@ -135,7 +138,7 @@ function buildEdgeCounts(edges: EntryEdgeLike[]): {
  */
 export function findFallbackEntryNodes<T extends EntryNodeLike>(
   nodes: T[],
-  edges: EntryEdgeLike[] = [],
+  edges: EntryEdgeLike[] = []
 ): T[] {
   const counts = edges.length > 0 ? buildEdgeCounts(edges) : null;
 
@@ -168,11 +171,13 @@ export function isEntryNode(node: EntryNodeLike): boolean {
 export function filterEntryNodes<T extends EntryNodeLike>(
   nodes: T[],
   metaEntryIds?: string[],
-  edges: EntryEdgeLike[] = [],
+  edges: EntryEdgeLike[] = []
 ): T[] {
   if (metaEntryIds && metaEntryIds.length > 0) {
     const idSet = new Set(metaEntryIds);
-    const fromMeta = nodes.filter((node) => idSet.has(node.id) && isEntryNode(node));
+    const fromMeta = nodes.filter(
+      (node) => idSet.has(node.id) && isEntryNode(node)
+    );
     if (fromMeta.length > 0) return fromMeta;
   }
 
@@ -185,17 +190,22 @@ export function filterEntryNodes<T extends EntryNodeLike>(
 export function findEntryNodeIds<T extends EntryNodeLike>(
   nodes: T[],
   metaEntryIds?: string[],
-  edges: EntryEdgeLike[] = [],
+  edges: EntryEdgeLike[] = []
 ): string[] {
   return filterEntryNodes(nodes, metaEntryIds, edges).map((node) => node.id);
 }
 
-export function pickPrimaryEntryNode<T extends EntryNodeLike>(nodes: T[], file: string): T {
+export function pickPrimaryEntryNode<T extends EntryNodeLike>(
+  nodes: T[],
+  file: string
+): T {
   const typed = nodes.find((node) => node.type === "entry");
   if (typed) return typed;
 
   const base = fileBaseName(file);
-  const byName = nodes.find((node) => node.name === base || node.name === "default");
+  const byName = nodes.find(
+    (node) => node.name === base || node.name === "default"
+  );
   if (byName) return byName;
 
   return [...nodes].sort((a, b) => a.name.localeCompare(b.name))[0]!;
@@ -210,9 +220,10 @@ export type EntryOverview<T extends EntryNodeLike = EntryNodeLike> = {
 
 function compareEntryOverviews<T extends EntryNodeLike>(
   a: EntryOverview<T>,
-  b: EntryOverview<T>,
+  b: EntryOverview<T>
 ): number {
-  const confDiff = CONFIDENCE_RANK[b.confidence] - CONFIDENCE_RANK[a.confidence];
+  const confDiff =
+    CONFIDENCE_RANK[b.confidence] - CONFIDENCE_RANK[a.confidence];
   if (confDiff !== 0) return confDiff;
 
   const aIsMain = fileBaseName(a.file).toLowerCase() === "main" ? 0 : 1;
@@ -224,7 +235,7 @@ function compareEntryOverviews<T extends EntryNodeLike>(
 
 export function dedupeEntryPointsByFile<T extends EntryNodeLike>(
   nodes: T[],
-  limit = 5,
+  limit = 5
 ): EntryOverview<T>[] {
   const byFile = new Map<string, T[]>();
 
@@ -249,11 +260,12 @@ export function dedupeEntryPointsByFile<T extends EntryNodeLike>(
 
   const hasClearMain = overviews.some(
     (entry) =>
-      entry.confidence === "high" && fileBaseName(entry.file).toLowerCase() === "main",
+      entry.confidence === "high" &&
+      fileBaseName(entry.file).toLowerCase() === "main"
   );
   if (hasClearMain) {
     overviews = overviews.filter(
-      (entry) => fileBaseName(entry.file).toLowerCase() === "main",
+      (entry) => fileBaseName(entry.file).toLowerCase() === "main"
     );
   }
 

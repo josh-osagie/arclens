@@ -24,7 +24,7 @@ describe("insights", () => {
   it("references @eslint-react for hook violations", () => {
     const result = analyzeFixture("hooks-violation");
     const hookInsight = buildInsights(result).find((i) =>
-      i.title.includes("Rules of Hooks"),
+      i.title.includes("Rules of Hooks")
     );
     expect(hookInsight?.eslintRule).toBe("@eslint-react/rules-of-hooks");
   });
@@ -62,7 +62,10 @@ describe("report", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-test-"));
     const jsonPath = path.join(dir, "report.json");
 
-    writeReportFile(result, jsonPath, { graphOutput: null, reportOutput: jsonPath });
+    writeReportFile(result, jsonPath, {
+      graphOutput: null,
+      reportOutput: jsonPath,
+    });
     const parsed = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
 
     expect(parsed.summary.nodes).toBeGreaterThan(0);
@@ -75,7 +78,10 @@ describe("report", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-test-"));
     const txtPath = path.join(dir, "report.txt");
 
-    writeReportFile(result, txtPath, { graphOutput: null, reportOutput: txtPath });
+    writeReportFile(result, txtPath, {
+      graphOutput: null,
+      reportOutput: txtPath,
+    });
     const text = fs.readFileSync(txtPath, "utf8");
 
     expect(text).toContain("Arclens");
@@ -91,7 +97,14 @@ describe("graph output shape (viewer contract)", () => {
 
     for (const node of graph.nodes) {
       expect(node.id).toContain("::");
-      expect(["component", "hook", "utility", "context", "entry", "config"]).toContain(node.type);
+      expect([
+        "component",
+        "hook",
+        "utility",
+        "context",
+        "entry",
+        "config",
+      ]).toContain(node.type);
     }
 
     for (const edge of graph.edges) {

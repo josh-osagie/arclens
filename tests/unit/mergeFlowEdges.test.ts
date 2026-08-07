@@ -20,7 +20,7 @@ describe("mergeSameDirectionEdges", () => {
       mergeSameDirectionEdges([
         { from: "a", to: "b", type: "imports" },
         { from: "a", to: "b", type: "renders" },
-      ]),
+      ])
     ).toEqual([{ from: "a", to: "b", types: ["renders", "imports"] }]);
   });
 
@@ -29,7 +29,7 @@ describe("mergeSameDirectionEdges", () => {
       mergeSameDirectionEdges([
         { from: "a", to: "b", type: "imports" },
         { from: "b", to: "a", type: "imports" },
-      ]),
+      ])
     ).toEqual([
       { from: "a", to: "b", types: ["imports"] },
       { from: "b", to: "a", types: ["imports"] },
@@ -41,7 +41,7 @@ describe("mergeSameDirectionEdges", () => {
       mergeSameDirectionEdges([
         { from: "a", to: "b", type: "uses" },
         { from: "a", to: "b", type: "uses" },
-      ]),
+      ])
     ).toEqual([{ from: "a", to: "b", types: ["uses"] }]);
   });
 
@@ -98,7 +98,7 @@ describe("buildFlowGraph edge merging", () => {
         imports: false,
         renders: false,
         uses: true,
-      }),
+      })
     ).toEqual([]);
   });
 });

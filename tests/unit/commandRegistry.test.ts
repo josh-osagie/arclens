@@ -70,7 +70,9 @@ describe("commandRegistry", () => {
     expect(grouped.get("graph")).toHaveLength(12);
     expect(grouped.get("selection")).toHaveLength(3);
 
-    const dimAction = built.find((action) => action.id === "toggle-dim-distant");
+    const dimAction = built.find(
+      (action) => action.id === "toggle-dim-distant"
+    );
     expect(dimAction?.label).toContain("Disable");
 
     const hideImports = built.find((action) => action.id === "hide-imports");
@@ -90,12 +92,24 @@ describe("commandRegistry", () => {
 
   it("matches global shortcut bindings", () => {
     const fitView = matchesCommandShortcut(
-      { key: "f", metaKey: false, ctrlKey: false, shiftKey: true, altKey: false },
-      COMMAND_SHORTCUTS["fit-view"]!,
+      {
+        key: "f",
+        metaKey: false,
+        ctrlKey: false,
+        shiftKey: true,
+        altKey: false,
+      },
+      COMMAND_SHORTCUTS["fit-view"]!
     );
     const focusSelected = matchesCommandShortcut(
-      { key: "f", metaKey: false, ctrlKey: false, shiftKey: false, altKey: false },
-      COMMAND_SHORTCUTS["focus-selected"]!,
+      {
+        key: "f",
+        metaKey: false,
+        ctrlKey: false,
+        shiftKey: false,
+        altKey: false,
+      },
+      COMMAND_SHORTCUTS["focus-selected"]!
     );
 
     expect(fitView).toBe(true);
@@ -113,15 +127,21 @@ describe("commandRegistry", () => {
         altKey: false,
         target: null,
       } as KeyboardEvent,
-      built,
+      built
     );
 
     expect(fitView?.id).toBe("fit-view");
   });
 
   it("detects Cmd/Ctrl+K shortcut", () => {
-    expect(shouldOpenCommandPalette({ key: "k", metaKey: true, ctrlKey: false })).toBe(true);
-    expect(shouldOpenCommandPalette({ key: "k", metaKey: false, ctrlKey: true })).toBe(true);
-    expect(shouldOpenCommandPalette({ key: "j", metaKey: true, ctrlKey: false })).toBe(false);
+    expect(
+      shouldOpenCommandPalette({ key: "k", metaKey: true, ctrlKey: false })
+    ).toBe(true);
+    expect(
+      shouldOpenCommandPalette({ key: "k", metaKey: false, ctrlKey: true })
+    ).toBe(true);
+    expect(
+      shouldOpenCommandPalette({ key: "j", metaKey: true, ctrlKey: false })
+    ).toBe(false);
   });
 });

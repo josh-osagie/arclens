@@ -8,12 +8,18 @@ import {
   formatUnsupportedProjectMessage,
   UnsupportedProjectError,
 } from "../../src/discoverFiles";
-import { findTsConfig, resolveProjectName, resolveTarget } from "../../src/resolveTarget";
+import {
+  findTsConfig,
+  resolveProjectName,
+  resolveTarget,
+} from "../../src/resolveTarget";
 import { fixturesDir } from "../helpers";
 
 describe("discoverFiles", () => {
   it("finds .ts and .tsx under a directory", () => {
-    const files = discoverSourceFiles(path.join(fixturesDir, "default-export-app"));
+    const files = discoverSourceFiles(
+      path.join(fixturesDir, "default-export-app")
+    );
     expect(files.some((f) => f.endsWith("App.tsx"))).toBe(true);
     expect(files.some((f) => f.endsWith("main.tsx"))).toBe(true);
   });
@@ -26,10 +32,16 @@ describe("discoverFiles", () => {
 
   it("skips .arclens snippet sidecars", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-discover-"));
-    fs.writeFileSync(path.join(dir, "App.tsx"), "export const App = () => null;\n");
+    fs.writeFileSync(
+      path.join(dir, "App.tsx"),
+      "export const App = () => null;\n"
+    );
     const sidecarDir = path.join(dir, ".arclens", "snippets");
     fs.mkdirSync(sidecarDir, { recursive: true });
-    fs.writeFileSync(path.join(sidecarDir, "App.tsx"), "export const App = () => null;\n");
+    fs.writeFileSync(
+      path.join(sidecarDir, "App.tsx"),
+      "export const App = () => null;\n"
+    );
 
     const files = discoverSourceFiles(dir);
     expect(files).toHaveLength(1);
@@ -50,7 +62,7 @@ describe("discoverFiles", () => {
     const message = formatUnsupportedProjectMessage(
       dir,
       "Found 3 HTML files, but no TypeScript (.ts/.tsx) sources.",
-      "/workspace",
+      "/workspace"
     );
 
     expect(message).toContain("React/TypeScript projects only");
@@ -60,7 +72,10 @@ describe("discoverFiles", () => {
   });
 
   it("throws UnsupportedProjectError with hint details", () => {
-    const error = new UnsupportedProjectError("/tmp/app", "Found 1 HTML file, but no TypeScript (.ts/.tsx) sources.");
+    const error = new UnsupportedProjectError(
+      "/tmp/app",
+      "Found 1 HTML file, but no TypeScript (.ts/.tsx) sources."
+    );
 
     expect(error).toBeInstanceOf(UnsupportedProjectError);
     expect(error.message).toContain("not supported yet");
@@ -76,7 +91,9 @@ describe("resolveTarget", () => {
   });
 
   it("rejects non-existent paths", () => {
-    expect(() => resolveTarget("./does-not-exist-xyz")).toThrow(/does not exist/);
+    expect(() => resolveTarget("./does-not-exist-xyz")).toThrow(
+      /does not exist/
+    );
   });
 
   it("refuses node_modules as target", () => {
@@ -99,7 +116,7 @@ describe("resolveProjectName", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-name-"));
     fs.writeFileSync(
       path.join(dir, "package.json"),
-      JSON.stringify({ name: "my-cool-app" }),
+      JSON.stringify({ name: "my-cool-app" })
     );
 
     expect(resolveProjectName(dir)).toBe("my-cool-app");

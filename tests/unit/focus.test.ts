@@ -16,7 +16,9 @@ describe("focus", () => {
   });
 
   it("lists known nodes when name is not found", () => {
-    const report = formatFocusReport(result, "NotARealComponent", { color: false });
+    const report = formatFocusReport(result, "NotARealComponent", {
+      color: false,
+    });
 
     expect(report).toContain('No node named "NotARealComponent" found');
     expect(report).toContain("Known nodes:");

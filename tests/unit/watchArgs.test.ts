@@ -101,7 +101,11 @@ describe("watch.sh argument parsing", () => {
       });
       expect.fail("watch.sh should exit non-zero for unsupported projects");
     } catch (error) {
-      const execError = error as { status?: number; stderr?: string; stdout?: string };
+      const execError = error as {
+        status?: number;
+        stderr?: string;
+        stdout?: string;
+      };
       const combined = `${execError.stdout ?? ""}${execError.stderr ?? ""}`;
       expect(execError.status).toBe(1);
       expect(combined).toMatch(/No TypeScript sources/);

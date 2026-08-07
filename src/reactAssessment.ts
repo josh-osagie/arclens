@@ -12,7 +12,7 @@ export type ReactAssessment = {
 export function applyModuleClassification(
   moduleTypeByFile: Map<string, GraphNodeType>,
   exports: ExportRecord[],
-  graph: Graph,
+  graph: Graph
 ): void {
   for (const exp of exports) {
     if (isConfigFile(exp.file)) {
@@ -40,9 +40,14 @@ export function applyModuleClassification(
 }
 
 export function assessReactProject(
-  result: Pick<AnalysisResult, "graph" | "exports" | "renders" | "uses" | "importEdges">,
+  result: Pick<
+    AnalysisResult,
+    "graph" | "exports" | "renders" | "uses" | "importEdges"
+  >
 ): ReactAssessment {
-  const components = result.graph.nodes.filter((node) => node.type === "component");
+  const components = result.graph.nodes.filter(
+    (node) => node.type === "component"
+  );
   const hasRenders = result.renders.length > 0;
   const hasHookUses = result.uses.length > 0;
   const hasEntry = result.graph.nodes.some((node) => node.type === "entry");
@@ -51,7 +56,7 @@ export function assessReactProject(
       edge.to === "react" ||
       edge.to.startsWith("react/") ||
       edge.to.startsWith("react-dom") ||
-      edge.to.startsWith("react-native"),
+      edge.to.startsWith("react-native")
   );
 
   const signals: string[] = [];

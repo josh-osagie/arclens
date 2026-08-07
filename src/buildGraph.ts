@@ -19,7 +19,7 @@ function createBaseNode(
   name: string,
   file: string,
   type: GraphNode["type"],
-  extra?: Pick<GraphNode, "exportKind" | "kind">,
+  extra?: Pick<GraphNode, "exportKind" | "kind">
 ): GraphNode {
   return {
     id,
@@ -36,10 +36,16 @@ function ensureNode(nodes: GraphNode[], exportRecord: ExportRecord): void {
   const id = nodeId(exportRecord);
   if (!nodes.some((node) => node.id === id)) {
     nodes.push(
-      createBaseNode(id, exportRecord.name, exportRecord.file, exportRecord.type, {
-        exportKind: exportRecord.exportKind,
-        kind: exportRecord.kind,
-      }),
+      createBaseNode(
+        id,
+        exportRecord.name,
+        exportRecord.file,
+        exportRecord.type,
+        {
+          exportKind: exportRecord.exportKind,
+          kind: exportRecord.kind,
+        }
+      )
     );
   }
 }
@@ -48,13 +54,13 @@ export function buildGraph(
   importEdges: ReturnType<typeof extractImportEdges>,
   exports: ExportRecord[],
   renders: ReturnType<typeof extractJsxRenders>,
-  uses: ReturnType<typeof extractHookUsage>,
+  uses: ReturnType<typeof extractHookUsage>
 ): Graph {
   const nodes: GraphNode[] = exports.map((e) =>
     createBaseNode(nodeId(e), e.name, e.file, e.type, {
       exportKind: e.exportKind,
       kind: e.kind,
-    }),
+    })
   );
 
   const graphEdges: GraphEdge[] = [];

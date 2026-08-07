@@ -8,7 +8,10 @@ import {
   extractImportEdges,
   extractJsxRenders,
 } from "./extractors/exports";
-import { detectHookRuleViolations, type HookRuleViolation } from "./extractors/hookRules";
+import {
+  detectHookRuleViolations,
+  type HookRuleViolation,
+} from "./extractors/hookRules";
 import { extractComponentProps } from "./extractors/props";
 import { classifyFileModule } from "./extractors/reactFunction";
 import type { GraphNodeType, GraphProp } from "./types";
@@ -32,14 +35,18 @@ export type FileAnalysisPayload = {
   moduleType: GraphNodeType;
 };
 
-export function sanitizeFileAnalysisPayload(payload: FileAnalysisPayload): FileAnalysisPayload {
+export function sanitizeFileAnalysisPayload(
+  payload: FileAnalysisPayload
+): FileAnalysisPayload {
   return {
     ...payload,
     filePath: normalizeFileRef(payload.filePath),
     importEdges: payload.importEdges.map((edge) => ({
       ...edge,
       from: normalizeFileRef(edge.from),
-      ...(edge.resolvedTo ? { resolvedTo: normalizeFileRef(edge.resolvedTo) } : {}),
+      ...(edge.resolvedTo
+        ? { resolvedTo: normalizeFileRef(edge.resolvedTo) }
+        : {}),
     })),
     exports: payload.exports.map((exp) => ({
       ...exp,
@@ -64,13 +71,15 @@ export function sanitizeFileAnalysisPayload(payload: FileAnalysisPayload): FileA
         const file = normalizeFileRef(id.slice(0, sep));
         const name = id.slice(sep + 2);
         return [`${file}::${name}`, props];
-      }),
+      })
     ),
     moduleType: payload.moduleType,
   };
 }
 
-export function extractFileAnalysis(sourceFile: SourceFile): FileAnalysisPayload {
+export function extractFileAnalysis(
+  sourceFile: SourceFile
+): FileAnalysisPayload {
   const filePath = path.normalize(sourceFile.getFilePath());
   const exports = extractExportsDeclarations(sourceFile);
   const propsMap = extractComponentProps([sourceFile], exports);
@@ -98,7 +107,9 @@ export type MergedFileAnalysis = {
   scannedFiles: string[];
 };
 
-export function mergeFilePayloads(payloads: FileAnalysisPayload[]): MergedFileAnalysis {
+export function mergeFilePayloads(
+  payloads: FileAnalysisPayload[]
+): MergedFileAnalysis {
   const importEdges: ImportEdge[] = [];
   const exports: ExportRecord[] = [];
   const renders: RenderEdge[] = [];

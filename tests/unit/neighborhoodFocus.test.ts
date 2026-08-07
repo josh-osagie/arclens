@@ -29,21 +29,29 @@ describe("neighborhoodFocus", () => {
   });
 
   it("includes direct neighbors at 1 hop", () => {
-    expect(computeNeighborhoodIds("c", graph.edges, 1)).toEqual(new Set(["b", "c", "d"]));
+    expect(computeNeighborhoodIds("c", graph.edges, 1)).toEqual(
+      new Set(["b", "c", "d"])
+    );
   });
 
   it("extends to two hops undirected", () => {
     expect(computeNeighborhoodIds("c", graph.edges, 2)).toEqual(
-      new Set(["a", "b", "c", "d"]),
+      new Set(["a", "b", "c", "d"])
     );
   });
 
   it("prefers boot path over neighborhood focus", () => {
     const connected = new Set(["c", "x"]);
-    const result = resolveHighlightIds(["a", "b", "c"], "c", graph.edges, connected, {
-      neighborhoodFocus: true,
-      neighborhoodHops: 2,
-    });
+    const result = resolveHighlightIds(
+      ["a", "b", "c"],
+      "c",
+      graph.edges,
+      connected,
+      {
+        neighborhoodFocus: true,
+        neighborhoodHops: 2,
+      }
+    );
     expect(result).toEqual(new Set(["a", "b", "c"]));
   });
 

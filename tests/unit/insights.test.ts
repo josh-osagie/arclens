@@ -1,13 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { analyzeSamples } from "../helpers";
-import { buildInsights, hookRuleViolationsToInsights } from "../../src/insights";
+import {
+  buildInsights,
+  hookRuleViolationsToInsights,
+} from "../../src/insights";
 import type { ExportRecord } from "../../src/extractors/exports";
 import type { GraphEdge, GraphNode } from "../../src/types";
 import { nodeId } from "../../src/extractors/find";
 
-function graphNode(name: string, file: string, type: GraphNode["type"]): GraphNode {
+function graphNode(
+  name: string,
+  file: string,
+  type: GraphNode["type"]
+): GraphNode {
   return {
-    id: nodeId({ file, name, exportKind: "named", kind: "FunctionDeclaration", type }),
+    id: nodeId({
+      file,
+      name,
+      exportKind: "named",
+      kind: "FunctionDeclaration",
+      type,
+    }),
     name,
     file,
     type,
@@ -21,7 +34,9 @@ describe("buildInsights gates", () => {
     const result = analyzeSamples();
     const titles = buildInsights(result).map((insight) => insight.title);
 
-    expect(titles.some((title) => title.includes("Component naming:"))).toBe(false);
+    expect(titles.some((title) => title.includes("Component naming:"))).toBe(
+      false
+    );
     expect(titles.some((title) => title.includes("Hook naming:"))).toBe(false);
   });
 
@@ -46,9 +61,11 @@ describe("buildInsights gates", () => {
       importEdges: [],
     }).map((insight) => insight.title);
 
-    expect(titles.some((title) => title.includes("Component naming: generateFileError"))).toBe(
-      false,
-    );
+    expect(
+      titles.some((title) =>
+        title.includes("Component naming: generateFileError")
+      )
+    ).toBe(false);
   });
 });
 
@@ -74,7 +91,7 @@ describe("hookRuleViolationsToInsights", () => {
 
     expect(insights).toHaveLength(1);
     expect(insights[0]?.title).toBe(
-      "Rules of Hooks: 2× useFormik called after an early return",
+      "Rules of Hooks: 2× useFormik called after an early return"
     );
     expect(insights[0]?.detail).toContain("At lines 42, 78.");
   });
@@ -99,6 +116,8 @@ describe("hookRuleViolationsToInsights", () => {
     ]);
 
     expect(insights).toHaveLength(2);
-    expect(insights.every((insight) => !insight.title.includes("×"))).toBe(true);
+    expect(insights.every((insight) => !insight.title.includes("×"))).toBe(
+      true
+    );
   });
 });

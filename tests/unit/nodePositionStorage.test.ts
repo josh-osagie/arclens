@@ -61,7 +61,7 @@ describe("nodePositionStorage", () => {
 
   it("extracts positions from flow nodes", () => {
     expect(
-      nodePositionsFromNodes([makeNode("a", 1, 2), makeNode("b", 3, 4)]),
+      nodePositionsFromNodes([makeNode("a", 1, 2), makeNode("b", 3, 4)])
     ).toEqual({
       a: { x: 1, y: 2 },
       b: { x: 3, y: 4 },
@@ -83,7 +83,9 @@ describe("nodePositionStorage", () => {
     const next = [makeNode("a", 12, 34)];
     const current = [makeNode("a", 100, 200)];
 
-    expect(mergeNodePositions(next, current, null, new Set(["a"]))[0].position).toEqual({
+    expect(
+      mergeNodePositions(next, current, null, new Set(["a"]))[0].position
+    ).toEqual({
       x: 100,
       y: 200,
     });
@@ -92,13 +94,19 @@ describe("nodePositionStorage", () => {
   it("falls back to layout positions when nothing is saved", () => {
     const next = [makeNode("a", 12, 34)];
 
-    expect(mergeNodePositions(next, [], null)[0].position).toEqual({ x: 12, y: 34 });
+    expect(mergeNodePositions(next, [], null)[0].position).toEqual({
+      x: 12,
+      y: 34,
+    });
   });
 
   it("ignores saved positions for cluster folder nodes", () => {
     const next = [makeNode("cluster::src/components", 12, 34)];
     const saved = { "cluster::src/components": { x: 0, y: 0 } };
 
-    expect(mergeNodePositions(next, [], saved)[0].position).toEqual({ x: 12, y: 34 });
+    expect(mergeNodePositions(next, [], saved)[0].position).toEqual({
+      x: 12,
+      y: 34,
+    });
   });
 });

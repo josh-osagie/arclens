@@ -9,18 +9,32 @@ import type { AtlasGraph } from "../../viewer/src/types";
 
 const sampleGraph: AtlasGraph = {
   nodes: [
-    { id: "a::App", name: "App", file: "/a/App.tsx", type: "component", stats: { incoming: 1, outgoing: 1 } },
-    { id: "b::Button", name: "Button", file: "/b/Button.tsx", type: "component", stats: { incoming: 1, outgoing: 0 } },
+    {
+      id: "a::App",
+      name: "App",
+      file: "/a/App.tsx",
+      type: "component",
+      stats: { incoming: 1, outgoing: 1 },
+    },
+    {
+      id: "b::Button",
+      name: "Button",
+      file: "/b/Button.tsx",
+      type: "component",
+      stats: { incoming: 1, outgoing: 0 },
+    },
   ],
-  edges: [
-    { from: "a::App", to: "b::Button", type: "renders" },
-  ],
+  edges: [{ from: "a::App", to: "b::Button", type: "renders" }],
 };
 
 describe("graphConnections", () => {
   it("builds incoming and outgoing from edges", () => {
     const nodeById = buildNodeById(sampleGraph);
-    const appConnections = buildNodeConnections("a::App", sampleGraph.edges, nodeById);
+    const appConnections = buildNodeConnections(
+      "a::App",
+      sampleGraph.edges,
+      nodeById
+    );
 
     expect(appConnections.outgoing).toHaveLength(1);
     expect(appConnections.outgoing[0]?.name).toBe("Button");

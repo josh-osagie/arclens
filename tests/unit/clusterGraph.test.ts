@@ -35,12 +35,16 @@ describe("clusterGraph", () => {
 
   it("collapses folder members into cluster nodes", () => {
     const clustered = applyClusterView(graph, true, new Set());
-    const clusterIds = clustered.nodes.filter((node) => node.cluster).map((node) => node.id);
+    const clusterIds = clustered.nodes
+      .filter((node) => node.cluster)
+      .map((node) => node.id);
 
     expect(clusterIds).toContain(clusterNodeId("src/components"));
     expect(clustered.nodes.some((node) => node.id === "n1")).toBe(false);
     expect(clustered.nodes.some((node) => node.id === "n3")).toBe(false);
-    expect(clustered.nodes.some((node) => node.id === clusterNodeId("src"))).toBe(true);
+    expect(
+      clustered.nodes.some((node) => node.id === clusterNodeId("src"))
+    ).toBe(true);
     expect(clustered.edges).toEqual([
       {
         from: clusterNodeId("src"),
@@ -62,9 +66,9 @@ describe("clusterGraph", () => {
 
     expect(expanded.nodes.some((node) => node.id === "n1")).toBe(true);
     expect(expanded.nodes.some((node) => node.id === "n2")).toBe(false);
-    expect(expanded.nodes.some((node) => node.id === clusterNodeId("src/components"))).toBe(
-      true,
-    );
+    expect(
+      expanded.nodes.some((node) => node.id === clusterNodeId("src/components"))
+    ).toBe(true);
   });
 
   it("identifies cluster ids", () => {
@@ -83,7 +87,11 @@ describe("clusterGraph", () => {
 
   it("collapses a folder from expansion state", () => {
     const partial = new Map([["src/components", new Set(["n1"])]]);
-    const next = collapseClusterFolderState("src/components", new Set(["src"]), partial);
+    const next = collapseClusterFolderState(
+      "src/components",
+      new Set(["src"]),
+      partial
+    );
 
     expect(next.fullyExpandedFolders.has("src/components")).toBe(false);
     expect(next.fullyExpandedFolders.has("src")).toBe(true);
@@ -114,7 +122,12 @@ describe("clusterGraph", () => {
 
   it("dedupes wired cluster edges by endpoint pair and type", () => {
     const groups = groupNodesByFolder(graph.nodes);
-    const visibility = buildClusterNodeVisibilityMap(graph, groups, new Set(), new Map());
+    const visibility = buildClusterNodeVisibilityMap(
+      graph,
+      groups,
+      new Set(),
+      new Map()
+    );
     const visibleIds = new Set([
       clusterNodeId("src"),
       clusterNodeId("src/components"),
@@ -126,7 +139,7 @@ describe("clusterGraph", () => {
         { from: "n3", to: "n2", type: "renders" },
       ],
       visibility,
-      visibleIds,
+      visibleIds
     );
 
     expect(wired).toEqual([
@@ -150,14 +163,28 @@ describe("clusterGraph", () => {
   it("reveals search matches inside collapsed folders", () => {
     const searchGraph: AtlasGraph = {
       nodes: [
-        { id: "router", name: "LendhaRouter", file: "src/routing/LendhaRouter.tsx", type: "component" },
-        { id: "other", name: "Other", file: "src/routing/Other.tsx", type: "component" },
+        {
+          id: "router",
+          name: "LendhaRouter",
+          file: "src/routing/LendhaRouter.tsx",
+          type: "component",
+        },
+        {
+          id: "other",
+          name: "Other",
+          file: "src/routing/Other.tsx",
+          type: "component",
+        },
         { id: "main", name: "Main", file: "src/main.tsx", type: "entry" },
       ],
       edges: [{ from: "main", to: "router", type: "renders" }],
     };
 
-    const reveals = mergeSearchPartialReveals(searchGraph, "lendharouter", new Map());
+    const reveals = mergeSearchPartialReveals(
+      searchGraph,
+      "lendharouter",
+      new Map()
+    );
     expect(reveals.get("src/routing")?.has("router")).toBe(true);
 
     const clustered = applyClusterView(searchGraph, true, new Set(), reveals);
@@ -167,14 +194,21 @@ describe("clusterGraph", () => {
   it("highlights folder cluster when search match is still collapsed", () => {
     const searchGraph: AtlasGraph = {
       nodes: [
-        { id: "router", name: "LendhaRouter", file: "src/routing/LendhaRouter.tsx", type: "component" },
+        {
+          id: "router",
+          name: "LendhaRouter",
+          file: "src/routing/LendhaRouter.tsx",
+          type: "component",
+        },
         { id: "main", name: "Main", file: "src/main.tsx", type: "entry" },
       ],
       edges: [{ from: "main", to: "router", type: "renders" }],
     };
     const viewGraph = {
       meta: searchGraph.meta,
-      nodes: searchGraph.nodes.filter((node) => node.id === "router" || node.id === "main"),
+      nodes: searchGraph.nodes.filter(
+        (node) => node.id === "router" || node.id === "main"
+      ),
       edges: searchGraph.edges,
     };
 
@@ -183,7 +217,7 @@ describe("clusterGraph", () => {
       viewGraph,
       "lendharouter",
       true,
-      new Set(),
+      new Set()
     );
 
     expect(highlights?.has("router")).toBe(true);

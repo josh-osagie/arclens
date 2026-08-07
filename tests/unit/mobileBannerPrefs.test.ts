@@ -26,8 +26,12 @@ describe("mobileBannerPrefs", () => {
 
   it("shows banner on narrow viewports by default", () => {
     expect(loadMobileBannerPrefs()).toEqual(DEFAULT_MOBILE_BANNER_PREFS);
-    expect(shouldShowMobileBanner(DEFAULT_MOBILE_BANNER_PREFS, true)).toBe(true);
-    expect(shouldShowMobileBanner(DEFAULT_MOBILE_BANNER_PREFS, false)).toBe(false);
+    expect(shouldShowMobileBanner(DEFAULT_MOBILE_BANNER_PREFS, true)).toBe(
+      true
+    );
+    expect(shouldShowMobileBanner(DEFAULT_MOBILE_BANNER_PREFS, false)).toBe(
+      false
+    );
   });
 
   it("persists temporary dismiss", () => {

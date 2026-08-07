@@ -1,5 +1,10 @@
 import { Project } from "ts-morph";
-import { extractExportsDeclarations, extractHookUsage, extractImportEdges, extractJsxRenders } from "./exports";
+import {
+  extractExportsDeclarations,
+  extractHookUsage,
+  extractImportEdges,
+  extractJsxRenders,
+} from "./exports";
 
 export function extractRenders(project: Project) {
   return project.getSourceFiles().flatMap(extractJsxRenders);

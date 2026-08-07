@@ -73,7 +73,7 @@ export function resolveSnippetsDir(targetDir: string): string | null {
 /** Resolve a snippet sidecar file path for reading (legacy fallbacks included). */
 export function resolveSnippetSidecarPath(
   projectRoot: string,
-  relativeFile: string,
+  relativeFile: string
 ): string | null {
   const segments = relativeFile.split("/");
   const candidates = [

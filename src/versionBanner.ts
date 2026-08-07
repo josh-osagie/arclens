@@ -21,7 +21,7 @@ export function getPackageVersion(): string {
 
 export function formatVersionBanner(
   version: string = getPackageVersion(),
-  options: { color?: boolean } = {},
+  options: { color?: boolean } = {}
 ): string {
   const useColor = options.color !== false && process.stdout.isTTY;
   const accent = useColor ? pc.cyan : (value: string) => value;
