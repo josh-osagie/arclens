@@ -9,11 +9,11 @@ For a large, interconnected app, the graph is a **map**, not a poster. The goal 
 
 Think in three layers:
 
-| Layer | What you see | When to use it |
-| ----- | ------------ | -------------- |
-| **Folders** | Cluster bubbles by directory | Orientation: "where does this feature live?" |
-| **Feature slice** | One expanded folder + neighbors | Understanding a module |
-| **Node** | Single component/hook + details panel | "What does this file actually do?" |
+| Layer             | What you see                          | When to use it                               |
+| ----------------- | ------------------------------------- | -------------------------------------------- |
+| **Folders**       | Cluster bubbles by directory          | Orientation: "where does this feature live?" |
+| **Feature slice** | One expanded folder + neighbors       | Understanding a module                       |
+| **Node**          | Single component/hook + details panel | "What does this file actually do?"           |
 
 ## Recommended setup
 
@@ -67,16 +67,16 @@ Turn these on and leave them on for large projects (500+ nodes):
 
 ## Shortcuts
 
-| Shortcut | Action |
-| -------- | ------ |
-| `Ctrl/Cmd+K` | Command palette: jump to any node by name |
-| `Shift+C` | Toggle cluster folders |
-| `Shift+D` | Toggle dim distant / neighborhood focus |
-| `Shift+L` | Cycle layout (tree down ↔ tree right) |
-| `Shift+F` | Fit entire visible graph |
-| `F` | Focus selected node |
-| Click cluster | Expand folder (incremental on large graphs) |
-| `Shift+click` cluster | Collapse folder |
+| Shortcut              | Action                                      |
+| --------------------- | ------------------------------------------- |
+| `Ctrl/Cmd+K`          | Command palette: jump to any node by name   |
+| `Shift+C`             | Toggle cluster folders                      |
+| `Shift+D`             | Toggle dim distant / neighborhood focus     |
+| `Shift+L`             | Cycle layout (tree down ↔ tree right)       |
+| `Shift+F`             | Fit entire visible graph                    |
+| `F`                   | Focus selected node                         |
+| Click cluster         | Expand folder (incremental on large graphs) |
+| `Shift+click` cluster | Collapse folder                             |
 
 ## What not to do
 

@@ -29,6 +29,7 @@ Existing IDE navigation is file-centric. Arclens provides **architecture-centric
 - New team members ramping on large codebases
 
 ## Goals
+
 Arclens is not perfect yet, but it aims to be a comprehensive tool for understanding and analyzing React codebases.
 
 - Understand unfamiliar codebases quickly

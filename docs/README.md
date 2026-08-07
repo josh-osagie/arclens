@@ -6,12 +6,12 @@ Astro + [Starlight](https://starlight.astro.build/) site: marketing splash at `/
 
 Run from `docs/` (or `pnpm dev:docs` / `pnpm build:docs` from the repo root):
 
-| Command | Action |
-| ------- | ------ |
-| `pnpm install` | Install dependencies |
-| `pnpm dev` | Dev server at `http://localhost:4321` (uses `--force` to replace a stale server) |
-| `pnpm build` | Production build to `./dist/` |
-| `pnpm preview` | Preview the production build |
+| Command        | Action                                                                           |
+| -------------- | -------------------------------------------------------------------------------- |
+| `pnpm install` | Install dependencies                                                             |
+| `pnpm dev`     | Dev server at `http://localhost:4321` (uses `--force` to replace a stale server) |
+| `pnpm build`   | Production build to `./dist/`                                                    |
+| `pnpm preview` | Preview the production build                                                     |
 
 ## Port already in use?
 

@@ -3,7 +3,7 @@ title: Roadmap
 description: Planned and completed milestones for Arclens.
 ---
 
-Arclens development is organized in phases.  This page summarizes progress from `roadmap.md` at the repository root.
+Arclens development is organized in phases. This page summarizes progress from `roadmap.md` at the repository root.
 
 ## Phase 1: Foundations
 

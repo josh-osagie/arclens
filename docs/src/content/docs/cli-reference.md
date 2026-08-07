@@ -19,54 +19,54 @@ Analyze a React/TypeScript project and generate `graph.json`.
 pnpm arclens analyze [path] [options]
 ```
 
-| Argument | Default | Description |
-| -------- | ------- | ----------- |
+| Argument | Default     | Description                                |
+| -------- | ----------- | ------------------------------------------ |
 | `[path]` | `./samples` | Directory to analyze (app root or `./src`) |
 
 #### Output options
 
-| Flag | Description |
-| ---- | ----------- |
-| `-o, --output [file]` | Write graph JSON (default: `graph.json` in cwd). Omit graph output only when using `--report-file` alone. |
-| `--report-file <file>` | Save a full report. `.txt` = human-readable, `.json` = structured data including the graph. |
-| `--with-snippets` | Write truncated source sidecars to `.arclens/snippets/` inside the analyzed project for faster viewer previews. |
+| Flag                   | Description                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `-o, --output [file]`  | Write graph JSON (default: `graph.json` in cwd). Omit graph output only when using `--report-file` alone.       |
+| `--report-file <file>` | Save a full report. `.txt` = human-readable, `.json` = structured data including the graph.                     |
+| `--with-snippets`      | Write truncated source sidecars to `.arclens/snippets/` inside the analyzed project for faster viewer previews. |
 
 #### Report content
 
-| Flag | Description |
-| ---- | ----------- |
-| `--insights` | Show architecture suggestions and ESLint-style hints in the terminal report. |
+| Flag             | Description                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| `--insights`     | Show architecture suggestions and ESLint-style hints in the terminal report.                               |
 | `--focus <name>` | Show who imports, renders, or uses a specific node (e.g. `Button`). Replaces the default summary when set. |
-| `-v, --verbose` | Include scanned file list and export AST kind breakdown. |
-| `-q, --quiet` | Minimal output:written file paths only. |
-| `--no-color` | Disable ANSI colors in terminal output. |
+| `-v, --verbose`  | Include scanned file list and export AST kind breakdown.                                                   |
+| `-q, --quiet`    | Minimal output:written file paths only.                                                                    |
+| `--no-color`     | Disable ANSI colors in terminal output.                                                                    |
 
 #### Analysis behavior
 
-| Flag | Default | Description |
-| ---- | ------- | ----------- |
-| `--no-cache` | cache on | Re-parse all files and ignore `.arclens/cache.json`. |
-| `--max-files <number>` | `3000` | Refuse to scan more than N files (safety guard). |
-| `--reanalyze` | `false` | Watch mode: show re-analyze progress (used by `analyze:watch`). |
+| Flag                   | Default  | Description                                                     |
+| ---------------------- | -------- | --------------------------------------------------------------- |
+| `--no-cache`           | cache on | Re-parse all files and ignore `.arclens/cache.json`.            |
+| `--max-files <number>` | `3000`   | Refuse to scan more than N files (safety guard).                |
+| `--reanalyze`          | `false`  | Watch mode: show re-analyze progress (used by `analyze:watch`). |
 
 ## Watch scripts
 
 There is no separate `watch` subcommand in the CLI. Watch mode is provided by shell scripts:
 
-| Script | Description |
-| ------ | ----------- |
+| Script                                 | Description                                               |
+| -------------------------------------- | --------------------------------------------------------- |
 | `pnpm analyze:watch -- [path] [flags]` | Re-run `analyze` when TS/TSX files change (via chokidar). |
-| `pnpm dev:watch -- [path] [flags]` | Runs `analyze:watch` and `dev:viewer` together. |
+| `pnpm dev:watch -- [path] [flags]`     | Runs `analyze:watch` and `dev:viewer` together.           |
 
 When watch runs, `ARCLENS_WATCH_TARGET` is set so progress output behaves like `--reanalyze`.
 
 While watching (interactive terminal), use:
 
-| Key | Action |
-| --- | ------ |
+| Key | Action                     |
+| --- | -------------------------- |
 | `r` | Re-run analyze immediately |
-| `q` | Stop watching and exit |
-| `?` | Show available commands |
+| `q` | Stop watching and exit     |
+| `?` | Show available commands    |
 
 Ctrl+C also stops watch. In non-interactive environments (CI, piped stdin), watch runs without the keyboard loop.
 

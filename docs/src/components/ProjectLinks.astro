@@ -1,105 +1,107 @@
 ---
 interface Props {
-	heading?: string;
+  heading?: string;
 }
 
-const { heading = 'Links' } = Astro.props;
+const { heading = "Links" } = Astro.props;
 
 const links = [
-	{
-		href: 'https://www.npmjs.com/package/arclens',
-		label: 'npm',
-		description: 'Install the CLI',
-		external: true,
-	},
-	{
-		href: 'https://github.com/josh-osagie/arclens',
-		label: 'GitHub',
-		description: 'Source and issues',
-		external: true,
-	},
-	{
-		href: '/getting-started/',
-		label: 'Documentation',
-		description: 'Guides and reference',
-		external: false,
-	},
+  {
+    href: "https://www.npmjs.com/package/arclens",
+    label: "npm",
+    description: "Install the CLI",
+    external: true,
+  },
+  {
+    href: "https://github.com/josh-osagie/arclens",
+    label: "GitHub",
+    description: "Source and issues",
+    external: true,
+  },
+  {
+    href: "/getting-started/",
+    label: "Documentation",
+    description: "Guides and reference",
+    external: false,
+  },
 ];
 ---
 
 <footer class="project-links">
-	<h2 class="project-links__heading">{heading}</h2>
-	<nav class="project-links__nav" aria-label="Project links">
-		{
-			links.map((link) => (
-				<a
-					class="project-links__item"
-					href={link.href}
-					{...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-				>
-					<span class="project-links__label">{link.label}</span>
-					<span class="project-links__desc">{link.description}</span>
-				</a>
-			))
-		}
-	</nav>
+  <h2 class="project-links__heading">{heading}</h2>
+  <nav class="project-links__nav" aria-label="Project links">
+    {
+      links.map((link) => (
+        <a
+          class="project-links__item"
+          href={link.href}
+          {...(link.external
+            ? { target: "_blank", rel: "noopener noreferrer" }
+            : {})}
+        >
+          <span class="project-links__label">{link.label}</span>
+          <span class="project-links__desc">{link.description}</span>
+        </a>
+      ))
+    }
+  </nav>
 </footer>
 
 <style>
-	.project-links {
-		width: 100%;
-		max-width: 42rem;
-		margin: 0 auto 3rem;
-		padding-top: 2rem;
-		border-top: 1px solid var(--al-border);
-	}
+  .project-links {
+    width: 100%;
+    max-width: 42rem;
+    margin: 0 auto 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--al-border);
+  }
 
-	.project-links__heading {
-		margin: 0 0 1rem;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		text-align: center;
-		color: var(--al-muted);
-	}
+  .project-links__heading {
+    margin: 0 0 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-align: center;
+    color: var(--al-muted);
+  }
 
-	.project-links__nav {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 0.625rem;
-	}
+  .project-links__nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.625rem;
+  }
 
-	@media (max-width: 540px) {
-		.project-links__nav {
-			grid-template-columns: 1fr;
-		}
-	}
+  @media (max-width: 540px) {
+    .project-links__nav {
+      grid-template-columns: 1fr;
+    }
+  }
 
-	.project-links__item {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		padding: 0.875rem 1rem;
-		border: 1px solid var(--al-border);
-		border-radius: 0.375rem;
-		background: var(--al-surface);
-		color: var(--al-text);
-		text-decoration: none;
-		transition: border-color 0.15s ease;
-	}
+  .project-links__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--al-border);
+    border-radius: 0.375rem;
+    background: var(--al-surface);
+    color: var(--al-text);
+    text-decoration: none;
+    transition: border-color 0.15s ease;
+  }
 
-	.project-links__item:hover {
-		border-color: var(--al-border-strong);
-	}
+  .project-links__item:hover {
+    border-color: var(--al-border-strong);
+  }
 
-	.project-links__label {
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--al-text);
-	}
+  .project-links__label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--al-text);
+  }
 
-	.project-links__desc {
-		margin-top: 0.125rem;
-		font-size: 0.8125rem;
-		color: var(--al-muted);
-	}
+  .project-links__desc {
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    color: var(--al-muted);
+  }
 </style>

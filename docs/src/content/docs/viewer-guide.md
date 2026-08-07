@@ -83,14 +83,14 @@ Insights in the viewer mirror CLI `--insights` output, orphan exports, naming hi
 
 Click any node to open the details panel:
 
-| Field | Description |
-| ----- | ----------- |
+| Field       | Description                                         |
+| ----------- | --------------------------------------------------- |
 | Name / type | Component, hook, context, utility, entry, or config |
-| File path | Relative path in the analyzed project |
-| Export kind | Default or named export |
-| AST kind | Declaration shape ts-morph detected |
-| Props | Component prop names and types when available |
-| Connections | Incoming and outgoing imports, renders, and uses |
+| File path   | Relative path in the analyzed project               |
+| Export kind | Default or named export                             |
+| AST kind    | Declaration shape ts-morph detected                 |
+| Props       | Component prop names and types when available       |
+| Connections | Incoming and outgoing imports, renders, and uses    |
 
 ![Node details panel with metadata, props, and live source preview](/images/viewer/node-details-snippet.png)
 

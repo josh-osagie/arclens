@@ -9,15 +9,15 @@ Arclens builds a directed graph from static analysis. Understanding nodes and ed
 
 Each node represents an exported symbol or external module reference in your codebase.
 
-| Type | How it is detected |
-| ---- | ------------------ |
-| **component** | Exported function or variable that returns JSX |
-| **hook** | `use*` prefix or calls hooks without returning JSX |
-| **context** | Exported `createContext(...)` |
-| **utility** | Other exported functions (helpers, API clients, formatters) |
-| **entry** | Bootstrap files such as `main.tsx` or app router roots |
-| **config** | Config-like exports (vite config, test setup, etc.) |
-| **external** | npm package (e.g. `react`, `lodash`):shown as a single external node |
+| Type          | How it is detected                                                   |
+| ------------- | -------------------------------------------------------------------- |
+| **component** | Exported function or variable that returns JSX                       |
+| **hook**      | `use*` prefix or calls hooks without returning JSX                   |
+| **context**   | Exported `createContext(...)`                                        |
+| **utility**   | Other exported functions (helpers, API clients, formatters)          |
+| **entry**     | Bootstrap files such as `main.tsx` or app router roots               |
+| **config**    | Config-like exports (vite config, test setup, etc.)                  |
+| **external**  | npm package (e.g. `react`, `lodash`):shown as a single external node |
 
 Each node stores:
 
@@ -30,11 +30,11 @@ Each node stores:
 
 Edges describe how nodes relate:
 
-| Edge type | Meaning | Example |
-| --------- | ------- | ------- |
+| Edge type   | Meaning                     | Example                             |
+| ----------- | --------------------------- | ----------------------------------- |
 | **imports** | Module import between files | `import { Button } from './Button'` |
-| **renders** | JSX usage | `<Button />` |
-| **uses** | Hook invocation | `useState(...)`, `useEffect(...)` |
+| **renders** | JSX usage                   | `<Button />`                        |
+| **uses**    | Hook invocation             | `useState(...)`, `useEffect(...)`   |
 
 The analyzer does not yet build a general function **calls** graph:only hook **uses** and component **renders** are tracked for JSX/React patterns.
 
@@ -78,12 +78,12 @@ Insights are architecture hints computed after the graph is built. They appear i
 
 ### Severity levels
 
-| Severity | Typical examples |
-| -------- | ---------------- |
-| **error** | Rules of Hooks violations, analyzing `node_modules` |
+| Severity    | Typical examples                                                     |
+| ----------- | -------------------------------------------------------------------- |
+| **error**   | Rules of Hooks violations, analyzing `node_modules`                  |
 | **warning** | Component not PascalCase, hook not `use*` prefixed, missing tsconfig |
-| **info** | Orphan exports, component imported but not rendered |
-| **tip** | Large codebase warnings, type-only React imports |
+| **info**    | Orphan exports, component imported but not rendered                  |
+| **tip**     | Large codebase warnings, type-only React imports                     |
 
 ### Criteria (current)
 
