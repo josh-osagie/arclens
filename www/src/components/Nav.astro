@@ -1,17 +1,32 @@
 ---
-import { DOCS_URL } from '../data/tiers';
+import { DOCS_URL } from "../data/tiers";
 ---
 
-<header class="sticky top-0 z-40 h-16 border-b border-line bg-[rgba(7,11,18,0.82)] backdrop-blur-md">
+<header
+  class="sticky top-0 z-40 h-16 border-b border-line bg-[rgba(7,11,18,0.82)] backdrop-blur-md"
+>
   <div class="wrap flex h-full items-center justify-between gap-4">
-    <a class="inline-flex items-center gap-2.5 font-display text-[1.05rem] font-medium text-text no-underline hover:text-text" href="/" aria-label="Arclens home">
+    <a
+      class="inline-flex items-center gap-2.5 font-display text-[1.05rem] font-medium text-text no-underline hover:text-text"
+      href="/"
+      aria-label="Arclens home"
+    >
       <img src="/arclens-logo.svg" alt="" width="28" height="28" />
       <span>Arclens</span>
     </a>
     <nav class="flex items-center gap-3 sm:gap-5" aria-label="Primary">
-      <a class="text-[0.9375rem] font-medium text-text-body no-underline hover:text-text max-[560px]:hidden" href={DOCS_URL}>Docs</a>
-      <a class="text-[0.9375rem] font-medium text-text-body no-underline hover:text-text max-[560px]:hidden" href="#pricing">Pricing</a>
-      <a class="btn btn-primary min-h-[2.35rem] px-4 text-sm" href="#get-started">Get started</a>
+      <a
+        class="text-[0.9375rem] font-medium text-text-body no-underline hover:text-text max-[560px]:hidden"
+        href={DOCS_URL}>Docs</a
+      >
+      <a
+        class="text-[0.9375rem] font-medium text-text-body no-underline hover:text-text max-[560px]:hidden"
+        href="#pricing">Pricing</a
+      >
+      <a
+        class="btn btn-primary min-h-[2.35rem] px-4 text-sm"
+        href="#get-started">Get started</a
+      >
     </nav>
   </div>
 </header>

@@ -1,43 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
+import TextType from "./TextType";
 
-const FULL_TEXT = 'See your React architecture as a map';
-const CHAR_DELAY = 42;
+const WORDS = ["a map", "a blueprint", "a guide", "a graph", "a story"];
 
 export default function HeroTypewriter() {
-  const textRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const el = textRef.current;
-    if (!el) return;
-
-    if (reduce) {
-      el.textContent = FULL_TEXT;
-      return;
-    }
-
-    el.textContent = '';
-    let index = 0;
-    let timer: ReturnType<typeof setTimeout>;
-
-    const tick = () => {
-      index += 1;
-      el.textContent = FULL_TEXT.slice(0, index);
-      if (index < FULL_TEXT.length) {
-        timer = setTimeout(tick, CHAR_DELAY);
-      }
-    };
-
-    timer = setTimeout(tick, CHAR_DELAY);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <span className="hero-typewriter">
-      <span ref={textRef} aria-hidden="true" />
-      <span className="sr-only">{FULL_TEXT}</span>
-      <span className="hero-typewriter-cursor" aria-hidden="true" />
-    </span>
+    <h1>
+      See your codebase as{" "}
+      <span className="inline-block min-w-[70%]">
+        <TextType
+          text={WORDS}
+          typingSpeed={75}
+          pauseDuration={1800}
+          deletingSpeed={40}
+          loop
+          className="text-primary"
+        />
+      </span>
+    </h1>
   );
 }

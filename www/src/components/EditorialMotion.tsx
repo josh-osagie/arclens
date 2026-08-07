@@ -1,16 +1,18 @@
-import { useEffect } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useEffect } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 export default function EditorialMotion() {
   useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
     if (reduce) return;
 
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
-      gsap.utils.toArray<HTMLElement>('.js-reveal').forEach((section) => {
+      gsap.utils.toArray<HTMLElement>(".js-reveal").forEach((section) => {
         gsap.fromTo(
           section,
           { opacity: 0, y: 28 },
@@ -18,13 +20,13 @@ export default function EditorialMotion() {
             opacity: 1,
             y: 0,
             duration: 0.75,
-            ease: 'power2.out',
+            ease: "power2.out",
             scrollTrigger: {
               trigger: section,
-              start: 'top 88%',
+              start: "top 88%",
               once: true,
             },
-          },
+          }
         );
       });
 
@@ -36,13 +38,13 @@ export default function EditorialMotion() {
           {
             y: 0,
             duration: 0.65,
-            ease: 'power2.out',
+            ease: "power2.out",
             scrollTrigger: {
-              trigger: '#pricing',
-              start: 'top 78%',
+              trigger: "#pricing",
+              start: "top 78%",
               once: true,
             },
-          },
+          }
         );
       }
     });

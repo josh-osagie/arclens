@@ -1,23 +1,23 @@
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
 
 const NODES = [
-  { id: 'a', cx: 72, cy: 48, r: 4 },
-  { id: 'b', cx: 168, cy: 32, r: 3.5 },
-  { id: 'c', cx: 248, cy: 88, r: 4 },
-  { id: 'd', cx: 120, cy: 128, r: 3 },
-  { id: 'e', cx: 200, cy: 152, r: 3.5 },
-  { id: 'f', cx: 56, cy: 168, r: 3 },
+  { id: "a", cx: 72, cy: 48, r: 4 },
+  { id: "b", cx: 168, cy: 32, r: 3.5 },
+  { id: "c", cx: 248, cy: 88, r: 4 },
+  { id: "d", cx: 120, cy: 128, r: 3 },
+  { id: "e", cx: 200, cy: 152, r: 3.5 },
+  { id: "f", cx: 56, cy: 168, r: 3 },
 ];
 
 const EDGES: [string, string][] = [
-  ['a', 'b'],
-  ['b', 'c'],
-  ['a', 'd'],
-  ['d', 'e'],
-  ['c', 'e'],
-  ['d', 'f'],
-  ['a', 'f'],
+  ["a", "b"],
+  ["b", "c"],
+  ["a", "d"],
+  ["d", "e"],
+  ["c", "e"],
+  ["d", "f"],
+  ["a", "f"],
 ];
 
 function edgePath(from: (typeof NODES)[0], to: (typeof NODES)[0]) {
@@ -28,12 +28,14 @@ export default function ArchGraph() {
   const rootRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
     const svg = rootRef.current;
     if (!svg || reduce) return;
 
-    const lines = svg.querySelectorAll<SVGPathElement>('.arch-edge');
-    const dots = svg.querySelectorAll<SVGCircleElement>('.arch-node');
+    const lines = svg.querySelectorAll<SVGPathElement>(".arch-edge");
+    const dots = svg.querySelectorAll<SVGCircleElement>(".arch-node");
 
     lines.forEach((line) => {
       const len = line.getTotalLength();
@@ -42,7 +44,7 @@ export default function ArchGraph() {
     });
 
     dots.forEach((dot) => {
-      dot.style.opacity = '0';
+      dot.style.opacity = "0";
     });
 
     const tl = gsap.timeline({ delay: 0.35 });
@@ -50,26 +52,26 @@ export default function ArchGraph() {
     tl.to(lines, {
       strokeDashoffset: 0,
       duration: 1.4,
-      ease: 'power2.inOut',
+      ease: "power2.inOut",
       stagger: 0.12,
     }).to(
       dots,
       {
         opacity: 1,
         duration: 0.5,
-        ease: 'power2.out',
+        ease: "power2.out",
         stagger: 0.06,
       },
-      '-=1.1',
+      "-=1.1"
     );
 
     gsap.to(dots, {
       opacity: 0.55,
       duration: 2.4,
-      ease: 'sine.inOut',
+      ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
-      stagger: { each: 0.35, from: 'random' },
+      stagger: { each: 0.35, from: "random" },
       delay: 1.8,
     });
 

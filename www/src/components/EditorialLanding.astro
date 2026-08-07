@@ -1,30 +1,50 @@
 ---
-import { ANALYZE_CMD, DOCS_URL, INSTALL_CMD } from '../data/tiers';
-import { steps, whyFreeItems } from '../data/content';
-import Nav from './Nav.astro';
-import Footer from './Footer.astro';
-import PricingGrid from './PricingGrid';
-import HeroTypewriter from './HeroTypewriter';
-import ArchGraph from './ArchGraph';
-import EditorialMotion from './EditorialMotion';
+import { ANALYZE_CMD, DOCS_URL, INSTALL_CMD } from "../data/tiers";
+import { steps, whyFreeItems } from "../data/content";
+import Nav from "./Nav.astro";
+import Footer from "./Footer.astro";
+import PricingGrid from "./PricingGrid";
+import HeroTypewriter from "./HeroTypewriter";
+import ArchGraph from "./ArchGraph";
+import EditorialMotion from "./EditorialMotion";
+import TerminalDemo from "./TerminalDemo";
 ---
 
 <Nav />
 <main class="editorial-landing bg-ink text-text">
   <!-- Terminal-first hero -->
-  <section class="hero-section relative border-b border-line overflow-hidden" id="get-started" aria-labelledby="hero-title">
-    <div class="hero-graph-wrap pointer-events-none absolute inset-0" aria-hidden="true">
+  <section
+    class="hero-section relative border-b border-line overflow-hidden"
+    id="get-started"
+    aria-labelledby="hero-title"
+  >
+    <div
+      class="hero-graph-wrap pointer-events-none absolute inset-0"
+      aria-hidden="true"
+    >
       <ArchGraph client:load />
     </div>
 
-    <div class="wrap relative z-[1] grid min-h-[calc(100svh-4rem)] items-center gap-8 py-10 lg:grid-cols-[1fr_1.05fr] lg:gap-12 lg:py-16">
-      <div class="order-2 lg:order-1">
-        <p class="mb-3 font-mono text-[0.6875rem] tracking-[0.25em] text-accent uppercase">React architecture explorer</p>
-        <h1 id="hero-title" class="mb-3 font-display text-[clamp(2rem,5vw,3.25rem)] font-semibold leading-[1.05] tracking-tight">
+    <div
+      class="wrap relative z-[1] grid items-center gap-8 py-10 lg:grid-cols-[1.5fr_1.05fr] lg:gap-12 lg:py-16"
+    >
+      <div>
+        <p
+          class="mb-3 font-mono text-[0.6875rem] tracking-[0.25em] text-accent uppercase"
+        >
+          React architecture explorer
+        </p>
+        <h1
+          id="hero-title"
+          class="mb-3 font-display text-[clamp(2rem,5vw,3.25rem)] font-semibold leading-[1.05] tracking-tight"
+        >
           <HeroTypewriter client:load />
         </h1>
-        <p class="mb-6 max-w-[28rem] text-[0.9375rem] leading-relaxed text-text-body">
-          Static analysis → interactive graph. Understand unfamiliar codebases in minutes.
+        <p
+          class="mb-6 max-w-md text-[0.9375rem] leading-relaxed text-text-body"
+        >
+          Static analysis → interactive graph. Understand unfamiliar codebases
+          in minutes.
         </p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#install">Get started</a>
@@ -32,39 +52,35 @@ import EditorialMotion from './EditorialMotion';
         </div>
       </div>
 
-      <div class="order-1 lg:order-2" id="install">
-        <div class="overflow-hidden border border-line-strong bg-[#050810] shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
-          <div class="flex items-center gap-2 border-b border-line px-4 py-2.5">
-            <span class="h-2.5 w-2.5 rounded-full bg-[#ff5f57]"></span>
-            <span class="h-2.5 w-2.5 rounded-full bg-[#febc2e]"></span>
-            <span class="h-2.5 w-2.5 rounded-full bg-[#28c840]"></span>
-            <span class="ml-2 font-mono text-[0.6875rem] text-text-muted">arclens — zsh</span>
-          </div>
-          <div class="space-y-3 p-5 font-mono text-[0.8125rem] leading-relaxed sm:p-6">
-            <p><span class="text-text-muted">$</span> <span class="text-accent-strong">{INSTALL_CMD}</span></p>
-            <p class="text-text-muted">added 1 package in 2s</p>
-            <p><span class="text-text-muted">$</span> <span class="text-accent-strong">{ANALYZE_CMD}</span></p>
-            <div class="border-l-2 border-accent pl-3 text-text-body">
-              <p class="text-ok">✓ 847 files analyzed</p>
-              <p>→ 312 components · 89 hooks · 24 contexts</p>
-              <p>→ Graph ready at <span class="text-accent">.arclens/graph.json</span></p>
-              <p class="text-text-muted">Run <span class="text-text">arclens view</span> to explore</p>
-            </div>
-          </div>
-        </div>
+      <div id="install">
+        <TerminalDemo client:load />
       </div>
     </div>
   </section>
 
   <!-- Product screenshot -->
-  <section class="js-reveal border-b border-line py-12 sm:py-16" id="demo" aria-labelledby="demo-title">
+  <section
+    class="js-reveal border-b border-line py-12 sm:py-16"
+    id="demo"
+    aria-labelledby="demo-title"
+  >
     <div class="wrap">
-      <div class="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
+      <div
+        class="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4"
+      >
         <div>
-          <p class="font-mono text-[0.6875rem] tracking-wider text-accent uppercase">Product</p>
-          <h2 id="demo-title" class="mt-1 text-[clamp(1.5rem,3vw,2.25rem)]">From files to architecture</h2>
+          <p
+            class="font-mono text-[0.6875rem] tracking-wider text-accent uppercase"
+          >
+            Product
+          </p>
+          <h2 id="demo-title" class="mt-1 text-[clamp(1.5rem,3vw,2.25rem)]">
+            From files to architecture
+          </h2>
         </div>
-        <p class="max-w-[20rem] text-[0.875rem] text-text-body">Without running the app.</p>
+        <p class="max-w-[20rem] text-[0.875rem] text-text-body">
+          Without running the app.
+        </p>
       </div>
       <figure class="border border-line-strong">
         <img
@@ -80,17 +96,31 @@ import EditorialMotion from './EditorialMotion';
   </section>
 
   <!-- How it works -->
-  <section class="js-reveal border-b border-line py-12 sm:py-16" id="how" aria-labelledby="how-title">
+  <section
+    class="js-reveal border-b border-line py-12 sm:py-16"
+    id="how"
+    aria-labelledby="how-title"
+  >
     <div class="wrap">
-      <p class="mb-6 font-mono text-[0.6875rem] tracking-wider text-accent uppercase">How it works</p>
+      <p
+        class="mb-6 font-mono text-[0.6875rem] tracking-wider text-accent uppercase"
+      >
+        How it works
+      </p>
       <h2 id="how-title" class="sr-only">Three steps</h2>
       <div class="grid gap-px border border-line bg-line md:grid-cols-3">
         {
           steps.map((step) => (
             <article class="bg-ink p-5 sm:p-6">
-              <span class="mono mb-3 block border border-line px-2 py-0.5 w-fit text-[0.6875rem] text-accent">{step.n}</span>
-              <h3 class="mb-2 font-display text-[1.05rem] font-medium">{step.title}</h3>
-              <p class="text-[0.875rem] leading-snug text-text-body">{step.body}</p>
+              <span class="mono mb-3 block border border-line px-2 py-0.5 w-fit text-[0.6875rem] text-accent">
+                {step.n}
+              </span>
+              <h3 class="mb-2 font-display text-[1.05rem] font-medium">
+                {step.title}
+              </h3>
+              <p class="text-[0.875rem] leading-snug text-text-body">
+                {step.body}
+              </p>
             </article>
           ))
         }
@@ -99,22 +129,42 @@ import EditorialMotion from './EditorialMotion';
   </section>
 
   <!-- Why Free -->
-  <section class="js-reveal border-b border-line py-12 sm:py-16" id="why-free" aria-labelledby="why-title">
+  <section
+    class="js-reveal border-b border-line py-12 sm:py-16"
+    id="why-free"
+    aria-labelledby="why-title"
+  >
     <div class="wrap grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
       <div class="border border-line p-6 sm:p-8">
-        <p class="font-mono text-[0.6875rem] tracking-wider text-accent uppercase">Free tier</p>
-        <h2 id="why-title" class="mt-2 mb-3 text-[clamp(1.5rem,3vw,2rem)]">Built for your side project and your day job</h2>
+        <p
+          class="font-mono text-[0.6875rem] tracking-wider text-accent uppercase"
+        >
+          Free tier
+        </p>
+        <h2 id="why-title" class="mt-2 mb-3 text-[clamp(1.5rem,3vw,2rem)]">
+          Built for your side project and your day job
+        </h2>
         <p class="mb-5 text-[0.9375rem] leading-relaxed text-text-body">
-          Most React apps are small enough to map locally. Install Arclens, run analyze, and explore the graph without signing up or hitting a paywall on day one. Pro is there when the repo gets big enough that you feel the limits, not before.
+          Most React apps are small enough to map locally. Install Arclens, run
+          analyze, and explore the graph without signing up or hitting a paywall
+          on day one. Pro is there when the repo gets big enough that you feel
+          the limits, not before.
         </p>
         <a class="btn btn-primary" href="#get-started">Install Free</a>
       </div>
       <div class="grid gap-px border border-line bg-line sm:grid-cols-2">
         {
           whyFreeItems.map((item) => (
-            <div class="bg-ink p-5">
-              <h3 class="mb-1 font-display text-[0.9375rem] font-medium">{item.title}</h3>
-              <p class="text-[0.8125rem] text-text-body">{item.body}</p>
+            <div class="flex flex-col justify-start bg-ink p-5 sm:p-6">
+              <span class="mono mb-2 block font-mono text-[0.625rem] tracking-wider text-accent uppercase">
+                {item.tag}
+              </span>
+              <h3 class="mb-1.5 font-display text-[0.9375rem] font-medium text-text">
+                {item.title}
+              </h3>
+              <p class="text-base leading-relaxed text-text-body">
+                {item.body}
+              </p>
             </div>
           ))
         }
@@ -125,10 +175,18 @@ import EditorialMotion from './EditorialMotion';
   <PricingGrid client:visible className="js-reveal border-b border-line" />
 
   <section class="js-reveal py-12 sm:py-16" aria-labelledby="docs-title">
-    <div class="wrap flex flex-wrap items-center justify-between gap-4 border border-line-strong p-6 sm:p-8">
+    <div
+      class="wrap flex flex-wrap items-center justify-between gap-4 border border-line-strong p-6 sm:p-8"
+    >
       <div>
-        <p class="font-mono text-[0.6875rem] tracking-wider text-accent uppercase">Documentation</p>
-        <h2 id="docs-title" class="mt-1 text-[clamp(1.25rem,2.5vw,1.75rem)]">Prefer to read first?</h2>
+        <p
+          class="font-mono text-[0.6875rem] tracking-wider text-accent uppercase"
+        >
+          Documentation
+        </p>
+        <h2 id="docs-title" class="mt-1 text-[clamp(1.25rem,2.5vw,1.75rem)]">
+          Prefer to read first?
+        </h2>
       </div>
       <a class="btn btn-secondary" href={DOCS_URL}>Open docs</a>
     </div>

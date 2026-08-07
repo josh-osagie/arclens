@@ -1,9 +1,10 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @theme {
-  --font-display: 'Unbounded', system-ui, sans-serif;
-  --font-sans: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --color-ink: #070b12;
   --color-ink-elevated: #0d1420;
@@ -117,7 +118,7 @@
   }
 
   .install-block {
-    @apply mt-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-line bg-[rgba(8,14,24,0.72)] px-4 py-3 font-mono text-[0.8125rem] text-accent-strong sm:mt-5;
+    @apply mt-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-line bg-[rgba(8,14,24,0.72)] px-4 py-3 font-mono text-base text-accent-strong sm:mt-5;
   }
 
   .install-block .prompt {
@@ -129,16 +130,16 @@
   }
 
   .feature-list li {
-    @apply relative pl-3 text-[0.75rem] leading-[1.35] text-text-body;
+    @apply relative pl-3 text-sm leading-[1.35] text-text-body;
   }
 
   .feature-list li::before {
-    content: '';
+    content: "";
     @apply absolute top-[0.42em] left-0 h-[4px] w-[4px] rounded-full bg-accent opacity-75;
   }
 
   .hero-visual-overlay::after {
-    content: '';
+    content: "";
     @apply absolute inset-0 z-[1];
     background:
       linear-gradient(
@@ -200,7 +201,13 @@
 
   .hero-graph-wrap {
     @apply flex items-center justify-end opacity-40;
-    mask-image: linear-gradient(90deg, transparent 0%, black 35%, black 85%, transparent 100%);
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      black 35%,
+      black 85%,
+      transparent 100%
+    );
   }
 
   .hero-graph-wrap .arch-graph {
@@ -242,11 +249,11 @@
   }
 
   .pricing-period {
-    @apply text-[0.8125rem] text-text-muted;
+    @apply text-base text-text-muted;
   }
 
   .pricing-blurb {
-    @apply text-[0.8125rem] leading-snug text-text-body;
+    @apply text-base leading-snug text-text-body;
   }
 
   .pricing-features {
