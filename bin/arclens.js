@@ -11,12 +11,18 @@ const distCli = path.join(packageRoot, "dist", "cli.js");
 if (fs.existsSync(distCli)) {
   require(distCli);
 } else {
-  const tsxCli = path.join(packageRoot, "node_modules", "tsx", "dist", "cli.mjs");
+  const tsxCli = path.join(
+    packageRoot,
+    "node_modules",
+    "tsx",
+    "dist",
+    "cli.mjs"
+  );
   const srcCli = path.join(packageRoot, "src", "cli.ts");
   const result = spawnSync(
     process.execPath,
     [tsxCli, srcCli, ...process.argv.slice(2)],
-    { stdio: "inherit", cwd: packageRoot },
+    { stdio: "inherit", cwd: packageRoot }
   );
   process.exit(result.status ?? 1);
 }
