@@ -3,6 +3,7 @@
 </p>
 
 # Arclens
+
 Arclens statically analyzes React and TypeScript applications and transforms them into an interactive architecture graph, making it easy to explore dependencies, trace component relationships, and understand unfamiliar codebases.
 
 Unlike traditional IDE navigation, Arclens gives you a high-level view of your application's architecture without executing your code.
@@ -120,10 +121,10 @@ npx arclens analyze -h
 
 **Output**
 
-| Flag                   | Description                                                                  |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| `-o, --output [file]`  | Write `graph.json` (default: `graph.json` in cwd)                            |
-| `--report-file <file>` | Save a full report (`.txt` = readable, `.json` = structured)                 |
+| Flag                   | Description                                                              |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `-o, --output [file]`  | Write `graph.json` (default: `graph.json` in cwd)                        |
+| `--report-file <file>` | Save a full report (`.txt` = readable, `.json` = structured)             |
 | `--with-snippets`      | Write source sidecars to `.arclens/snippets/` for faster viewer previews |
 
 **Report content**
@@ -138,10 +139,10 @@ npx arclens analyze -h
 
 **Analysis behavior**
 
-| Flag              | Default  | Description                                             |
-| ----------------- | -------- | ------------------------------------------------------- |
+| Flag              | Default  | Description                                         |
+| ----------------- | -------- | --------------------------------------------------- |
 | `--no-cache`      | cache on | Re-parse all files and ignore `.arclens/cache.json` |
-| `--max-files <n>` | `3000`   | Refuse to scan more than N files (safety guard)         |
+| `--max-files <n>` | `3000`   | Refuse to scan more than N files (safety guard)     |
 
 #### Terminal output
 
@@ -184,12 +185,12 @@ npx arclens view
 npx arclens view --graph ./output/graph.json --open
 ```
 
-| Flag                 | Default      | Description                          |
-| -------------------- | ------------ | ------------------------------------ |
-| `-p, --port <n>`     | `5173`       | Port for the viewer server           |
-| `-g, --graph <file>` | `graph.json` | Path to the graph file               |
-| `--project-root`     | from graph   | Project root for live source snippets |
-| `--open`             | off          | Open the viewer in your browser      |
+| Flag                 | Default      | Description                             |
+| -------------------- | ------------ | --------------------------------------- |
+| `-p, --port <n>`     | `5173`       | Port for the viewer server              |
+| `-g, --graph <file>` | `graph.json` | Path to the graph file                  |
+| `--project-root`     | from graph   | Project root for live source snippets   |
+| `--open`             | off          | Open the viewer in your browser         |
 | `--dev`              | auto*        | Vite dev server with HMR from `viewer/` |
 
 \*From this repo, dev mode is auto-detected when `viewer/vite.config.ts` exists. Published installs serve static assets from `dist/viewer/`.
@@ -268,12 +269,12 @@ pnpm dev:docs          # start the docs site
 
 Shorthand scripts (same CLI, useful in this repo):
 
-| Script            | Equivalent                          |
-| ----------------- | ----------------------------------- |
-| `pnpm analyze`    | `pnpm arclens analyze`          |
-| `pnpm analyze:watch` | `pnpm arclens watch`         |
-| `pnpm dev:viewer` | `pnpm arclens view --dev` (Vite HMR from `viewer/`) |
-| `pnpm dev:watch`  | watch + view together (see script)  |
+| Script               | Equivalent                                          |
+| -------------------- | --------------------------------------------------- |
+| `pnpm analyze`       | `pnpm arclens analyze`                              |
+| `pnpm analyze:watch` | `pnpm arclens watch`                                |
+| `pnpm dev:viewer`    | `pnpm arclens view --dev` (Vite HMR from `viewer/`) |
+| `pnpm dev:watch`     | watch + view together (see script)                  |
 
 **Viewer dev vs production:** From this repo, `pnpm dev:viewer` (or `arclens view --dev`) runs the Vite dev server in `viewer/` so favicon, title, and UI changes hot-reload. `graph.json` is served from your current working directory. After `pnpm build`, or from the published npm package (no `viewer/` folder), `arclens view` serves the static bundle in `dist/viewer/`.
 
