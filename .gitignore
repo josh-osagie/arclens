@@ -7,6 +7,11 @@ graph.json
 
 src/**/*.js
 
-# docs build output (source lives in docs/)
+# docs build output
 docs/.astro/
 docs/dist/
+
+# site
+www/node_modules/
+www/.astro/
+www/dist/

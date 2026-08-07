@@ -1,0 +1,37 @@
+---
+import { DOCS_URL, GITHUB_URL, NPM_URL } from '../data/tiers';
+---
+
+<footer class="border-t border-line bg-[rgba(0,0,0,0.25)] pt-10 pb-6 sm:pt-12">
+  <div class="wrap mb-6 grid gap-8 sm:mb-8 md:grid-cols-[1.2fr_1.5fr] md:gap-10">
+    <div>
+      <a class="mb-3 inline-flex items-center gap-2 font-display text-text no-underline hover:text-text" href="/">
+        <img src="/arclens-logo.svg" alt="" width="24" height="24" />
+        <span>Arclens</span>
+      </a>
+      <p class="max-w-[22rem] text-[0.9375rem] text-text-muted">Open core. Local-first architecture maps for React and TypeScript.</p>
+    </div>
+
+    <nav class="grid grid-cols-2 gap-5 sm:grid-cols-3 sm:gap-6" aria-label="Footer">
+      <div class="grid content-start gap-2">
+        <p class="mb-1 font-mono text-[0.6875rem] tracking-wider text-text-muted uppercase">Product</p>
+        <a class="text-[0.9rem] text-text-body no-underline hover:text-accent-strong" href="#pricing">Pricing</a>
+        <a class="text-[0.9rem] text-text-body no-underline hover:text-accent-strong" href="#get-started">Get started</a>
+        <a class="text-[0.9rem] text-text-body no-underline hover:text-accent-strong" href={DOCS_URL}>Docs</a>
+      </div>
+      <div class="grid content-start gap-2">
+        <p class="mb-1 font-mono text-[0.6875rem] tracking-wider text-text-muted uppercase">Links</p>
+        <a class="text-[0.9rem] text-text-body no-underline hover:text-accent-strong" href={NPM_URL}>npm</a>
+        <a class="text-[0.9rem] text-text-body no-underline hover:text-accent-strong" href={GITHUB_URL}>GitHub</a>
+        <a class="text-[0.9rem] text-text-body no-underline hover:text-accent-strong" href="mailto:joshx.dev@gmail.com?subject=Arclens%20contact">Contact</a>
+      </div>
+      <div class="grid content-start gap-2">
+        <p class="mb-1 font-mono text-[0.6875rem] tracking-wider text-text-muted uppercase">Legal</p>
+        <a class="text-[0.9rem] text-text-body no-underline hover:text-accent-strong" href={`${GITHUB_URL}/blob/main/LICENSE`}>License (MIT / open core)</a>
+      </div>
+    </nav>
+  </div>
+  <div class="wrap border-t border-line pt-4 sm:pt-5">
+    <p class="text-[0.8125rem] text-text-muted">© {new Date().getFullYear()} Arclens</p>
+  </div>
+</footer>
