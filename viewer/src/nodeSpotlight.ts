@@ -1,5 +1,8 @@
 import { clusterNodeId, folderKey } from "./clusterGraph";
-import { computeNeighborhoodIds, DEFAULT_NEIGHBORHOOD_HOPS } from "./neighborhoodFocus";
+import {
+  computeNeighborhoodIds,
+  DEFAULT_NEIGHBORHOOD_HOPS,
+} from "./neighborhoodFocus";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 
 /** Graph node ids to spotlight around a node (neighborhood within the visible canvas). */
@@ -8,7 +11,7 @@ export function computeNodeSpotlightIds(
   allNodes: AtlasGraphNode[],
   visibleNodes: AtlasGraphNode[],
   edges: AtlasGraph["edges"],
-  hops = DEFAULT_NEIGHBORHOOD_HOPS,
+  hops = DEFAULT_NEIGHBORHOOD_HOPS
 ): Set<string> {
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   const neighborhood = computeNeighborhoodIds(nodeId, edges, hops);
@@ -37,6 +40,8 @@ export function computeNodeSpotlightIds(
   return spotlight;
 }
 
-export function shouldDimForNodeSpotlight(spotlightNodeId: string | null): boolean {
+export function shouldDimForNodeSpotlight(
+  spotlightNodeId: string | null
+): boolean {
   return spotlightNodeId !== null;
 }

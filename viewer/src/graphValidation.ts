@@ -68,7 +68,11 @@ export function validateGraphData(data: unknown): GraphValidationResult {
     };
   }
 
-  if ("edges" in record && record.edges !== undefined && !Array.isArray(record.edges)) {
+  if (
+    "edges" in record &&
+    record.edges !== undefined &&
+    !Array.isArray(record.edges)
+  ) {
     return {
       ok: false,
       issue: "invalid-edges",
@@ -79,7 +83,9 @@ export function validateGraphData(data: unknown): GraphValidationResult {
   const graph: AtlasGraph = {
     meta: record.meta as AtlasGraph["meta"] | undefined,
     nodes: record.nodes as AtlasGraph["nodes"],
-    edges: (Array.isArray(record.edges) ? record.edges : []) as AtlasGraph["edges"],
+    edges: (Array.isArray(record.edges)
+      ? record.edges
+      : []) as AtlasGraph["edges"],
   };
 
   return { ok: true, graph };

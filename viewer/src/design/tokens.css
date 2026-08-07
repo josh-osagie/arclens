@@ -46,7 +46,8 @@
   --atlas-edge-uses: #8b5cf6;
 
   /* Typography */
-  --atlas-font: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --atlas-font:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --atlas-text-xs: 10px;
   --atlas-text-sm: 11px;
   --atlas-text-base: 12px;
@@ -83,8 +84,7 @@
   --atlas-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
   --atlas-shadow-drag: 0 16px 36px rgba(0, 0, 0, 0.58);
   --atlas-shadow-selected:
-    0 0 0 1px rgba(255, 255, 255, 0.12),
-    0 16px 40px rgba(0, 0, 0, 0.55);
+    0 0 0 1px rgba(255, 255, 255, 0.12), 0 16px 40px rgba(0, 0, 0, 0.55);
 
   /* Layout */
   --atlas-sidebar-main: min(280px, calc(100vw - 32px));

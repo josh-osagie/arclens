@@ -12,7 +12,7 @@ const EDGE_TYPE_PRIORITY: GraphEdgeType[] = ["renders", "imports", "uses"];
 
 export function sortEdgeTypes(types: GraphEdgeType[]): GraphEdgeType[] {
   return [...types].sort(
-    (a, b) => EDGE_TYPE_PRIORITY.indexOf(a) - EDGE_TYPE_PRIORITY.indexOf(b),
+    (a, b) => EDGE_TYPE_PRIORITY.indexOf(a) - EDGE_TYPE_PRIORITY.indexOf(b)
   );
 }
 
@@ -29,7 +29,7 @@ export function strokeColorForEdgeTypes(types: GraphEdgeType[]): string {
 }
 
 export function mergeSameDirectionEdges(
-  edges: Array<{ from: string; to: string; type: GraphEdgeType }>,
+  edges: Array<{ from: string; to: string; type: GraphEdgeType }>
 ): MergedAtlasEdge[] {
   const groups = new Map<string, MergedAtlasEdge>();
 

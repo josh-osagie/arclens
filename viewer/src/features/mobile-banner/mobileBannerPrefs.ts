@@ -39,7 +39,7 @@ export function dismissMobileBanner(permanent: boolean): MobileBannerPrefs {
 
 export function shouldShowMobileBanner(
   prefs: MobileBannerPrefs,
-  isNarrowViewport: boolean,
+  isNarrowViewport: boolean
 ): boolean {
   if (prefs.permanent) return false;
   if (!isNarrowViewport) return false;

@@ -30,13 +30,19 @@ export function buildExportFilename(options: {
   format: ExportFormat;
   now?: Date;
 }): string {
-  const label = options.projectName?.trim() || options.graphKey?.trim() || "arclens";
-  const stamp = (options.now ?? new Date()).toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const label =
+    options.projectName?.trim() || options.graphKey?.trim() || "arclens";
+  const stamp = (options.now ?? new Date())
+    .toISOString()
+    .replace(/[:.]/g, "-")
+    .slice(0, 19);
   return `${slugifyExportSegment(label)}-graph-${stamp}.${options.format}`;
 }
 
 export function isExcludedFromExport(node: Element): boolean {
-  return EXPORT_EXCLUDE_CLASS_NAMES.some((className) => node.classList.contains(className));
+  return EXPORT_EXCLUDE_CLASS_NAMES.some((className) =>
+    node.classList.contains(className)
+  );
 }
 
 export function createExportFilter(): (node: HTMLElement) => boolean {
@@ -50,7 +56,7 @@ export function createExportFilter(): (node: HTMLElement) => boolean {
 export async function captureGraphSnapshot(
   root: HTMLElement,
   format: ExportFormat,
-  options?: { pixelRatio?: number; backgroundColor?: string },
+  options?: { pixelRatio?: number; backgroundColor?: string }
 ): Promise<string> {
   const filter = createExportFilter();
   const backgroundColor = options?.backgroundColor ?? DEFAULT_CANVAS_BACKGROUND;

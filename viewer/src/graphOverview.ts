@@ -1,5 +1,12 @@
-import { dedupeEntryPointsByFile, type EntryOverview } from "../../src/entryPoints";
-import { clusterNodeId, findEntryNodes, groupNodesByFolder } from "./clusterGraph";
+import {
+  dedupeEntryPointsByFile,
+  type EntryOverview,
+} from "../../src/entryPoints";
+import {
+  clusterNodeId,
+  findEntryNodes,
+  groupNodesByFolder,
+} from "./clusterGraph";
 import type { AtlasGraph, AtlasGraphNode } from "./types";
 
 export type { EntryOverview };
@@ -17,7 +24,7 @@ export type HubOverview = {
 
 export function computeTopFolders(
   graph: AtlasGraph,
-  limit = 8,
+  limit = 8
 ): FolderOverview[] {
   const groups = groupNodesByFolder(graph.nodes);
 
@@ -31,10 +38,7 @@ export function computeTopFolders(
     .slice(0, limit);
 }
 
-export function computeHubNodes(
-  graph: AtlasGraph,
-  limit = 8,
-): HubOverview[] {
+export function computeHubNodes(graph: AtlasGraph, limit = 8): HubOverview[] {
   const degree = new Map<string, number>();
 
   for (const edge of graph.edges) {
@@ -54,14 +58,14 @@ export function computeHubNodes(
       (a, b) =>
         b.degree - a.degree ||
         a.node.name.localeCompare(b.node.name) ||
-        a.node.id.localeCompare(b.node.id),
+        a.node.id.localeCompare(b.node.id)
     )
     .slice(0, limit);
 }
 
 export function computeEntryPoints(
   graph: AtlasGraph,
-  limit = 5,
+  limit = 5
 ): EntryOverview<AtlasGraphNode>[] {
   return dedupeEntryPointsByFile(findEntryNodes(graph), limit);
 }

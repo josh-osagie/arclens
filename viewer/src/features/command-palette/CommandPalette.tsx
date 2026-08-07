@@ -37,17 +37,17 @@ export function CommandPalette({ state, actions }: Props) {
 
   const jumpNodes = useMemo(
     () => filterJumpNodes(state.nodes, query),
-    [state.nodes, query],
+    [state.nodes, query]
   );
 
   const commandActions = useMemo(
     () => buildCommandActions(state, actions),
-    [state, actions],
+    [state, actions]
   );
 
   const groupedActions = useMemo(
     () => groupCommandActions(commandActions),
-    [commandActions],
+    [commandActions]
   );
 
   useEffect(() => {
@@ -98,13 +98,17 @@ export function CommandPalette({ state, actions }: Props) {
                 onSelect={() => onSelectNode(node)}
               >
                 <span className="truncate">{node.name}</span>
-                <span className="ml-2 truncate text-xs text-muted-foreground">{node.file}</span>
+                <span className="ml-2 truncate text-xs text-muted-foreground">
+                  {node.file}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>
         )}
 
-        {jumpNodes.length > 0 && groupedActions.size > 0 && <CommandSeparator />}
+        {jumpNodes.length > 0 && groupedActions.size > 0 && (
+          <CommandSeparator />
+        )}
 
         {(["navigate", "graph", "selection"] as const).map((groupId) => {
           const items = groupedActions.get(groupId);
@@ -120,7 +124,9 @@ export function CommandPalette({ state, actions }: Props) {
                   onSelect={() => runAndClose(item.run)}
                 >
                   <span className="flex-1 truncate">{item.label}</span>
-                  {item.shortcut ? <CommandShortcut>{item.shortcut}</CommandShortcut> : null}
+                  {item.shortcut ? (
+                    <CommandShortcut>{item.shortcut}</CommandShortcut>
+                  ) : null}
                 </CommandItem>
               ))}
             </CommandGroup>

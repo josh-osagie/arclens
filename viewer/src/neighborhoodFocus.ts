@@ -3,7 +3,9 @@ import type { AtlasGraph } from "./types";
 export const DEFAULT_NEIGHBORHOOD_HOPS = 2;
 
 /** Default when the user has not explicitly toggled dim-distant-nodes. */
-export function defaultNeighborhoodFocusEnabled(isLargeGraph: boolean): boolean {
+export function defaultNeighborhoodFocusEnabled(
+  isLargeGraph: boolean
+): boolean {
   return isLargeGraph;
 }
 
@@ -11,7 +13,7 @@ export function defaultNeighborhoodFocusEnabled(isLargeGraph: boolean): boolean 
 export function shouldAutoEnableNeighborhoodFocus(
   isLargeGraph: boolean,
   userHasToggled: boolean,
-  currentlyEnabled: boolean,
+  currentlyEnabled: boolean
 ): boolean {
   return isLargeGraph && !userHasToggled && !currentlyEnabled;
 }
@@ -22,7 +24,7 @@ export function shouldAutoEnableNeighborhoodFocus(
 export function computeNeighborhoodIds(
   nodeId: string,
   edges: AtlasGraph["edges"],
-  hops: number,
+  hops: number
 ): Set<string> {
   const neighborhood = new Set<string>([nodeId]);
   let frontier = new Set<string>([nodeId]);
@@ -56,7 +58,7 @@ export function resolveHighlightIds(
   options: {
     neighborhoodFocus: boolean;
     neighborhoodHops: number;
-  },
+  }
 ): Set<string> | null {
   if (pathIds.length > 0) {
     return new Set(pathIds);

@@ -4,13 +4,15 @@ export type InsightSeverity = GraphInsight["severity"];
 
 export type InsightSeverityCounts = Record<InsightSeverity, number>;
 
-export function countInsightsBySeverity(insights: GraphInsight[]): InsightSeverityCounts {
+export function countInsightsBySeverity(
+  insights: GraphInsight[]
+): InsightSeverityCounts {
   return insights.reduce(
     (counts, insight) => {
       counts[insight.severity] += 1;
       return counts;
     },
-    { error: 0, warning: 0, info: 0, tip: 0 },
+    { error: 0, warning: 0, info: 0, tip: 0 }
   );
 }
 
@@ -24,7 +26,9 @@ export type InsightBadgeSummary = {
 };
 
 /** Returns null when there are no insights (badge should stay hidden). */
-export function insightBadgeSummary(insights: GraphInsight[]): InsightBadgeSummary | null {
+export function insightBadgeSummary(
+  insights: GraphInsight[]
+): InsightBadgeSummary | null {
   if (insights.length === 0) return null;
 
   const counts = countInsightsBySeverity(insights);

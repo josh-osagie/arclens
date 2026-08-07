@@ -17,18 +17,20 @@ export type ExportOptions = {
   scope?: ExportScope;
 };
 
-let exportHandler: ((format: ExportFormat, options?: ExportOptions) => Promise<void>) | null =
+let exportHandler:
+  ((format: ExportFormat, options?: ExportOptions) => Promise<void>) | null =
   null;
 
 export function registerExportHandler(
-  handler: ((format: ExportFormat, options?: ExportOptions) => Promise<void>) | null,
+  handler:
+    ((format: ExportFormat, options?: ExportOptions) => Promise<void>) | null
 ): void {
   exportHandler = handler;
 }
 
 export async function triggerExport(
   format: ExportFormat,
-  options?: ExportOptions,
+  options?: ExportOptions
 ): Promise<void> {
   await exportHandler?.(format, options);
 }
@@ -51,7 +53,10 @@ async function waitForViewportSettled(): Promise<void> {
   });
 }
 
-export function ExportBridge({ projectName, graphKey }: ExportMeta & { graphKey: string }) {
+export function ExportBridge({
+  projectName,
+  graphKey,
+}: ExportMeta & { graphKey: string }) {
   const { fitView, getViewport, setViewport } = useReactFlow();
 
   useEffect(() => {

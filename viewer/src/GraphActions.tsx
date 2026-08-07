@@ -24,7 +24,10 @@ type Props = {
   focusOnSelect: boolean;
   onFocusOnSelectChange: (enabled: boolean) => void;
   edgeVisibility: EdgeVisibilityPrefs;
-  onEdgeVisibilityChange: (type: keyof EdgeVisibilityPrefs, visible: boolean) => void;
+  onEdgeVisibilityChange: (
+    type: keyof EdgeVisibilityPrefs,
+    visible: boolean
+  ) => void;
   expandedFolders: string[];
   onShowFromEntry: () => void;
   onCollapseFolders: () => void;
@@ -51,7 +54,8 @@ export function GraphActions({
   onLayoutPresetChange,
   layoutDisabled,
 }: Props) {
-  const [sectionPrefs, setSectionPrefs] = useState<SidebarSectionPrefs>(loadSidebarSections);
+  const [sectionPrefs, setSectionPrefs] =
+    useState<SidebarSectionPrefs>(loadSidebarSections);
   const expanded = sectionPrefs.graphControls;
 
   const onToggleSection = useCallback(() => {
@@ -80,7 +84,9 @@ export function GraphActions({
             {expanded ? "▾" : "▸"}
           </span>
           <span className="field-label">
-            <span className="overview-shortcuts__heading-label">Graph controls</span>
+            <span className="overview-shortcuts__heading-label">
+              Graph controls
+            </span>
             <InfoTip
               text="Layout, entry navigation, view options, and edge visibility."
               nested
@@ -92,7 +98,10 @@ export function GraphActions({
       {expanded && (
         <div className="graph-actions__body">
           <div className="graph-controls__field">
-            <label className="graph-controls__field-label" htmlFor="layout-preset">
+            <label
+              className="graph-controls__field-label"
+              htmlFor="layout-preset"
+            >
               <span className="field-label">
                 <span className="field-label__text">Layout</span>
                 <InfoTip text="Ranked dagre layout (React Flow guide). Uses render edges for positioning — on large graphs, imports and uses are hidden automatically for a clean tree. Re-enable them under Edge visibility." />
@@ -116,7 +125,11 @@ export function GraphActions({
           </div>
 
           <div className="graph-actions__buttons">
-            <button type="button" className="graph-actions__btn" onClick={onShowFromEntry}>
+            <button
+              type="button"
+              className="graph-actions__btn"
+              onClick={onShowFromEntry}
+            >
               From entry
             </button>
             {expandedFolders.length > 0 && (
@@ -145,7 +158,9 @@ export function GraphActions({
               />
             </div>
 
-            <div className={`graph-toggle${neighborhoodFocus ? " graph-toggle--expanded" : ""}`}>
+            <div
+              className={`graph-toggle${neighborhoodFocus ? " graph-toggle--expanded" : ""}`}
+            >
               <div className="graph-toggle__main">
                 <span className="graph-toggle__label">
                   <span className="field-label">
@@ -161,8 +176,14 @@ export function GraphActions({
               </div>
               {neighborhoodFocus && (
                 <div className="graph-toggle__sub">
-                  <span className="graph-toggle__sub-label">Connection depth</span>
-                  <div className="graph-toggle__chips" role="group" aria-label="Connection depth">
+                  <span className="graph-toggle__sub-label">
+                    Connection depth
+                  </span>
+                  <div
+                    className="graph-toggle__chips"
+                    role="group"
+                    aria-label="Connection depth"
+                  >
                     {[1, 2].map((hops) => (
                       <button
                         key={hops}
@@ -203,10 +224,14 @@ export function GraphActions({
             <div className="graph-toggle__sub graph-toggle__sub--stacked">
               {EDGE_TYPES.map((type) => (
                 <div key={type} className="graph-toggle graph-toggle--nested">
-                  <span className="graph-toggle__label">{EDGE_VISIBILITY_LABELS[type]}</span>
+                  <span className="graph-toggle__label">
+                    {EDGE_VISIBILITY_LABELS[type]}
+                  </span>
                   <ToggleSwitch
                     checked={edgeVisibility[type]}
-                    onChange={(visible) => onEdgeVisibilityChange(type, visible)}
+                    onChange={(visible) =>
+                      onEdgeVisibilityChange(type, visible)
+                    }
                     ariaLabel={`Show ${EDGE_VISIBILITY_LABELS[type].toLowerCase()} edges`}
                   />
                 </div>

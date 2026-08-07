@@ -32,7 +32,7 @@ export function getFlowEdgeTypes(edge: Edge): GraphEdgeType[] {
   if (Array.isArray(dataTypes)) {
     return dataTypes.filter(
       (type): type is GraphEdgeType =>
-        typeof type === "string" && isGraphEdgeType(type),
+        typeof type === "string" && isGraphEdgeType(type)
     );
   }
 
@@ -50,7 +50,9 @@ function withVisibleEdgeTypes(edge: Edge, visibleTypes: GraphEdgeType[]): Edge {
   const strokeType = primaryEdgeType(visibleTypes);
   const stroke = strokeColorForEdgeTypes(visibleTypes);
   const label =
-    typeof edge.label === "string" ? formatEdgeTypeLabel(visibleTypes) : edge.label;
+    typeof edge.label === "string"
+      ? formatEdgeTypeLabel(visibleTypes)
+      : edge.label;
 
   return {
     ...edge,
@@ -73,7 +75,7 @@ function withVisibleEdgeTypes(edge: Edge, visibleTypes: GraphEdgeType[]): Edge {
 
 export function filterEdgesByVisibility(
   edges: Edge[],
-  visibility: EdgeVisibilityPrefs = DEFAULT_EDGE_VISIBILITY,
+  visibility: EdgeVisibilityPrefs = DEFAULT_EDGE_VISIBILITY
 ): Edge[] {
   const anyVisible = EDGE_TYPES.some((type) => visibility[type]);
   if (!anyVisible) return [];
@@ -92,7 +94,7 @@ export function filterEdgesByVisibility(
 export function presentVisibleEdges(
   edges: Edge[],
   visibility: EdgeVisibilityPrefs,
-  patch: (filtered: Edge[]) => Edge[],
+  patch: (filtered: Edge[]) => Edge[]
 ): Edge[] {
   return patch(filterEdgesByVisibility(edges, visibility));
 }

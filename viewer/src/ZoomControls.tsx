@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Panel, useReactFlow, useViewport } from "@xyflow/react";
 import { triggerExport } from "./exportGraphBridge";
-import { loadExportScope, saveExportScope, type ExportScope } from "./exportPrefs";
+import {
+  loadExportScope,
+  saveExportScope,
+  type ExportScope,
+} from "./exportPrefs";
 
 function FitViewIcon() {
   return (
@@ -42,7 +46,9 @@ export function ZoomControls() {
   const percent = Math.round(zoom * 100);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [exportScope, setExportScope] = useState<ExportScope>(() => loadExportScope());
+  const [exportScope, setExportScope] = useState<ExportScope>(() =>
+    loadExportScope()
+  );
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const runExport = useCallback(
@@ -57,7 +63,7 @@ export function ZoomControls() {
         setMenuOpen(false);
       }
     },
-    [exportScope],
+    [exportScope]
   );
 
   const onScopeChange = useCallback((fullGraph: boolean) => {
@@ -83,7 +89,11 @@ export function ZoomControls() {
     <Panel position="bottom-left" className="zoom-controls-wrap">
       <div ref={wrapRef} className="export-controls">
         {menuOpen && (
-          <div className="export-controls__menu" role="menu" aria-label="Export graph">
+          <div
+            className="export-controls__menu"
+            role="menu"
+            aria-label="Export graph"
+          >
             <label className="export-controls__scope">
               <input
                 type="checkbox"
@@ -93,7 +103,9 @@ export function ZoomControls() {
                 onPointerDown={(event) => event.stopPropagation()}
               />
               <span className="export-controls__scope-text">
-                <span className="export-controls__scope-label">Export full graph</span>
+                <span className="export-controls__scope-label">
+                  Export full graph
+                </span>
                 <span className="export-controls__scope-hint">
                   {exportScope === "full"
                     ? "Fits all nodes, then captures"

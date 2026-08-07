@@ -6,7 +6,7 @@ export function toLegacyStorageKey(key: string): string {
 /** Read localStorage, trying the primary key then legacy fallbacks. */
 export function readLocalStorage(
   key: string,
-  legacyKeys: string[] = [toLegacyStorageKey(key)],
+  legacyKeys: string[] = [toLegacyStorageKey(key)]
 ): string | null {
   try {
     const primary = localStorage.getItem(key);

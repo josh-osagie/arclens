@@ -59,7 +59,9 @@ export function spreadCoincidentPositions(items: Positioned[]): Positioned[] {
     const { height } = item;
 
     const overlaps = () =>
-      placed.some((other) => Math.abs(other.x - x) < 8 && Math.abs(other.y - y) < 8);
+      placed.some(
+        (other) => Math.abs(other.x - x) < 8 && Math.abs(other.y - y) < 8
+      );
 
     while (overlaps()) {
       y += height + GAP;
@@ -74,7 +76,9 @@ export function spreadCoincidentPositions(items: Positioned[]): Positioned[] {
  * Pure dagre layout over serializable node/edge payloads.
  * Positions are top-left anchors (dagre centers converted).
  */
-export function computeDagreLayout(request: DagreLayoutRequest): DagreLayoutResponse {
+export function computeDagreLayout(
+  request: DagreLayoutRequest
+): DagreLayoutResponse {
   const { nodes, edges, direction, entryIds = [] } = request;
   const isHorizontal = direction === "LR";
   const sourcePosition = isHorizontal ? "right" : "bottom";
@@ -118,7 +122,7 @@ export function computeDagreLayout(request: DagreLayoutRequest): DagreLayoutResp
         y: layoutNode.y - node.height / 2,
         height: node.height,
       };
-    }),
+    })
   );
 
   return {

@@ -24,4 +24,6 @@ export const typeLabels = {
   config: "Config",
 } as const;
 
-export const nodeTypes = Object.keys(typeColors) as Array<keyof typeof typeColors>;
+export const nodeTypes = Object.keys(typeColors) as Array<
+  keyof typeof typeColors
+>;

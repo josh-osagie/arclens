@@ -41,7 +41,9 @@ type FloatingPanelContextValue = {
   toggleMinimize: () => void;
 };
 
-const FloatingPanelContext = createContext<FloatingPanelContextValue | null>(null);
+const FloatingPanelContext = createContext<FloatingPanelContextValue | null>(
+  null
+);
 
 function MinimizeIcon() {
   return (
@@ -100,7 +102,7 @@ function buildInitialRect(
   id: string,
   defaultRect: PanelRect,
   minWidth: number,
-  minHeight: number,
+  minHeight: number
 ): { rect: PanelRect; expandedRect: PanelRect | null; minimized: boolean } {
   const minimized = loadPanelMinimized(id);
   const stored = loadPanelRect(id) ?? defaultRect;
@@ -138,7 +140,9 @@ export function FloatingPanel({
   const expandedRectRef = useRef<PanelRect | null>(initial.expandedRect);
   const [rect, setRect] = useState(rectRef.current);
   const [minimized, setMinimized] = useState(initial.minimized);
-  const [interaction, setInteraction] = useState<"drag" | "resize" | null>(null);
+  const [interaction, setInteraction] = useState<"drag" | "resize" | null>(
+    null
+  );
 
   const persistRect = useCallback(
     (next: PanelRect) => {
@@ -149,14 +153,16 @@ export function FloatingPanel({
         width: minWidth,
         height: effectiveMinHeight,
       });
-      const resolved = minimized ? { ...clamped, height: MINIMIZED_HEIGHT } : clamped;
+      const resolved = minimized
+        ? { ...clamped, height: MINIMIZED_HEIGHT }
+        : clamped;
       rectRef.current = resolved;
       setRect(resolved);
       if (!minimized) {
         savePanelRect(id, resolved);
       }
     },
-    [id, minWidth, minHeight, minimized],
+    [id, minWidth, minHeight, minimized]
   );
 
   useEffect(() => {
@@ -193,7 +199,9 @@ export function FloatingPanel({
   const onDragPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const target = event.target as Element;
-      if (target.closest("button, input, textarea, a, select, [data-no-drag]")) {
+      if (
+        target.closest("button, input, textarea, a, select, [data-no-drag]")
+      ) {
         return;
       }
 
@@ -228,7 +236,7 @@ export function FloatingPanel({
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     },
-    [dragHandleSelector, minimized, persistRect],
+    [dragHandleSelector, minimized, persistRect]
   );
 
   const onResizePointerDown = useCallback(
@@ -261,12 +269,12 @@ export function FloatingPanel({
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     },
-    [minimized, persistRect],
+    [minimized, persistRect]
   );
 
   const panelContext = useMemo(
     () => ({ minimizedLabel, toggleMinimize }),
-    [minimizedLabel, toggleMinimize],
+    [minimizedLabel, toggleMinimize]
   );
 
   return (

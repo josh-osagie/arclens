@@ -75,19 +75,33 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
   const [fieldPrefs, setFieldPrefs] = useDetailsFieldPrefs();
 
   const incoming = {
-    imports: (node.connections?.incoming ?? []).filter((c) => c.edgeType === "imports"),
-    renders: (node.connections?.incoming ?? []).filter((c) => c.edgeType === "renders"),
-    uses: (node.connections?.incoming ?? []).filter((c) => c.edgeType === "uses"),
+    imports: (node.connections?.incoming ?? []).filter(
+      (c) => c.edgeType === "imports"
+    ),
+    renders: (node.connections?.incoming ?? []).filter(
+      (c) => c.edgeType === "renders"
+    ),
+    uses: (node.connections?.incoming ?? []).filter(
+      (c) => c.edgeType === "uses"
+    ),
   };
 
   const outgoing = {
-    imports: (node.connections?.outgoing ?? []).filter((c) => c.edgeType === "imports"),
-    renders: (node.connections?.outgoing ?? []).filter((c) => c.edgeType === "renders"),
-    uses: (node.connections?.outgoing ?? []).filter((c) => c.edgeType === "uses"),
+    imports: (node.connections?.outgoing ?? []).filter(
+      (c) => c.edgeType === "imports"
+    ),
+    renders: (node.connections?.outgoing ?? []).filter(
+      (c) => c.edgeType === "renders"
+    ),
+    uses: (node.connections?.outgoing ?? []).filter(
+      (c) => c.edgeType === "uses"
+    ),
   };
 
-  const usedByCount = node.stats?.incoming ?? node.connections?.incoming.length ?? 0;
-  const dependsOnCount = node.stats?.outgoing ?? node.connections?.outgoing.length ?? 0;
+  const usedByCount =
+    node.stats?.incoming ?? node.connections?.incoming.length ?? 0;
+  const dependsOnCount =
+    node.stats?.outgoing ?? node.connections?.outgoing.length ?? 0;
   const accent = typeColors[node.type] ?? typeColors.utility;
   const show = (key: keyof DetailsFieldPrefs) => fieldPrefs[key];
 
@@ -105,7 +119,11 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
         <div className="graph-sidebar__header-actions">
           <DetailsFieldMenu prefs={fieldPrefs} onChange={setFieldPrefs} />
           <PanelMinimizeButton />
-          <button type="button" className="graph-sidebar__close" onClick={onClose}>
+          <button
+            type="button"
+            className="graph-sidebar__close"
+            onClick={onClose}
+          >
             ×
           </button>
         </div>
@@ -124,7 +142,10 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
           {node.exportKind && show("export") && (
             <div>
               <dt>
-                <FieldLabel label="Export" tip="How this symbol is exported from its file." />
+                <FieldLabel
+                  label="Export"
+                  tip="How this symbol is exported from its file."
+                />
               </dt>
               <dd>{node.exportKind}</dd>
             </div>
@@ -132,7 +153,10 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
           {node.kind && show("astKind") && (
             <div>
               <dt>
-                <FieldLabel label="AST kind" tip="The declaration shape ts-morph found in source." />
+                <FieldLabel
+                  label="AST kind"
+                  tip="The declaration shape ts-morph found in source."
+                />
               </dt>
               <dd>{node.kind}</dd>
             </div>
@@ -166,7 +190,10 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
         {show("props") && node.props && node.props.length > 0 && (
           <div className="details-section">
             <h3>
-              <FieldLabel label="Props" tip="Prop names and types from this component's parameter." />
+              <FieldLabel
+                label="Props"
+                tip="Prop names and types from this component's parameter."
+              />
             </h3>
             <ul className="details-props">
               {node.props.map((prop) => (
@@ -175,9 +202,13 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
                     {prop.name}
                     {prop.optional ? "?" : ""}
                   </span>
-                  {prop.type && <code className="details-props__type">{prop.type}</code>}
+                  {prop.type && (
+                    <code className="details-props__type">{prop.type}</code>
+                  )}
                   {prop.defaultValue && (
-                    <span className="details-props__default">= {prop.defaultValue}</span>
+                    <span className="details-props__default">
+                      = {prop.defaultValue}
+                    </span>
                   )}
                 </li>
               ))}
@@ -186,22 +217,46 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
         )}
 
         {show("importedBy") && (
-          <ConnectionGroup title="Imported by" tip={CONNECTION_TIPS.importedBy} items={incoming.imports} />
+          <ConnectionGroup
+            title="Imported by"
+            tip={CONNECTION_TIPS.importedBy}
+            items={incoming.imports}
+          />
         )}
         {show("renderedBy") && (
-          <ConnectionGroup title="Rendered by" tip={CONNECTION_TIPS.renderedBy} items={incoming.renders} />
+          <ConnectionGroup
+            title="Rendered by"
+            tip={CONNECTION_TIPS.renderedBy}
+            items={incoming.renders}
+          />
         )}
         {show("calledFrom") && (
-          <ConnectionGroup title="Called from" tip={CONNECTION_TIPS.calledFrom} items={incoming.uses} />
+          <ConnectionGroup
+            title="Called from"
+            tip={CONNECTION_TIPS.calledFrom}
+            items={incoming.uses}
+          />
         )}
         {show("imports") && (
-          <ConnectionGroup title="Imports" tip={CONNECTION_TIPS.imports} items={outgoing.imports} />
+          <ConnectionGroup
+            title="Imports"
+            tip={CONNECTION_TIPS.imports}
+            items={outgoing.imports}
+          />
         )}
         {show("renders") && (
-          <ConnectionGroup title="Renders" tip={CONNECTION_TIPS.renders} items={outgoing.renders} />
+          <ConnectionGroup
+            title="Renders"
+            tip={CONNECTION_TIPS.renders}
+            items={outgoing.renders}
+          />
         )}
         {show("callsHooks") && (
-          <ConnectionGroup title="Calls hooks" tip={CONNECTION_TIPS.callsHooks} items={outgoing.uses} />
+          <ConnectionGroup
+            title="Calls hooks"
+            tip={CONNECTION_TIPS.callsHooks}
+            items={outgoing.uses}
+          />
         )}
       </div>
     </div>

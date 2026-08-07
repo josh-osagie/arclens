@@ -61,7 +61,10 @@ export function filterEdgesForDagreLayout(edges: Edge[]): Edge[] {
   return renders.length > 0 ? renders : edges;
 }
 
-export function nodeLayoutDimensions(node: Node<AtlasNodeData>): { width: number; height: number } {
+export function nodeLayoutDimensions(node: Node<AtlasNodeData>): {
+  width: number;
+  height: number;
+} {
   if (node.type === "cluster") {
     return { width: CLUSTER_NODE_W, height: CLUSTER_NODE_H };
   }
@@ -77,7 +80,7 @@ function toDagreRequest(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
   direction: DagreDirection,
-  entryIds: string[],
+  entryIds: string[]
 ): DagreLayoutRequest {
   const layoutEdges = filterEdgesForDagreLayout(edges);
   return {
@@ -96,9 +99,11 @@ function toDagreRequest(
 
 function applyDagreResult(
   nodes: Node<AtlasNodeData>[],
-  result: DagreLayoutResponse,
+  result: DagreLayoutResponse
 ): Node<AtlasNodeData>[] {
-  const byId = new Map(result.positions.map((position) => [position.id, position]));
+  const byId = new Map(
+    result.positions.map((position) => [position.id, position])
+  );
   const sourcePosition =
     result.sourcePosition === "right" ? Position.Right : Position.Bottom;
   const targetPosition =
@@ -110,9 +115,7 @@ function applyDagreResult(
       ...node,
       targetPosition,
       sourcePosition,
-      position: laidOut
-        ? { x: laidOut.x, y: laidOut.y }
-        : node.position,
+      position: laidOut ? { x: laidOut.x, y: laidOut.y } : node.position,
     };
   });
 }
@@ -125,15 +128,18 @@ export function getDagreLayoutedNodes(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
   direction: "TB" | "LR",
-  entryIds: string[] = [],
+  entryIds: string[] = []
 ): Node<AtlasNodeData>[] {
   if (nodes.length === 0) return nodes;
-  return applyDagreResult(nodes, computeDagreLayout(toDagreRequest(nodes, edges, direction, entryIds)));
+  return applyDagreResult(
+    nodes,
+    computeDagreLayout(toDagreRequest(nodes, edges, direction, entryIds))
+  );
 }
 
 /** Nudge nodes that dagre placed at the same coordinates (common for isolated clusters). */
 export function spreadCoincidentNodes(
-  nodes: Node<AtlasNodeData>[],
+  nodes: Node<AtlasNodeData>[]
 ): Node<AtlasNodeData>[] {
   const spread = spreadCoincidentPositions(
     nodes.map((node) => ({
@@ -141,7 +147,7 @@ export function spreadCoincidentNodes(
       x: node.position.x,
       y: node.position.y,
       height: nodeLayoutDimensions(node).height,
-    })),
+    }))
   );
   const byId = new Map(spread.map((item) => [item.id, item]));
 
@@ -156,7 +162,7 @@ export function layoutNodesByPreset(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
   mode: LayoutPreset,
-  context: LayoutContext = {},
+  context: LayoutContext = {}
 ): Node<AtlasNodeData>[] {
   const direction = mode === "dagre-lr" ? "LR" : "TB";
   return getDagreLayoutedNodes(nodes, edges, direction, context.entryIds ?? []);
@@ -224,7 +230,9 @@ function getLayoutWorker(): Worker | null {
   }
 }
 
-function layoutViaWorker(request: DagreLayoutRequest): Promise<DagreLayoutResponse> {
+function layoutViaWorker(
+  request: DagreLayoutRequest
+): Promise<DagreLayoutResponse> {
   const worker = getLayoutWorker();
   if (!worker) {
     return Promise.reject(new Error("Layout worker unavailable"));
@@ -245,11 +253,13 @@ function layoutViaWorker(request: DagreLayoutRequest): Promise<DagreLayoutRespon
 }
 
 async function computeDagreLayoutAsync(
-  request: DagreLayoutRequest,
+  request: DagreLayoutRequest
 ): Promise<DagreLayoutResponse> {
   try {
     const result = await layoutViaWorker(request);
-    console.debug("[arclens] layout via worker", { nodes: request.nodes.length });
+    console.debug("[arclens] layout via worker", {
+      nodes: request.nodes.length,
+    });
     return result;
   } catch {
     console.debug("[arclens] layout via sync fallback", {
@@ -267,7 +277,7 @@ export async function getDagreLayoutedNodesAsync(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
   direction: "TB" | "LR",
-  entryIds: string[] = [],
+  entryIds: string[] = []
 ): Promise<Node<AtlasNodeData>[]> {
   if (nodes.length === 0) return nodes;
 
@@ -286,10 +296,15 @@ export async function layoutNodesByPresetAsync(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
   mode: LayoutPreset,
-  context: LayoutContext = {},
+  context: LayoutContext = {}
 ): Promise<Node<AtlasNodeData>[]> {
   const direction = mode === "dagre-lr" ? "LR" : "TB";
-  return getDagreLayoutedNodesAsync(nodes, edges, direction, context.entryIds ?? []);
+  return getDagreLayoutedNodesAsync(
+    nodes,
+    edges,
+    direction,
+    context.entryIds ?? []
+  );
 }
 
 /** Reset worker state (tests). */

@@ -1,5 +1,9 @@
 import { useCallback, useState, type ReactNode } from "react";
-import type { FolderOverview, HubOverview, EntryOverview } from "./graphOverview";
+import type {
+  FolderOverview,
+  HubOverview,
+  EntryOverview,
+} from "./graphOverview";
 import { InfoTip } from "./InfoTip";
 import { formatRelativePath, truncatePath } from "./buildFlowGraph";
 import {
@@ -54,11 +58,12 @@ function OverviewSection<T>({
 
   if (items.length === 0) return null;
 
-  const visibleItems = expanded && (showAll || items.length <= DEFAULT_VISIBLE)
-    ? items
-    : expanded
-      ? items.slice(0, DEFAULT_VISIBLE)
-      : [];
+  const visibleItems =
+    expanded && (showAll || items.length <= DEFAULT_VISIBLE)
+      ? items
+      : expanded
+        ? items.slice(0, DEFAULT_VISIBLE)
+        : [];
   const hiddenCount = items.length - DEFAULT_VISIBLE;
 
   return (
@@ -114,7 +119,8 @@ export function OverviewShortcuts({
   onFolderClick,
   onHubClick,
 }: Props) {
-  const [sectionPrefs, setSectionPrefs] = useState<SidebarSectionPrefs>(loadSidebarSections);
+  const [sectionPrefs, setSectionPrefs] =
+    useState<SidebarSectionPrefs>(loadSidebarSections);
 
   const onToggleSection = useCallback((key: SidebarSectionKey) => {
     setSectionPrefs((prev) => {
@@ -139,7 +145,9 @@ export function OverviewShortcuts({
         onToggleSection={onToggleSection}
         itemKey={(entry) => entry.node.id}
         renderItem={(entry) => {
-          const relativePath = truncatePath(formatRelativePath(entry.file, projectRoot));
+          const relativePath = truncatePath(
+            formatRelativePath(entry.file, projectRoot)
+          );
           const exportSuffix =
             entry.exportCount > 1 ? ` · ${entry.exportCount} exports` : "";
 
@@ -150,7 +158,9 @@ export function OverviewShortcuts({
               onClick={() => onEntryClick(entry.node)}
               aria-pressed={spotlightNodeId === entry.node.id}
             >
-              <span className="overview-shortcuts__label">{entry.node.name}</span>
+              <span className="overview-shortcuts__label">
+                {entry.node.name}
+              </span>
               <span className="overview-shortcuts__meta" title={relativePath}>
                 {relativePath}
                 {exportSuffix}
@@ -175,9 +185,12 @@ export function OverviewShortcuts({
             onClick={() => onFolderClick(folder)}
             aria-pressed={spotlightFolder === folder.folder}
           >
-            <span className="overview-shortcuts__label">{folderLabel(folder.folder)}</span>
+            <span className="overview-shortcuts__label">
+              {folderLabel(folder.folder)}
+            </span>
             <span className="overview-shortcuts__meta" title={folder.folder}>
-              {folder.count} node{folder.count === 1 ? "" : "s"} · {truncatePath(folder.folder)}
+              {folder.count} node{folder.count === 1 ? "" : "s"} ·{" "}
+              {truncatePath(folder.folder)}
             </span>
           </button>
         )}

@@ -101,7 +101,11 @@ export function DetailsFieldMenu({ prefs, onChange }: Props) {
               </div>
             ))}
           </div>
-          <button type="button" className="details-field-menu__reset" onClick={reset}>
+          <button
+            type="button"
+            className="details-field-menu__reset"
+            onClick={reset}
+          >
             reset defaults
           </button>
         </div>
@@ -110,7 +114,12 @@ export function DetailsFieldMenu({ prefs, onChange }: Props) {
   );
 }
 
-export function useDetailsFieldPrefs(): [DetailsFieldPrefs, (prefs: DetailsFieldPrefs) => void] {
-  const [prefs, setPrefs] = useState<DetailsFieldPrefs>(() => loadDetailsFields());
+export function useDetailsFieldPrefs(): [
+  DetailsFieldPrefs,
+  (prefs: DetailsFieldPrefs) => void,
+] {
+  const [prefs, setPrefs] = useState<DetailsFieldPrefs>(() =>
+    loadDetailsFields()
+  );
   return [prefs, setPrefs];
 }

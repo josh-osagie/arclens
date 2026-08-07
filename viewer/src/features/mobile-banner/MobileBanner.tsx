@@ -41,8 +41,9 @@ export function MobileBanner() {
               Arclens works best on desktop
             </p>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Graph navigation is limited on small screens. You can keep exploring, but panning,
-              zooming, and panel layout are easier on a larger display.
+              Graph navigation is limited on small screens. You can keep
+              exploring, but panning, zooming, and panel layout are easier on a
+              larger display.
             </p>
           </div>
         </div>
@@ -50,7 +51,12 @@ export function MobileBanner() {
           <Button type="button" variant="outline" size="sm" onClick={onDismiss}>
             Dismiss
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onDontShowAgain}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onDontShowAgain}
+          >
             Don&apos;t show again
           </Button>
         </div>

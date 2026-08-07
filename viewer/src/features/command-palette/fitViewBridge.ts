@@ -9,7 +9,7 @@ type FitViewOptions = {
 let fitViewHandler: ((options?: FitViewOptions) => void) | null = null;
 
 export function registerFitViewHandler(
-  handler: ((options?: FitViewOptions) => void) | null,
+  handler: ((options?: FitViewOptions) => void) | null
 ): void {
   fitViewHandler = handler;
 }

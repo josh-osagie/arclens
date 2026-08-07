@@ -3,7 +3,13 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { AtlasNodeData } from "./buildFlowGraph";
 import { typeColors, typeLabels } from "./buildFlowGraph";
 
-function AtlasNodeComponent({ data, selected, dragging, sourcePosition, targetPosition }: NodeProps) {
+function AtlasNodeComponent({
+  data,
+  selected,
+  dragging,
+  sourcePosition,
+  targetPosition,
+}: NodeProps) {
   const nodeData = data as AtlasNodeData & {
     selected?: boolean;
     dimmed?: boolean;

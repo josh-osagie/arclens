@@ -25,7 +25,9 @@ function readProjectRootFromGraph(): string | null {
       meta?: { targetDir?: string };
     };
     const targetDir = graph.meta?.targetDir;
-    return targetDir && fs.existsSync(targetDir) ? path.resolve(targetDir) : null;
+    return targetDir && fs.existsSync(targetDir)
+      ? path.resolve(targetDir)
+      : null;
   } catch {
     return null;
   }
@@ -39,7 +41,11 @@ function resolveProjectRoot(): string | null {
   return readProjectRootFromGraph();
 }
 
-function sendJson(res: import("node:http").ServerResponse, status: number, body: unknown): void {
+function sendJson(
+  res: import("node:http").ServerResponse,
+  status: number,
+  body: unknown
+): void {
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
@@ -53,7 +59,11 @@ function serveGraphJson(): Plugin {
       server.middlewares.use("/graph.json", (_req, res) => {
         if (!fs.existsSync(graphPath)) {
           res.statusCode = 404;
-          res.end(JSON.stringify({ error: "graph.json not found. Run pnpm analyze first." }));
+          res.end(
+            JSON.stringify({
+              error: "graph.json not found. Run pnpm analyze first.",
+            })
+          );
           return;
         }
 
@@ -100,7 +110,11 @@ function serveSnippetApi(): Plugin {
         const maxLines = parseSnippetLinesParam(url.searchParams.get("lines"));
 
         try {
-          const snippet = readSnippetFromDisk(projectRoot, relativeFile, maxLines);
+          const snippet = readSnippetFromDisk(
+            projectRoot,
+            relativeFile,
+            maxLines
+          );
           sendJson(res, 200, {
             file: relativeFile,
             content: snippet.content,
@@ -110,7 +124,8 @@ function serveSnippetApi(): Plugin {
             source: snippet.source,
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           sendJson(res, 404, { error: message, file: relativeFile });
         }
       });

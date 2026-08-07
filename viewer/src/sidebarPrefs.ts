@@ -1,11 +1,7 @@
 import { readLocalStorage, writeLocalStorage } from "./storageCompat";
 
 export type SidebarSectionKey =
-  | "entries"
-  | "folders"
-  | "hubs"
-  | "graphControls"
-  | "legend";
+  "entries" | "folders" | "hubs" | "graphControls" | "legend";
 
 export type SidebarSectionPrefs = Record<SidebarSectionKey, boolean>;
 
@@ -41,7 +37,7 @@ export function saveSidebarSections(prefs: SidebarSectionPrefs): void {
 
 export function toggleSidebarSection(
   prefs: SidebarSectionPrefs,
-  key: SidebarSectionKey,
+  key: SidebarSectionKey
 ): SidebarSectionPrefs {
   return { ...prefs, [key]: !prefs[key] };
 }

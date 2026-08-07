@@ -1,9 +1,6 @@
 import type { AtlasGraph } from "./types";
 import { nodeMatchesSearch } from "./clusterGraph";
-import {
-  FORCE_FULL_GRAPH,
-  MAX_VISIBLE_NODES,
-} from "./viewerConfig";
+import { FORCE_FULL_GRAPH, MAX_VISIBLE_NODES } from "./viewerConfig";
 
 export type ViewGraphMode = "full" | "search" | "empty" | "overview";
 
@@ -16,7 +13,7 @@ export type ViewGraphSelection = {
 export function selectVisibleGraph(
   graph: AtlasGraph,
   searchLower: string,
-  isLarge: boolean,
+  isLarge: boolean
 ): ViewGraphSelection {
   if (!isLarge || FORCE_FULL_GRAPH) {
     return { graph, mode: "full", matchCount: graph.nodes.length };
@@ -66,7 +63,7 @@ export function selectVisibleGraph(
       meta: graph.meta,
       nodes: graph.nodes.filter((node) => idSet.has(node.id)),
       edges: graph.edges.filter(
-        (edge) => idSet.has(edge.from) && idSet.has(edge.to),
+        (edge) => idSet.has(edge.from) && idSet.has(edge.to)
       ),
     },
     mode: "search",

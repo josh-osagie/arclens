@@ -3,7 +3,7 @@ import type { AtlasGraph } from "./types";
 export function findPathFromEntries(
   graph: AtlasGraph,
   targetId: string,
-  entryIds: string[],
+  entryIds: string[]
 ): string[] {
   if (entryIds.length === 0 || entryIds.includes(targetId)) {
     return entryIds.includes(targetId) ? [targetId] : [];
@@ -58,7 +58,7 @@ export function pathEdgeKeys(path: string[], graph: AtlasGraph): Set<string> {
 export function mergeHighlightIds(
   pathIds: string[],
   connectedIds: Set<string> | null,
-  selectedId: string | null,
+  selectedId: string | null
 ): Set<string> | null {
   if (pathIds.length > 0) {
     return new Set(pathIds);

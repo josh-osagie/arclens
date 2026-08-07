@@ -13,14 +13,16 @@ export function InsightsPanel({ insights, variant = "sidebar" }: Props) {
   if (insights.length === 0) return null;
 
   const sorted = [...insights].sort(
-    (a, b) => severityOrder[a.severity] - severityOrder[b.severity],
+    (a, b) => severityOrder[a.severity] - severityOrder[b.severity]
   );
   const isDrawer = variant === "drawer";
   const shown = isDrawer ? sorted : sorted.slice(0, 8);
   const remaining = sorted.length - shown.length;
 
   return (
-    <div className={`insights-panel${isDrawer ? " insights-panel--drawer" : ""}`}>
+    <div
+      className={`insights-panel${isDrawer ? " insights-panel--drawer" : ""}`}
+    >
       {!isDrawer && (
         <h3 className="insights-panel__title">
           <span className="field-label">
@@ -29,17 +31,25 @@ export function InsightsPanel({ insights, variant = "sidebar" }: Props) {
           </span>
         </h3>
       )}
-      <div className={`insights-panel__scroll${isDrawer ? " insights-panel__scroll--drawer" : ""} atlas-scroll`}>
+      <div
+        className={`insights-panel__scroll${isDrawer ? " insights-panel__scroll--drawer" : ""} atlas-scroll`}
+      >
         <ul className="insights-panel__list">
           {shown.map((insight, index) => (
             <li
               key={`${insight.title}-${index}`}
               className={`insights-panel__item insights-panel__item--${insight.severity}`}
             >
-              <span className="insights-panel__item-title">{insight.title}</span>
-              <span className="insights-panel__item-detail">{insight.detail}</span>
+              <span className="insights-panel__item-title">
+                {insight.title}
+              </span>
+              <span className="insights-panel__item-detail">
+                {insight.detail}
+              </span>
               {insight.file && (
-                <span className="insights-panel__item-file">{insight.file}</span>
+                <span className="insights-panel__item-file">
+                  {insight.file}
+                </span>
               )}
             </li>
           ))}

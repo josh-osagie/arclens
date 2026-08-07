@@ -24,7 +24,11 @@ type ViewState =
   | { status: "error"; message: string }
   | { status: "ready"; snippet: SnippetResponse; relativeFile: string };
 
-export function FileSnippetPreview({ nodeFile, projectRoot, maxLines = DEFAULT_SNIPPET_LINES }: Props) {
+export function FileSnippetPreview({
+  nodeFile,
+  projectRoot,
+  maxLines = DEFAULT_SNIPPET_LINES,
+}: Props) {
   const [expanded, setExpanded] = useState(loadSourcePreviewExpanded);
   const [state, setState] = useState<ViewState>({ status: "loading" });
 
@@ -64,7 +68,8 @@ export function FileSnippetPreview({ nodeFile, projectRoot, maxLines = DEFAULT_S
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           setState({ status: "error", message });
         }
       });
@@ -103,7 +108,9 @@ export function FileSnippetPreview({ nodeFile, projectRoot, maxLines = DEFAULT_S
           {state.status === "error" && (
             <div className="details-snippet__fallback">
               <p className="details-snippet__path">{relFile(nodeFile)}</p>
-              <p className="details-snippet__status details-snippet__status--error">{state.message}</p>
+              <p className="details-snippet__status details-snippet__status--error">
+                {state.message}
+              </p>
             </div>
           )}
 
@@ -120,17 +127,25 @@ export function FileSnippetPreview({ nodeFile, projectRoot, maxLines = DEFAULT_S
                   {state.snippet.content.split("\n").map((line, index) => {
                     const parts = highlightLine(line);
                     return (
-                      <div className="snippet-line" key={`${state.relativeFile}-${index}`}>
+                      <div
+                        className="snippet-line"
+                        key={`${state.relativeFile}-${index}`}
+                      >
                         <span className="snippet-line__num">{index + 1}</span>
                         <code className="snippet-line__code">
                           {parts.map((part, partIndex) =>
                             part.className ? (
-                              <span className={part.className} key={`${part.key}-${partIndex}`}>
+                              <span
+                                className={part.className}
+                                key={`${part.key}-${partIndex}`}
+                              >
                                 {part.text}
                               </span>
                             ) : (
-                              <span key={`${part.key}-${partIndex}`}>{part.text}</span>
-                            ),
+                              <span key={`${part.key}-${partIndex}`}>
+                                {part.text}
+                              </span>
+                            )
                           )}
                         </code>
                       </div>

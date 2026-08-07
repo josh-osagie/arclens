@@ -14,7 +14,8 @@ type Props = {
 };
 
 export function GraphLegend({ types, typeColors }: Props) {
-  const [sectionPrefs, setSectionPrefs] = useState<SidebarSectionPrefs>(loadSidebarSections);
+  const [sectionPrefs, setSectionPrefs] =
+    useState<SidebarSectionPrefs>(loadSidebarSections);
   const expanded = sectionPrefs.legend;
 
   const onToggleSection = useCallback(() => {

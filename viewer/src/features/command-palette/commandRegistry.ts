@@ -3,10 +3,7 @@ import {
   EDGE_VISIBILITY_LABELS,
   type EdgeVisibilityPrefs,
 } from "../../edgeVisibilityPrefs";
-import {
-  LAYOUT_PRESETS,
-  type LayoutPreset,
-} from "../../layoutPresets";
+import { LAYOUT_PRESETS, type LayoutPreset } from "../../layoutPresets";
 
 export type CommandGroupId = "navigate" | "graph" | "selection";
 
@@ -30,7 +27,8 @@ export type CommandAction = {
 };
 
 const IS_MAC =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent);
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/i.test(navigator.userAgent);
 
 export const COMMAND_SHORTCUTS: Record<string, CommandShortcutSpec> = {
   "show-from-entry": { key: "E" },
@@ -52,8 +50,11 @@ export function formatCommandShortcut(spec: CommandShortcutSpec): string {
 }
 
 export function matchesCommandShortcut(
-  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">,
-  spec: CommandShortcutSpec,
+  event: Pick<
+    KeyboardEvent,
+    "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey"
+  >,
+  spec: CommandShortcutSpec
 ): boolean {
   if (event.altKey) return false;
   if (Boolean(spec.mod) !== isModKey(event)) return false;
@@ -72,7 +73,7 @@ export function isEditableTarget(target: EventTarget | null): boolean {
 
 export function findBoundCommandAction(
   event: KeyboardEvent,
-  actions: CommandAction[],
+  actions: CommandAction[]
 ): CommandAction | undefined {
   if (isEditableTarget(event.target)) return undefined;
 
@@ -120,7 +121,7 @@ export const COMMAND_GROUP_LABELS: Record<CommandGroupId, string> = {
 export function filterJumpNodes(
   nodes: AtlasGraphNode[],
   query: string,
-  limit = 12,
+  limit = 12
 ): AtlasGraphNode[] {
   const trimmed = query.trim().toLowerCase();
   const candidates = nodes.filter((node) => !node.cluster);
@@ -139,12 +140,12 @@ export function filterJumpNodes(
 
 export function buildCommandActions(
   state: CommandPaletteState,
-  actions: CommandPaletteActions,
+  actions: CommandPaletteActions
 ): CommandAction[] {
   const hasSelection = Boolean(state.selected && !state.selected.cluster);
 
   const withShortcut = (
-    action: Omit<CommandAction, "shortcut" | "shortcutBinding">,
+    action: Omit<CommandAction, "shortcut" | "shortcutBinding">
   ): CommandAction => {
     const binding = COMMAND_SHORTCUTS[action.id];
     if (!binding) return action;
@@ -159,12 +160,20 @@ export function buildCommandActions(
     id: `layout-${preset.id}`,
     group: "graph" as const,
     label: `Layout: ${preset.label}`,
-    keywords: ["layout", "relayout", "dagre", preset.id, preset.label.toLowerCase()],
+    keywords: [
+      "layout",
+      "relayout",
+      "dagre",
+      preset.id,
+      preset.label.toLowerCase(),
+    ],
     disabled: state.layoutDisabled,
     run: () => actions.onApplyLayout(preset.id),
   }));
 
-  const activeLayout = LAYOUT_PRESETS.find((preset) => preset.id === state.layoutPreset);
+  const activeLayout = LAYOUT_PRESETS.find(
+    (preset) => preset.id === state.layoutPreset
+  );
 
   return [
     withShortcut({
@@ -210,7 +219,9 @@ export function buildCommandActions(
     withShortcut({
       id: "toggle-cluster-folders",
       group: "graph",
-      label: state.clusterMode ? "Disable cluster folders" : "Enable cluster folders",
+      label: state.clusterMode
+        ? "Disable cluster folders"
+        : "Enable cluster folders",
       keywords: ["cluster", "folders", "group"],
       run: actions.onToggleClusterMode,
     }),
@@ -241,7 +252,7 @@ export function buildCommandActions(
       label: "Show all edges",
       keywords: ["edge", "visibility", "show", "all"],
       disabled: (["imports", "renders", "uses"] as const).every(
-        (type) => state.edgeVisibility[type],
+        (type) => state.edgeVisibility[type]
       ),
       run: actions.onShowAllEdges,
     },
@@ -272,7 +283,9 @@ export function buildCommandActions(
   ];
 }
 
-export function groupCommandActions(actions: CommandAction[]): Map<CommandGroupId, CommandAction[]> {
+export function groupCommandActions(
+  actions: CommandAction[]
+): Map<CommandGroupId, CommandAction[]> {
   const groups = new Map<CommandGroupId, CommandAction[]>();
   for (const action of actions) {
     const bucket = groups.get(action.group) ?? [];
@@ -282,12 +295,14 @@ export function groupCommandActions(actions: CommandAction[]): Map<CommandGroupI
   return groups;
 }
 
-export function isModKey(event: Pick<KeyboardEvent, "metaKey" | "ctrlKey">): boolean {
+export function isModKey(
+  event: Pick<KeyboardEvent, "metaKey" | "ctrlKey">
+): boolean {
   return event.metaKey || event.ctrlKey;
 }
 
 export function shouldOpenCommandPalette(
-  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">,
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">
 ): boolean {
   return isModKey(event) && event.key.toLowerCase() === "k";
 }

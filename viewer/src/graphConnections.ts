@@ -1,4 +1,9 @@
-import type { AtlasGraph, AtlasGraphNode, GraphConnection, GraphEdgeType } from "./types";
+import type {
+  AtlasGraph,
+  AtlasGraphNode,
+  GraphConnection,
+  GraphEdgeType,
+} from "./types";
 import { relFile } from "./buildFlowGraph";
 
 export function buildNodeById(graph: AtlasGraph): Map<string, AtlasGraphNode> {
@@ -8,7 +13,7 @@ export function buildNodeById(graph: AtlasGraph): Map<string, AtlasGraphNode> {
 function toConnection(
   peerId: string,
   edgeType: GraphEdgeType,
-  nodeById: Map<string, AtlasGraphNode>,
+  nodeById: Map<string, AtlasGraphNode>
 ): GraphConnection {
   const peer = nodeById.get(peerId);
   return {
@@ -22,7 +27,7 @@ function toConnection(
 export function buildNodeConnections(
   nodeId: string,
   edges: AtlasGraph["edges"],
-  nodeById: Map<string, AtlasGraphNode>,
+  nodeById: Map<string, AtlasGraphNode>
 ): { incoming: GraphConnection[]; outgoing: GraphConnection[] } {
   const incoming: GraphConnection[] = [];
   const outgoing: GraphConnection[] = [];
@@ -43,7 +48,7 @@ export function buildNodeConnections(
 export function enrichNodeForDetails(
   node: AtlasGraphNode,
   graph: AtlasGraph,
-  nodeById: Map<string, AtlasGraphNode>,
+  nodeById: Map<string, AtlasGraphNode>
 ): AtlasGraphNode {
   if (node.connections) {
     return node;
@@ -60,7 +65,7 @@ export function enrichNodeForDetails(
 
 export function getConnectedNodeIdsFromEdges(
   nodeId: string,
-  edges: AtlasGraph["edges"],
+  edges: AtlasGraph["edges"]
 ): Set<string> {
   const ids = new Set<string>([nodeId]);
 

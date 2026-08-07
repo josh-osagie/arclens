@@ -4,7 +4,7 @@ import type { AtlasGraphNode } from "./types";
 /** Graph node ids whose `folderKey(file)` matches the folder. */
 export function computeFolderMemberIds(
   folder: string,
-  nodes: AtlasGraphNode[],
+  nodes: AtlasGraphNode[]
 ): Set<string> {
   const ids = new Set<string>();
   for (const node of nodes) {
@@ -20,7 +20,7 @@ export function computeFolderMemberIds(
 export function computeFolderSpotlightIds(
   folder: string,
   allNodes: AtlasGraphNode[],
-  visibleNodes: AtlasGraphNode[],
+  visibleNodes: AtlasGraphNode[]
 ): Set<string> {
   const memberIds = computeFolderMemberIds(folder, allNodes);
   const spotlight = new Set<string>();

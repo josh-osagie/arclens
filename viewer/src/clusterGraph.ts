@@ -20,7 +20,7 @@ export function folderKey(file: string): string {
 }
 
 export function groupNodesByFolder(
-  nodes: AtlasGraphNode[],
+  nodes: AtlasGraphNode[]
 ): Map<string, AtlasGraphNode[]> {
   const groups = new Map<string, AtlasGraphNode[]>();
 
@@ -47,7 +47,10 @@ export function folderFromClusterId(id: string): string {
   return id.slice(CLUSTER_ID_PREFIX.length);
 }
 
-export function nodeMatchesSearch(node: AtlasGraphNode, searchLower: string): boolean {
+export function nodeMatchesSearch(
+  node: AtlasGraphNode,
+  searchLower: string
+): boolean {
   if (!searchLower) return false;
   return (
     node.name.toLowerCase().includes(searchLower) ||
@@ -57,7 +60,7 @@ export function nodeMatchesSearch(node: AtlasGraphNode, searchLower: string): bo
 
 export function findSearchMatchingNodeIds(
   graph: AtlasGraph,
-  searchLower: string,
+  searchLower: string
 ): Set<string> {
   const ids = new Set<string>();
   if (!searchLower) return ids;
@@ -75,7 +78,7 @@ export function nextClusterReveal(
   visibleIds: Set<string>,
   graph: AtlasGraph,
   alreadyRevealed: Set<string>,
-  batchSize = INCREMENTAL_CLUSTER_BATCH,
+  batchSize = INCREMENTAL_CLUSTER_BATCH
 ): Set<string> {
   const memberIds = new Set(members.map((member) => member.id));
   const next = new Set(alreadyRevealed);
@@ -84,13 +87,21 @@ export function nextClusterReveal(
   for (const edge of graph.edges) {
     if (picks.length >= batchSize) break;
 
-    if (visibleIds.has(edge.from) && memberIds.has(edge.to) && !next.has(edge.to)) {
+    if (
+      visibleIds.has(edge.from) &&
+      memberIds.has(edge.to) &&
+      !next.has(edge.to)
+    ) {
       picks.push(edge.to);
       next.add(edge.to);
     }
     if (picks.length >= batchSize) break;
 
-    if (visibleIds.has(edge.to) && memberIds.has(edge.from) && !next.has(edge.from)) {
+    if (
+      visibleIds.has(edge.to) &&
+      memberIds.has(edge.from) &&
+      !next.has(edge.from)
+    ) {
       picks.push(edge.from);
       next.add(edge.from);
     }
@@ -109,7 +120,7 @@ export function nextClusterReveal(
       .sort(
         (a, b) =>
           (incoming.get(b.id) ?? b.stats?.incoming ?? 0) -
-          (incoming.get(a.id) ?? a.stats?.incoming ?? 0),
+          (incoming.get(a.id) ?? a.stats?.incoming ?? 0)
       );
 
     for (const member of ranked) {
@@ -128,7 +139,7 @@ export function buildClusterNodeVisibilityMap(
   graph: AtlasGraph,
   groups: Map<string, AtlasGraphNode[]>,
   fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>>,
+  partialReveals: Map<string, Set<string>>
 ): Map<string, string> {
   const nodeIdToVisibleId = new Map<string, string>();
 
@@ -141,7 +152,9 @@ export function buildClusterNodeVisibilityMap(
     }
 
     const revealed = partialReveals.get(folder) ?? new Set<string>();
-    const hiddenCount = members.length - members.filter((member) => revealed.has(member.id)).length;
+    const hiddenCount =
+      members.length -
+      members.filter((member) => revealed.has(member.id)).length;
     const clusterId = hiddenCount > 0 ? clusterNodeId(folder) : null;
 
     for (const member of members) {
@@ -166,7 +179,7 @@ export function buildClusterNodeVisibilityMap(
 export function wireClusterEdges(
   edges: AtlasGraph["edges"],
   nodeIdToVisibleId: Map<string, string>,
-  visibleIds: Set<string>,
+  visibleIds: Set<string>
 ): AtlasGraph["edges"] {
   const wired: AtlasGraph["edges"] = [];
   const seen = new Set<string>();
@@ -195,7 +208,7 @@ export function applyClusterView(
   graph: AtlasGraph,
   clusterMode: boolean,
   fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>> = new Map(),
+  partialReveals: Map<string, Set<string>> = new Map()
 ): AtlasGraph {
   if (!clusterMode) return graph;
 
@@ -227,7 +240,8 @@ export function applyClusterView(
       const baseName = folder.split("/").pop() ?? folder;
       displayNodes.push({
         id: clusterId,
-        name: revealedMembers.length > 0 ? `${baseName} +${hiddenCount}` : baseName,
+        name:
+          revealedMembers.length > 0 ? `${baseName} +${hiddenCount}` : baseName,
         file: folder,
         type: "utility",
         cluster: { folder, count: hiddenCount },
@@ -247,7 +261,7 @@ export function applyClusterView(
     graph,
     groups,
     fullyExpandedFolders,
-    partialReveals,
+    partialReveals
   );
 
   return {
@@ -265,19 +279,22 @@ export function buildClusteredVisibleIds(
   graph: AtlasGraph,
   clusterMode: boolean,
   fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>> = new Map(),
+  partialReveals: Map<string, Set<string>> = new Map()
 ): Set<string> {
   return new Set(
-    applyClusterView(graph, clusterMode, fullyExpandedFolders, partialReveals).nodes.map(
-      (node) => node.id,
-    ),
+    applyClusterView(
+      graph,
+      clusterMode,
+      fullyExpandedFolders,
+      partialReveals
+    ).nodes.map((node) => node.id)
   );
 }
 
 /** Folders that are fully expanded or have partial reveals. */
 export function listExpandedFolders(
   fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>>,
+  partialReveals: Map<string, Set<string>>
 ): string[] {
   const folders = new Set(fullyExpandedFolders);
   for (const [folder, revealed] of partialReveals) {
@@ -289,7 +306,7 @@ export function listExpandedFolders(
 export function collapseClusterFolderState(
   folder: string,
   fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>>,
+  partialReveals: Map<string, Set<string>>
 ): {
   fullyExpandedFolders: Set<string>;
   partialReveals: Map<string, Set<string>>;
@@ -314,7 +331,7 @@ export function collapseAllClusterFoldersState(): {
 export function revealNodeForSpotlight(
   node: AtlasGraphNode,
   graph: AtlasGraph,
-  partialReveals: Map<string, Set<string>>,
+  partialReveals: Map<string, Set<string>>
 ): Map<string, Set<string>> {
   if (node.file === "external") return partialReveals;
 
@@ -328,7 +345,8 @@ export function revealNodeForSpotlight(
 
   for (const edge of graph.edges) {
     if (edge.from === node.id && memberIds.has(edge.to)) revealed.add(edge.to);
-    if (edge.to === node.id && memberIds.has(edge.from)) revealed.add(edge.from);
+    if (edge.to === node.id && memberIds.has(edge.from))
+      revealed.add(edge.from);
   }
 
   next.set(folder, revealed);
@@ -356,7 +374,7 @@ export function revealNodeForSpotlight(
 export function mergeSearchPartialReveals(
   graph: AtlasGraph,
   searchLower: string,
-  partialReveals: Map<string, Set<string>>,
+  partialReveals: Map<string, Set<string>>
 ): Map<string, Set<string>> {
   if (!searchLower) return partialReveals;
 
@@ -374,7 +392,7 @@ export function computeSearchHighlightIds(
   viewGraph: AtlasGraph,
   searchLower: string,
   clusterMode: boolean,
-  fullyExpandedFolders: Set<string>,
+  fullyExpandedFolders: Set<string>
 ): Set<string> | null {
   if (!searchLower) return null;
 

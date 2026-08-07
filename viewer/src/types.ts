@@ -8,12 +8,7 @@ export type GraphProp = {
 };
 
 export type GraphNodeType =
-  | "component"
-  | "hook"
-  | "utility"
-  | "context"
-  | "entry"
-  | "config";
+  "component" | "hook" | "utility" | "context" | "entry" | "config";
 
 export type GraphInsight = {
   severity: "error" | "warning" | "info" | "tip";

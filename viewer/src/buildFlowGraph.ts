@@ -39,12 +39,12 @@ export type ClusterNodeData = {
 
 function applyEmbeddedLayouts(
   graph: AtlasGraph,
-  nodes: Node<AtlasNodeData>[],
+  nodes: Node<AtlasNodeData>[]
 ): Node<AtlasNodeData>[] | null {
   const positionById = new Map(
     graph.nodes
       .filter((node) => node.layout)
-      .map((node) => [node.id, node.layout!]),
+      .map((node) => [node.id, node.layout!])
   );
 
   // Cluster bubbles and filtered views lack graph.json layout — use dagre for everyone.
@@ -70,7 +70,7 @@ function layoutNodes(
   graph: AtlasGraph,
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
-  entryIds: string[] = [],
+  entryIds: string[] = []
 ) {
   if (nodes.length === 0) return nodes;
 
@@ -85,7 +85,7 @@ export async function layoutFlowGraphNodesAsync(
   graph: AtlasGraph,
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
-  entryIds: string[] = [],
+  entryIds: string[] = []
 ): Promise<Node<AtlasNodeData>[]> {
   if (nodes.length === 0) return nodes;
 
@@ -105,7 +105,7 @@ export type RelayoutOptions = LayoutContext & {
 export function relayoutFlowNodes(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
-  options: RelayoutOptions = {},
+  options: RelayoutOptions = {}
 ): Node<AtlasNodeData>[] {
   if (nodes.length === 0) return nodes;
 
@@ -120,7 +120,7 @@ export function relayoutFlowNodes(
 export async function relayoutFlowNodesAsync(
   nodes: Node<AtlasNodeData>[],
   edges: Edge[],
-  options: RelayoutOptions = {},
+  options: RelayoutOptions = {}
 ): Promise<Node<AtlasNodeData>[]> {
   if (nodes.length === 0) return nodes;
 
@@ -133,7 +133,7 @@ export async function relayoutFlowNodesAsync(
 
 export function buildFlowGraph(
   graph: AtlasGraph,
-  options: { compact?: boolean; entryIds?: string[]; skipLayout?: boolean } = {},
+  options: { compact?: boolean; entryIds?: string[]; skipLayout?: boolean } = {}
 ): {
   nodes: Node<AtlasNodeData>[];
   edges: Edge[];
@@ -233,7 +233,10 @@ export function relFile(filePath: string): string {
   return parts.slice(-2).join("/") || filePath;
 }
 
-export function formatRelativePath(filePath: string, projectRoot?: string): string {
+export function formatRelativePath(
+  filePath: string,
+  projectRoot?: string
+): string {
   const normalized = filePath.replace(/\\/g, "/");
 
   if (projectRoot) {

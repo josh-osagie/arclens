@@ -40,7 +40,11 @@ export function InsightsBadge({ insights }: Props) {
   return (
     <div className="insights-badge" ref={drawerRef}>
       {open && (
-        <div className="insights-badge__drawer" role="dialog" aria-label="Architecture insights">
+        <div
+          className="insights-badge__drawer"
+          role="dialog"
+          aria-label="Architecture insights"
+        >
           <div className="insights-badge__drawer-header">
             <h2 className="insights-badge__drawer-title">Insights</h2>
             <button

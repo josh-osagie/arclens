@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 
 import { MOBILE_BANNER_MAX_WIDTH_PX } from "./mobileBannerPrefs";
 
-export function useNarrowViewport(maxWidth = MOBILE_BANNER_MAX_WIDTH_PX): boolean {
+export function useNarrowViewport(
+  maxWidth = MOBILE_BANNER_MAX_WIDTH_PX
+): boolean {
   const query = `(max-width: ${maxWidth}px)`;
   const [matches, setMatches] = useState(() => {
     if (typeof window === "undefined") return false;

@@ -14,7 +14,7 @@ const LINE_EXTENT = 10000;
 
 export function computeHelperLines(
   dragged: Node<AtlasNodeData>,
-  others: Node<AtlasNodeData>[],
+  others: Node<AtlasNodeData>[]
 ): { lines: HelperLine[]; snapX?: number; snapY?: number } {
   const cx = dragged.position.x + NODE_W / 2;
   const cy = dragged.position.y + NODE_H / 2;
@@ -68,7 +68,7 @@ export function HelperLinesOverlay({ lines }: { lines: HelperLine[] }) {
               y2={line.position}
               className="helper-line"
             />
-          ),
+          )
         )}
       </g>
     </svg>

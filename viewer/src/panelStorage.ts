@@ -75,8 +75,14 @@ export function clampPanelRect(rect: PanelRect, min: PanelRect): PanelRect {
   const maxH = window.innerHeight - inset * 2;
   const width = Math.min(Math.max(rect.width, min.width), maxW);
   const height = Math.min(Math.max(rect.height, min.height), maxH);
-  const x = Math.min(Math.max(rect.x, inset), window.innerWidth - width - inset);
-  const y = Math.min(Math.max(rect.y, inset), window.innerHeight - height - inset);
+  const x = Math.min(
+    Math.max(rect.x, inset),
+    window.innerWidth - width - inset
+  );
+  const y = Math.min(
+    Math.max(rect.y, inset),
+    window.innerHeight - height - inset
+  );
 
   return { x, y, width, height };
 }
@@ -90,7 +96,7 @@ export function defaultMainPanelRect(): PanelRect {
       width: 280,
       height: Math.min(560, window.innerHeight - inset * 2),
     },
-    { x: inset, y: inset, width: 220, height: 180 },
+    { x: inset, y: inset, width: 220, height: 180 }
   );
 }
 
@@ -104,6 +110,6 @@ export function defaultDetailsPanelRect(): PanelRect {
       width,
       height: Math.min(560, window.innerHeight - inset * 2),
     },
-    { x: inset, y: inset, width: 260, height: 180 },
+    { x: inset, y: inset, width: 260, height: 180 }
   );
 }

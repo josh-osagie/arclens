@@ -9,5 +9,5 @@ createRoot(document.getElementById("root")!).render(
     <ReactFlowProvider>
       <App />
     </ReactFlowProvider>
-  </StrictMode>,
+  </StrictMode>
 );

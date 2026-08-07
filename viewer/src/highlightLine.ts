@@ -60,7 +60,10 @@ export function highlightLine(line: string): HighlightPart[] {
 
   merged.forEach((token, index) => {
     if (token.start > cursor) {
-      parts.push({ key: `gap-${index}`, text: line.slice(cursor, token.start) });
+      parts.push({
+        key: `gap-${index}`,
+        text: line.slice(cursor, token.start),
+      });
     }
     parts.push({
       key: `tok-${index}`,

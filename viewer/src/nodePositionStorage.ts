@@ -38,15 +38,23 @@ export function loadNodePositions(graphKey: string): NodePositions | null {
   }
 }
 
-export function saveNodePositions(graphKey: string, positions: NodePositions): void {
+export function saveNodePositions(
+  graphKey: string,
+  positions: NodePositions
+): void {
   try {
-    writeLocalStorage(nodePositionStorageKey(graphKey), JSON.stringify(positions));
+    writeLocalStorage(
+      nodePositionStorageKey(graphKey),
+      JSON.stringify(positions)
+    );
   } catch {
     // ignore quota errors
   }
 }
 
-export function nodePositionsFromNodes(nodes: Node<AtlasNodeData>[]): NodePositions {
+export function nodePositionsFromNodes(
+  nodes: Node<AtlasNodeData>[]
+): NodePositions {
   const positions: NodePositions = {};
   for (const node of nodes) {
     if (isClusterId(node.id)) continue;
@@ -59,7 +67,7 @@ export function mergeNodePositions(
   nextNodes: Node<AtlasNodeData>[],
   currentNodes: Node<AtlasNodeData>[],
   savedPositions: NodePositions | null = null,
-  draggedNodeIds: ReadonlySet<string> = new Set(),
+  draggedNodeIds: ReadonlySet<string> = new Set()
 ): Node<AtlasNodeData>[] {
   const currentById = new Map(currentNodes.map((node) => [node.id, node]));
 

@@ -1802,12 +1802,24 @@
 }
 
 .overview-shortcuts__btn--active {
-  background: color-mix(in srgb, var(--atlas-accent) 14%, var(--atlas-surface-raised));
-  border-color: color-mix(in srgb, var(--atlas-accent) 45%, var(--atlas-border));
+  background: color-mix(
+    in srgb,
+    var(--atlas-accent) 14%,
+    var(--atlas-surface-raised)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--atlas-accent) 45%,
+    var(--atlas-border)
+  );
 }
 
 .overview-shortcuts__btn--active:hover {
-  background: color-mix(in srgb, var(--atlas-accent) 20%, var(--atlas-surface-raised));
+  background: color-mix(
+    in srgb,
+    var(--atlas-accent) 20%,
+    var(--atlas-surface-raised)
+  );
 }
 
 .overview-shortcuts__label {
@@ -1851,7 +1863,11 @@
   padding: var(--atlas-space-5) var(--atlas-space-6);
   border-radius: var(--atlas-radius-xl);
   border: 1px dashed var(--atlas-border-strong);
-  background: color-mix(in srgb, var(--atlas-surface) 88%, var(--atlas-accent) 12%);
+  background: color-mix(
+    in srgb,
+    var(--atlas-surface) 88%,
+    var(--atlas-accent) 12%
+  );
   text-align: center;
   cursor: pointer;
   transition:

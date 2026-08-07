@@ -67,7 +67,12 @@ export function NodeToolbarActions({ node, onFocus }: Props) {
 
   const focusNode = () => {
     onFocus();
-    fitView({ nodes: [{ id: node.id }], padding: 0.55, duration: 350, maxZoom: 1.4 });
+    fitView({
+      nodes: [{ id: node.id }],
+      padding: 0.55,
+      duration: 350,
+      maxZoom: 1.4,
+    });
   };
 
   return (
@@ -78,7 +83,9 @@ export function NodeToolbarActions({ node, onFocus }: Props) {
         </button>
         <button
           type="button"
-          className={copied === "name" ? "node-toolbar__btn--copied" : undefined}
+          className={
+            copied === "name" ? "node-toolbar__btn--copied" : undefined
+          }
           onClick={() => copyText(node.name, "name")}
           title="Copy symbol name"
         >
@@ -93,7 +100,9 @@ export function NodeToolbarActions({ node, onFocus }: Props) {
         </button>
         <button
           type="button"
-          className={copied === "path" ? "node-toolbar__btn--copied" : undefined}
+          className={
+            copied === "path" ? "node-toolbar__btn--copied" : undefined
+          }
           onClick={() => copyText(node.file, "path")}
           title="Copy file path"
         >

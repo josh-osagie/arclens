@@ -45,7 +45,7 @@ export function saveEdgeVisibility(prefs: EdgeVisibilityPrefs): void {
 export function setEdgeTypeVisible(
   prefs: EdgeVisibilityPrefs,
   type: GraphEdgeType,
-  visible: boolean,
+  visible: boolean
 ): EdgeVisibilityPrefs {
   return { ...prefs, [type]: visible };
 }

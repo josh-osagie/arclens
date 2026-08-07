@@ -101,10 +101,7 @@ import {
   nodePositionsFromNodes,
   saveNodePositions,
 } from "./nodePositionStorage";
-import {
-  findPathFromEntries,
-  pathEdgeKeys,
-} from "./pathHighlight";
+import { findPathFromEntries, pathEdgeKeys } from "./pathHighlight";
 import {
   DEFAULT_NEIGHBORHOOD_HOPS,
   defaultNeighborhoodFocusEnabled,
@@ -153,9 +150,10 @@ function nodeOpacity(
   nodeId: string,
   label: string,
   searchLower: string,
-  highlightIds: Set<string> | null,
+  highlightIds: Set<string> | null
 ): number {
-  const matchesSearch = !searchLower || label.toLowerCase().includes(searchLower);
+  const matchesSearch =
+    !searchLower || label.toLowerCase().includes(searchLower);
 
   if (highlightIds && highlightIds.size > 0) {
     return highlightIds.has(nodeId) ? 1 : 0.18;
@@ -169,7 +167,7 @@ function patchNodePresentation(
   nodes: Node<AtlasNodeData>[],
   searchLower: string,
   selectedId: string | null,
-  highlightIds: Set<string> | null,
+  highlightIds: Set<string> | null
 ): Node<AtlasNodeData>[] {
   let changed = false;
 
@@ -205,7 +203,7 @@ function patchEdgePresentation(
   edges: Edge[],
   highlightIds: Set<string> | null,
   pathEdges: Set<string>,
-  highlight: boolean,
+  highlight: boolean
 ): Edge[] {
   if (!highlight || !highlightIds) return edges;
 
@@ -245,13 +243,13 @@ function presentEdges(
   visibility: EdgeVisibilityPrefs,
   highlightIds: Set<string> | null,
   pathEdges: Set<string>,
-  highlight: boolean,
+  highlight: boolean
 ): Edge[] {
   return patchEdgePresentation(
     filterEdgesByVisibility(edges, visibility),
     highlightIds,
     pathEdges,
-    highlight,
+    highlight
   );
 }
 
@@ -271,7 +269,10 @@ function FitViewOnce({
     if (skip || nodeCount === 0 || lastKey.current === viewKey) return;
 
     const timer = window.setTimeout(() => {
-      fitView({ padding: 0.22, duration: nodeCount > VIRTUALIZE_THRESHOLD ? 0 : 280 });
+      fitView({
+        padding: 0.22,
+        duration: nodeCount > VIRTUALIZE_THRESHOLD ? 0 : 280,
+      });
       lastKey.current = viewKey;
     }, 120);
 
@@ -285,7 +286,7 @@ function emptyViewMessage(
   mode: ViewGraphMode,
   totalNodes: number,
   matchCount: number,
-  searchLower: string,
+  searchLower: string
 ): string {
   if (mode === "overview" && !searchLower) {
     return "Showing folder overview — click a folder to expand, or use shortcuts below.";
@@ -302,7 +303,11 @@ function emptyViewMessage(
   return "";
 }
 
-function EmptyGraphPanel({ presentation }: { presentation: EmptyGraphPresentation }) {
+function EmptyGraphPanel({
+  presentation,
+}: {
+  presentation: EmptyGraphPresentation;
+}) {
   return (
     <div className="graph-shell graph-shell--empty">
       <div className="graph-panel graph-panel--empty">
@@ -318,37 +323,48 @@ function EmptyGraphPanel({ presentation }: { presentation: EmptyGraphPresentatio
 export default function App() {
   const [graph, setGraph] = useState<AtlasGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [emptyGraph, setEmptyGraph] = useState<EmptyGraphPresentation | null>(null);
+  const [emptyGraph, setEmptyGraph] = useState<EmptyGraphPresentation | null>(
+    null
+  );
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AtlasGraphNode | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [clusterMode, setClusterMode] = useState(false);
   const [fullyExpandedFolders, setFullyExpandedFolders] = useState<Set<string>>(
-    () => new Set(),
+    () => new Set()
   );
-  const [partialReveals, setPartialReveals] = useState<Map<string, Set<string>>>(
-    () => new Map(),
-  );
+  const [partialReveals, setPartialReveals] = useState<
+    Map<string, Set<string>>
+  >(() => new Map());
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
   const [focusOnSelect, setFocusOnSelect] = useState(true);
   const [neighborhoodFocus, setNeighborhoodFocus] = useState(false);
-  const [neighborhoodHops, setNeighborhoodHops] = useState(DEFAULT_NEIGHBORHOOD_HOPS);
+  const [neighborhoodHops, setNeighborhoodHops] = useState(
+    DEFAULT_NEIGHBORHOOD_HOPS
+  );
   const [spotlightFolder, setSpotlightFolder] = useState<string | null>(null);
   const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
   const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
-  const [folderExpandFocus, setFolderExpandFocus] = useState<string | null>(null);
-  const [relayoutNonce, setRelayoutNonce] = useState(0);
-  const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() => loadLayoutPreset());
-  const [edgeVisibility, setEdgeVisibility] = useState<EdgeVisibilityPrefs>(() =>
-    loadEdgeVisibility(),
+  const [folderExpandFocus, setFolderExpandFocus] = useState<string | null>(
+    null
   );
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>([]);
+  const [relayoutNonce, setRelayoutNonce] = useState(0);
+  const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() =>
+    loadLayoutPreset()
+  );
+  const [edgeVisibility, setEdgeVisibility] = useState<EdgeVisibilityPrefs>(
+    () => loadEdgeVisibility()
+  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>(
+    []
+  );
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const buildSigRef = useRef<string>("");
   const buildingGenRef = useRef(0);
   const baseEdgesRef = useRef<Edge[]>([]);
   const hasSavedViewportRef = useRef(false);
-  const savedNodePositionsRef = useRef<ReturnType<typeof loadNodePositions>>(null);
+  const savedNodePositionsRef =
+    useRef<ReturnType<typeof loadNodePositions>>(null);
   const applySavedLayoutRef = useRef(true);
   const draggedNodeIdsRef = useRef<Set<string>>(new Set());
   const neighborhoodFocusTouchedRef = useRef(false);
@@ -396,9 +412,15 @@ export default function App() {
       viewSelection.graph,
       clusterMode,
       fullyExpandedFolders,
-      effectivePartialReveals,
+      effectivePartialReveals
     );
-  }, [graph, viewSelection.graph, clusterMode, fullyExpandedFolders, effectivePartialReveals]);
+  }, [
+    graph,
+    viewSelection.graph,
+    clusterMode,
+    fullyExpandedFolders,
+    effectivePartialReveals,
+  ]);
 
   const partialRevealKey = [...effectivePartialReveals.entries()]
     .map(([folder, ids]) => `${folder}:${[...ids].sort().join(",")}`)
@@ -412,12 +434,12 @@ export default function App() {
 
   const nodeById = useMemo(
     () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
-    [graph],
+    [graph]
   );
 
   const entryIds = useMemo(
     () => (graph ? findEntryNodes(graph).map((node) => node.id) : []),
-    [graph],
+    [graph]
   );
 
   const pathIds = useMemo(() => {
@@ -431,13 +453,20 @@ export default function App() {
   }, [selected, graph]);
 
   const pathEdges = useMemo(
-    () => (graph && pathIds.length > 0 ? pathEdgeKeys(pathIds, graph) : new Set<string>()),
-    [graph, pathIds],
+    () =>
+      graph && pathIds.length > 0
+        ? pathEdgeKeys(pathIds, graph)
+        : new Set<string>(),
+    [graph, pathIds]
   );
 
   const folderSpotlightIds = useMemo(() => {
     if (!spotlightFolder || !graph) return null;
-    return computeFolderSpotlightIds(spotlightFolder, graph.nodes, clusteredGraph.nodes);
+    return computeFolderSpotlightIds(
+      spotlightFolder,
+      graph.nodes,
+      clusteredGraph.nodes
+    );
   }, [spotlightFolder, graph, clusteredGraph.nodes]);
 
   const nodeSpotlightIds = useMemo(() => {
@@ -446,7 +475,7 @@ export default function App() {
       spotlightNodeId,
       graph.nodes,
       clusteredGraph.nodes,
-      graph.edges,
+      graph.edges
     );
   }, [spotlightNodeId, graph, clusteredGraph.nodes]);
 
@@ -457,9 +486,15 @@ export default function App() {
       viewSelection.graph,
       searchLower,
       clusterMode,
-      fullyExpandedFolders,
+      fullyExpandedFolders
     );
-  }, [searchLower, graph, viewSelection.graph, clusterMode, fullyExpandedFolders]);
+  }, [
+    searchLower,
+    graph,
+    viewSelection.graph,
+    clusterMode,
+    fullyExpandedFolders,
+  ]);
 
   const selectionHighlightIds = useMemo(
     () =>
@@ -468,9 +503,16 @@ export default function App() {
         selected?.id ?? null,
         graph?.edges ?? [],
         connectedIds,
-        { neighborhoodFocus, neighborhoodHops },
+        { neighborhoodFocus, neighborhoodHops }
       ),
-    [pathIds, connectedIds, selected?.id, graph?.edges, neighborhoodFocus, neighborhoodHops],
+    [
+      pathIds,
+      connectedIds,
+      selected?.id,
+      graph?.edges,
+      neighborhoodFocus,
+      neighborhoodHops,
+    ]
   );
 
   const highlightIds = useMemo(() => {
@@ -487,7 +529,12 @@ export default function App() {
       return searchHighlightIds;
     }
     return selectionHighlightIds;
-  }, [selectionHighlightIds, nodeSpotlightIds, folderSpotlightIds, searchHighlightIds]);
+  }, [
+    selectionHighlightIds,
+    nodeSpotlightIds,
+    folderSpotlightIds,
+    searchHighlightIds,
+  ]);
 
   const shouldHighlightEdges =
     Boolean(selected) ||
@@ -508,8 +555,11 @@ export default function App() {
   const expandFocusNodeIds = useMemo(() => {
     if (!folderExpandFocus || !graph) return null;
     const visible = new Set(clusteredGraph.nodes.map((node) => node.id));
-    const members = groupNodesByFolder(graph.nodes).get(folderExpandFocus) ?? [];
-    const ids = members.filter((member) => visible.has(member.id)).map((member) => member.id);
+    const members =
+      groupNodesByFolder(graph.nodes).get(folderExpandFocus) ?? [];
+    const ids = members
+      .filter((member) => visible.has(member.id))
+      .map((member) => member.id);
     return ids.length > 0 ? ids : null;
   }, [folderExpandFocus, graph, clusteredGraph.nodes]);
 
@@ -533,36 +583,40 @@ export default function App() {
     return clusterIds.size > 0 ? [...clusterIds] : null;
   }, [searchLower, graph, clusteredGraph.nodes, clusterMode, nodeById]);
 
-  const autoFitNodeIds = spotlightFitIds ?? expandFocusNodeIds ?? searchFitNodeIds;
+  const autoFitNodeIds =
+    spotlightFitIds ?? expandFocusNodeIds ?? searchFitNodeIds;
   const autoFitNodeId =
     spotlightFolder || spotlightNodeId || autoFitNodeIds
       ? null
-      : canvasFocusId ?? selected?.id ?? null;
+      : (canvasFocusId ?? selected?.id ?? null);
 
   const expandedFolders = useMemo(
     () => listExpandedFolders(fullyExpandedFolders, partialReveals),
-    [fullyExpandedFolders, partialReveals],
+    [fullyExpandedFolders, partialReveals]
   );
 
   const overviewEntries = useMemo(
     () => (graph ? computeEntryPoints(graph) : []),
-    [graph],
+    [graph]
   );
 
   const overviewFolders = useMemo(
     () => (graph ? computeTopFolders(graph, OVERVIEW_TOP_FOLDERS) : []),
-    [graph],
+    [graph]
   );
 
   const overviewHubs = useMemo(
     () => (graph ? computeHubNodes(graph, OVERVIEW_HUB_NODES) : []),
-    [graph],
+    [graph]
   );
 
   const loadGraph = useCallback(async () => {
     try {
-      const res = await fetch(`/graph.json?_=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("graph.json not found. Run `pnpm analyze` first.");
+      const res = await fetch(`/graph.json?_=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok)
+        throw new Error("graph.json not found. Run `pnpm analyze` first.");
       const data: unknown = await res.json();
       const validated = validateGraphData(data);
       if (!validated.ok) {
@@ -577,13 +631,17 @@ export default function App() {
     } catch (err) {
       setGraph(null);
       setEmptyGraph(null);
-      setError(err instanceof Error ? err.message : "Failed to load graph.json");
+      setError(
+        err instanceof Error ? err.message : "Failed to load graph.json"
+      );
     }
   }, []);
 
   useEffect(() => {
     hasSavedViewportRef.current = Boolean(graphKey && loadViewport(graphKey));
-    savedNodePositionsRef.current = graphKey ? loadNodePositions(graphKey) : null;
+    savedNodePositionsRef.current = graphKey
+      ? loadNodePositions(graphKey)
+      : null;
     applySavedLayoutRef.current = true;
     draggedNodeIdsRef.current = new Set();
   }, [graphKey]);
@@ -615,7 +673,7 @@ export default function App() {
             clusteredGraph,
             built.nodes,
             built.edges,
-            entryIds,
+            entryIds
           );
           if (cancelled) return;
 
@@ -628,14 +686,16 @@ export default function App() {
                 mergeNodePositions(
                   layoutedNodes,
                   current,
-                  applySavedLayoutRef.current ? savedNodePositionsRef.current : null,
-                  draggedNodeIdsRef.current,
-                ),
+                  applySavedLayoutRef.current
+                    ? savedNodePositionsRef.current
+                    : null,
+                  draggedNodeIdsRef.current
+                )
               ),
               searchLower,
               selected?.id ?? null,
-              highlightIds,
-            ),
+              highlightIds
+            )
           );
           applySavedLayoutRef.current = false;
           setEdges(
@@ -644,8 +704,8 @@ export default function App() {
               edgeVisibility,
               highlightIds,
               pathEdges,
-              shouldHighlightEdges,
-            ),
+              shouldHighlightEdges
+            )
           );
         } catch (error) {
           if (cancelled || error instanceof LayoutCancelledError) return;
@@ -666,7 +726,12 @@ export default function App() {
 
   useEffect(() => {
     setNodes((current) =>
-      patchNodePresentation(current, searchLower, selected?.id ?? null, highlightIds),
+      patchNodePresentation(
+        current,
+        searchLower,
+        selected?.id ?? null,
+        highlightIds
+      )
     );
     setEdges((current) =>
       presentEdges(
@@ -674,8 +739,8 @@ export default function App() {
         edgeVisibility,
         highlightIds,
         pathEdges,
-        shouldHighlightEdges,
-      ),
+        shouldHighlightEdges
+      )
     );
   }, [
     searchLower,
@@ -701,11 +766,11 @@ export default function App() {
             viewSelection.graph,
             clusterMode,
             fullyExpandedFolders,
-            prev,
+            prev
           );
           next.set(
             folder,
-            nextClusterReveal(folder, members, visible, graph, already),
+            nextClusterReveal(folder, members, visible, graph, already)
           );
           return next;
         });
@@ -717,7 +782,13 @@ export default function App() {
       setFolderExpandFocus(folder);
       setSelected(null);
     },
-    [graph, isLargeGraph, clusterMode, viewSelection.graph, fullyExpandedFolders],
+    [
+      graph,
+      isLargeGraph,
+      clusterMode,
+      viewSelection.graph,
+      fullyExpandedFolders,
+    ]
   );
 
   const collapseClusterFolder = useCallback(
@@ -725,7 +796,7 @@ export default function App() {
       const next = collapseClusterFolderState(
         folder,
         fullyExpandedFolders,
-        partialReveals,
+        partialReveals
       );
       setFullyExpandedFolders(next.fullyExpandedFolders);
       setPartialReveals(next.partialReveals);
@@ -736,7 +807,7 @@ export default function App() {
         return folderKey(current.file) === folder ? null : current;
       });
     },
-    [fullyExpandedFolders, partialReveals],
+    [fullyExpandedFolders, partialReveals]
   );
 
   const collapseAllClusterFolders = useCallback(() => {
@@ -770,7 +841,7 @@ export default function App() {
       setFocusOnSelect(true);
       setCanvasFocusId(null);
     },
-    [graph, isLargeGraph, clusterMode, spotlightNodeId, nodeById],
+    [graph, isLargeGraph, clusterMode, spotlightNodeId, nodeById]
   );
 
   const onOverviewFolderClick = useCallback(
@@ -788,17 +859,17 @@ export default function App() {
       setCanvasFocusId(null);
       setFocusOnSelect(true);
     },
-    [expandClusterFolder, clusterMode, spotlightFolder],
+    [expandClusterFolder, clusterMode, spotlightFolder]
   );
 
   const onOverviewEntryClick = useCallback(
     (node: AtlasGraphNode) => focusGraphNode(node),
-    [focusGraphNode],
+    [focusGraphNode]
   );
 
   const onOverviewHubClick = useCallback(
     (node: AtlasGraphNode) => focusGraphNode(node),
-    [focusGraphNode],
+    [focusGraphNode]
   );
 
   const onNodeClick = useCallback(
@@ -823,14 +894,22 @@ export default function App() {
         shouldAutoEnableNeighborhoodFocus(
           isLargeGraph,
           neighborhoodFocusTouchedRef.current,
-          neighborhoodFocus,
+          neighborhoodFocus
         )
       ) {
         setNeighborhoodFocus(true);
       }
       setSelected(enrichNodeForDetails(base, graph, nodeById));
     },
-    [graph, nodeById, expandClusterFolder, collapseClusterFolder, expandedFolders, isLargeGraph, neighborhoodFocus],
+    [
+      graph,
+      nodeById,
+      expandClusterFolder,
+      collapseClusterFolder,
+      expandedFolders,
+      isLargeGraph,
+      neighborhoodFocus,
+    ]
   );
 
   const onNeighborhoodFocusChange = useCallback((enabled: boolean) => {
@@ -847,17 +926,23 @@ export default function App() {
 
   const onNodeDrag: OnNodeDrag<Node<AtlasNodeData>> = useCallback(
     (_event, dragged) => {
-      const { lines } = computeHelperLines(dragged as Node<AtlasNodeData>, nodes);
+      const { lines } = computeHelperLines(
+        dragged as Node<AtlasNodeData>,
+        nodes
+      );
       setHelperLines(lines);
     },
-    [nodes],
+    [nodes]
   );
 
   const onNodeDragStop: OnNodeDrag<Node<AtlasNodeData>> = useCallback(
     (_event, dragged) => {
       draggedNodeIdsRef.current.add(dragged.id);
       setNodes((current) => {
-        const { snapX, snapY } = computeHelperLines(dragged as Node<AtlasNodeData>, current);
+        const { snapX, snapY } = computeHelperLines(
+          dragged as Node<AtlasNodeData>,
+          current
+        );
         const next =
           snapX === undefined && snapY === undefined
             ? current
@@ -870,7 +955,7 @@ export default function App() {
                         y: snapY ?? node.position.y,
                       },
                     }
-                  : node,
+                  : node
               );
 
         if (graphKey) {
@@ -881,7 +966,7 @@ export default function App() {
       });
       setHelperLines([]);
     },
-    [setNodes, graphKey],
+    [setNodes, graphKey]
   );
 
   const showFromEntry = useCallback(() => {
@@ -935,11 +1020,15 @@ export default function App() {
 
       void (async () => {
         try {
-          const layouted = await relayoutFlowNodesAsync(snapshot, edgesSnapshot, {
-            mode: preset,
-            entryIds,
-            graph: graph ?? undefined,
-          });
+          const layouted = await relayoutFlowNodesAsync(
+            snapshot,
+            edgesSnapshot,
+            {
+              mode: preset,
+              entryIds,
+              graph: graph ?? undefined,
+            }
+          );
           if (buildingGen !== buildingGenRef.current) return;
           setNodes(layouted);
           setRelayoutNonce((value) => value + 1);
@@ -954,7 +1043,7 @@ export default function App() {
         }
       })();
     },
-    [setNodes, entryIds, graph, nodes],
+    [setNodes, entryIds, graph, nodes]
   );
 
   const cycleLayout = useCallback(() => {
@@ -969,7 +1058,7 @@ export default function App() {
         return next;
       });
     },
-    [],
+    []
   );
 
   const showAllEdges = useCallback(() => {
@@ -997,7 +1086,15 @@ export default function App() {
       hasEntryNodes: graph ? findEntryNodes(graph).length > 0 : false,
       edgeVisibility,
     }),
-    [graph, clusterMode, neighborhoodFocus, nodes.length, selected, layoutPreset, edgeVisibility],
+    [
+      graph,
+      clusterMode,
+      neighborhoodFocus,
+      nodes.length,
+      selected,
+      layoutPreset,
+      edgeVisibility,
+    ]
   );
 
   const commandPaletteActions = useMemo<CommandPaletteActions>(
@@ -1036,14 +1133,24 @@ export default function App() {
         if (selected?.name) void copyText(selected.name);
       },
       onCopySelectedPath: () => {
-        if (selected?.file && selected.file !== "external") void copyText(selected.file);
+        if (selected?.file && selected.file !== "external")
+          void copyText(selected.file);
       },
       onHideEdgeType: (type) => {
         onEdgeVisibilityChange(type, false);
       },
       onShowAllEdges: showAllEdges,
     }),
-    [focusGraphNode, showFromEntry, applyLayout, cycleLayout, selected, copyText, onEdgeVisibilityChange, showAllEdges],
+    [
+      focusGraphNode,
+      showFromEntry,
+      applyLayout,
+      cycleLayout,
+      selected,
+      copyText,
+      onEdgeVisibilityChange,
+      showAllEdges,
+    ]
   );
 
   const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
@@ -1054,7 +1161,7 @@ export default function App() {
         viewSelection.mode,
         graph.nodes.length,
         viewSelection.matchCount,
-        searchLower,
+        searchLower
       )
     : "";
 
@@ -1088,7 +1195,10 @@ export default function App() {
   return (
     <div className="graph-shell">
       <MobileBanner />
-      <CommandPalette state={commandPaletteState} actions={commandPaletteActions} />
+      <CommandPalette
+        state={commandPaletteState}
+        actions={commandPaletteActions}
+      />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1118,7 +1228,10 @@ export default function App() {
         proOptions={PRO_OPTIONS}
       >
         <ViewportPersistence graphKey={graphKey} enabled={Boolean(graphKey)} />
-        <ExportBridge projectName={graph.meta?.projectName} graphKey={graphKey} />
+        <ExportBridge
+          projectName={graph.meta?.projectName}
+          graphKey={graphKey}
+        />
         <FitViewBridge />
         <FitViewOnce
           viewKey={fitViewKey}
@@ -1141,7 +1254,12 @@ export default function App() {
           />
         )}
 
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--atlas-canvas-grid)" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={16}
+          size={1}
+          color="var(--atlas-canvas-grid)"
+        />
         <ZoomControls />
         <HelperLinesOverlay lines={helperLines} />
 
@@ -1181,7 +1299,9 @@ export default function App() {
               <div className="graph-sidebar__title-row">
                 <div>
                   {graph.meta?.projectName && (
-                    <p className="graph-sidebar__project">{graph.meta.projectName}</p>
+                    <p className="graph-sidebar__project">
+                      {graph.meta.projectName}
+                    </p>
                   )}
                   <p className="graph-sidebar__stats graph-sidebar__stats--inline">
                     {graph.nodes.length} nodes · {graph.edges.length} edges
@@ -1256,7 +1376,9 @@ export default function App() {
                     : "Large graph — search or click folders to expand nearby nodes gradually."}
               </p>
             )}
-            {graph.meta?.notice && <p className="graph-notice">{graph.meta.notice}</p>}
+            {graph.meta?.notice && (
+              <p className="graph-notice">{graph.meta.notice}</p>
+            )}
 
             <GraphLegend types={legendTypes} typeColors={typeColors} />
 
@@ -1304,7 +1426,8 @@ export default function App() {
                     <InfoTip text="Only the selected node and its connections within the chosen depth stay fully visible." />
                   </span>
                 </span>
-                Showing {highlightIds?.size ?? 0} nodes within {neighborhoodHops} hop
+                Showing {highlightIds?.size ?? 0} nodes within{" "}
+                {neighborhoodHops} hop
                 {neighborhoodHops === 1 ? "" : "s"} — everything else is dimmed.
               </p>
             )}
