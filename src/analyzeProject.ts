@@ -47,6 +47,11 @@ import {
   runWithPhaseHeartbeat,
   type AnalyzeProgressReporter,
 } from "./analyzeProgress";
+import {
+  entitlementsFor,
+  formatFileCountLimitMessage,
+  type Entitlements,
+} from "./entitlements";
 
 export type { ImportEdge, RenderEdge, UseEdge };
 
@@ -57,6 +62,8 @@ export type AnalyzeOptions = {
   progress?: AnalyzeProgressReporter;
   verbose?: boolean;
   cache?: boolean;
+  /** When set, over-limit messaging uses plan-aware upgrade copy */
+  entitlements?: Entitlements;
 };
 
 export type AnalysisResult = {
@@ -100,7 +107,8 @@ export function analyzeProject(
   const started = Date.now();
   const legacyProgress = options.onProgress;
   const progress = options.progress;
-  const maxFiles = options.maxFiles ?? 3000;
+  const entitlements = options.entitlements ?? entitlementsFor("free");
+  const maxFiles = options.maxFiles ?? entitlements.maxFiles;
   const useCache = options.cache !== false;
   const projectName = resolveProjectName(targetDir);
 
@@ -119,8 +127,11 @@ export function analyzeProject(
 
   if (discoveredFiles.length > maxFiles) {
     throw new Error(
-      `Refusing to analyze ${discoveredFiles.length} files (limit: ${maxFiles}). ` +
-        "Scan a smaller folder (e.g. ./src) or pass --max-files to raise the limit."
+      formatFileCountLimitMessage(
+        discoveredFiles.length,
+        entitlements,
+        maxFiles
+      )
     );
   }
 

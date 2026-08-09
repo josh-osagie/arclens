@@ -9,6 +9,16 @@ import {
   readSnippetFromDisk,
   resolveRelativeFile,
 } from "./snippets";
+import {
+  activateLicense,
+  deactivateLicense,
+  readLocalLicense,
+} from "./license";
+import {
+  getActiveEntitlements,
+  getCheckoutUrl,
+  getPricingUrl,
+} from "./entitlements";
 
 export type ViewOptions = {
   port: number;
@@ -211,12 +221,19 @@ function createStaticServer(
     if (url.pathname === "/api/license") {
       if (req.method === "GET") {
         const license = readLocalLicense();
+        const entitlements = getActiveEntitlements();
         sendJson(res, 200, {
-          plan: license ? license.variantName : "Free",
+          plan: entitlements.label,
+          variantName: license?.variantName ?? null,
           status: license ? license.status : "free",
           email: license?.customerEmail ?? null,
           instanceName: license?.instanceName ?? null,
           expiresAt: license?.expiresAt ?? null,
+          maxFiles: entitlements.maxFiles,
+          features: entitlements.features,
+          pricingUrl: getPricingUrl(),
+          checkoutProUrl: getCheckoutUrl("pro"),
+          checkoutTeamUrl: getCheckoutUrl("team"),
         });
         return;
       }

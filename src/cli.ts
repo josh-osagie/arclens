@@ -13,8 +13,12 @@ import {
   activateLicense,
   deactivateLicense,
   validateLicense,
-  readLocalLicense,
 } from "./license";
+import {
+  getActiveEntitlements,
+  getCheckoutUrl,
+  getPricingUrl,
+} from "./entitlements";
 
 const program = new Command();
 const version = getPackageVersion();
@@ -56,12 +60,16 @@ program
     console.log("Activating Arclens license key...");
     const res = await activateLicense(key);
     if (res.success && res.data) {
+      const entitlements = getActiveEntitlements();
       console.log(`\n✓ Arclens ${res.data.variantName} license activated!`);
-      console.log(`  Customer: ${res.data.customerEmail}`);
-      console.log(`  Instance: ${res.data.instanceName}`);
+      console.log(`  Customer:  ${res.data.customerEmail}`);
+      console.log(`  Instance:  ${res.data.instanceName}`);
+      console.log(`  Plan:      ${entitlements.label}`);
+      console.log(`  Max files: ${entitlements.maxFiles.toLocaleString()}`);
       process.exitCode = 0;
     } else {
       console.error(`\n✗ License activation failed: ${res.error}`);
+      console.error(`  Get a key: ${getPricingUrl()}`);
       process.exitCode = 1;
     }
   });
@@ -85,19 +93,34 @@ program
   .description("Display local license status and plan information")
   .action(async () => {
     const res = await validateLicense();
+    const entitlements = getActiveEntitlements();
+
+    console.log("\nArclens License Status:");
     if (res.valid && res.data) {
-      console.log("\nArclens License Status:");
-      console.log(`  Plan:      ${res.data.variantName}`);
+      console.log(`  Plan:      ${entitlements.label} (${res.data.variantName})`);
       console.log(`  Status:    ${res.data.status}`);
       console.log(`  Email:     ${res.data.customerEmail}`);
       console.log(`  Machine:   ${res.data.instanceName}`);
+      if (res.data.expiresAt) {
+        console.log(`  Expires:   ${res.data.expiresAt}`);
+      }
     } else {
-      console.log("\nArclens License Status:");
-      console.log("  Plan:      Free");
+      console.log(`  Plan:      ${entitlements.label}`);
       console.log("  Status:    Local-first free tier");
-      console.log(
-        "  Run 'arclens activate <key>' to unlock Pro/Team features."
-      );
+    }
+
+    console.log(`  Max files: ${entitlements.maxFiles.toLocaleString()}`);
+    console.log(
+      `  Features:  large projects ${entitlements.features.largeProjects ? "on" : "off"}, ` +
+        `CI ${entitlements.features.ciIntegration ? "on" : "reserved"}`
+    );
+
+    if (entitlements.plan === "free") {
+      const checkout = getCheckoutUrl("pro");
+      console.log("");
+      console.log("  Upgrade:");
+      console.log(`    ${checkout ?? getPricingUrl()}`);
+      console.log("    Then: arclens activate <license-key>");
     }
     process.exitCode = 0;
   });

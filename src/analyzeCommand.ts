@@ -12,6 +12,14 @@ import { buildInsights } from "./insights";
 import { slimGraphForExport } from "./slimGraph";
 import { CACHE_DIR } from "./cache/fileCache";
 import { writeSnippetSidecars, SNIPPETS_DIR } from "./snippets";
+import {
+  formatFileCountLimitMessage,
+  getActiveEntitlements,
+  PlanLimitError,
+  resolveMaxFiles,
+  type Entitlements,
+} from "./entitlements";
+import { validateLicense } from "./license";
 
 export type AnalyzeOptions = {
   output?: string;
@@ -21,7 +29,8 @@ export type AnalyzeOptions = {
   quiet?: boolean;
   color?: boolean;
   focus?: string;
-  maxFiles: string;
+  /** When omitted, plan default from entitlements is used */
+  maxFiles?: string;
   cache?: boolean;
   withSnippets?: boolean;
   reanalyze?: boolean;
@@ -143,8 +152,7 @@ export function addAnalyzeOptions(command: Command): Command {
     )
     .option(
       "--max-files <number>",
-      "refuse to scan more than N files (safety guard)",
-      "3000"
+      "refuse to scan more than N files (defaults to your plan limit)"
     )
     .option(
       "--no-cache",
@@ -157,6 +165,15 @@ export function addAnalyzeOptions(command: Command): Command {
     .option("--reanalyze", "watch mode: show re-analyze progress", false);
 }
 
+/** Best-effort remote validate; never blocks Free or offline use. */
+async function refreshLicenseQuietly(): Promise<void> {
+  try {
+    await validateLicense();
+  } catch {
+    // ignore
+  }
+}
+
 export function runAnalyze(inputPath: string, options: AnalyzeOptions): number {
   const progress = createAnalyzeProgressReporter({
     quiet: options.quiet,
@@ -165,19 +182,19 @@ export function runAnalyze(inputPath: string, options: AnalyzeOptions): number {
     color: options.color,
   });
 
+  void refreshLicenseQuietly();
+
   try {
     const targetDir = resolveTarget(inputPath);
-    const maxFiles = Number.parseInt(options.maxFiles, 10);
-
-    if (Number.isNaN(maxFiles) || maxFiles <= 0) {
-      throw new Error("--max-files must be a positive number");
-    }
+    const entitlements = getActiveEntitlements();
+    const maxFiles = resolveMaxFiles(options.maxFiles, entitlements);
 
     const result = analyzeProject(targetDir, {
       maxFiles,
       cache: options.cache,
       verbose: options.verbose,
       progress,
+      entitlements,
     });
 
     const shouldWriteGraph = Boolean(options.output) || !options.reportFile;
@@ -215,6 +232,11 @@ export function runAnalyze(inputPath: string, options: AnalyzeOptions): number {
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof PlanLimitError) {
+      progress.stop();
+      console.error(options.quiet ? `arclens: ${message.split("\n")[0]}` : message);
+      return 1;
+    }
     if (error instanceof UnsupportedProjectError) {
       progress.stop();
       if (options.quiet) {
@@ -231,3 +253,7 @@ export function runAnalyze(inputPath: string, options: AnalyzeOptions): number {
     return 1;
   }
 }
+
+/** Re-export for tests / watch messaging */
+export { formatFileCountLimitMessage };
+export type { Entitlements };

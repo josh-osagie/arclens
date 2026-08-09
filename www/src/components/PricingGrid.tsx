@@ -98,6 +98,12 @@ export default function PricingGrid({
                 <a
                   className={`${ctaClass(tier.cta.kind)} w-full`}
                   href={tier.cta.href}
+                  {...(tier.cta.external
+                    ? {
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                      }
+                    : {})}
                 >
                   {tier.cta.label}
                 </a>
@@ -109,7 +115,11 @@ export default function PricingGrid({
                     >
                       Docs
                     </a>
-                  ) : null}
+                  ) : (
+                    <span className="text-center text-xs text-text-muted">
+                      License key emailed after checkout
+                    </span>
+                  )}
                 </div>
               </div>
             </article>
