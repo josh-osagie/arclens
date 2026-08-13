@@ -259,4 +259,8 @@
   .pricing-features {
     @apply border-t border-line pt-2;
   }
+
+  .pricing-inline-code {
+    @apply font-mono text-[0.78em] text-accent-strong rounded-[4px] bg-accent/10 px-1.5 py-[1px] border border-accent/25;
+  }
 }

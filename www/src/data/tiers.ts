@@ -40,8 +40,7 @@ export const tiers: Tier[] = [
       "Component, hook, context & utility extraction",
       "Interactive graph viewer & neighborhood focus",
       "CLI terminal reports & orphan detection",
-      "Export graph snapshot (graph.json)",
-      "Community support & open documentation",
+      "Export graph snapshot (`graph.json`)"
     ],
     cta: {
       label: "Get started",

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { tiers, DOCS_URL, type Tier } from "../data/tiers";
 
 interface Props {
@@ -10,6 +11,48 @@ function ctaClass(kind: Tier["cta"]["kind"]) {
   if (kind === "primary") return "btn btn-primary";
   if (kind === "secondary") return "btn btn-secondary";
   return "btn btn-ghost";
+}
+
+type InlineSegment =
+  | { kind: "text"; value: string }
+  | { kind: "code"; value: string };
+
+function parseInlineCode(text: string): InlineSegment[] {
+  const segments: InlineSegment[] = [];
+  const regex = /`([^`]+)`/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ kind: "text", value: text.slice(lastIndex, match.index) });
+    }
+    segments.push({ kind: "code", value: match[1] });
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    segments.push({ kind: "text", value: text.slice(lastIndex) });
+  }
+  return segments.length > 0 ? segments : [{ kind: "text", value: text }];
+}
+
+function InlineText({ text }: { text: string }) {
+  const segments = useMemo(() => parseInlineCode(text), [text]);
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.kind === "code" ? (
+          <code
+            key={i}
+            className="pricing-inline-code"
+          >
+            {seg.value}
+          </code>
+        ) : (
+          <span key={i}>{seg.value}</span>
+        )
+      )}
+    </>
+  );
 }
 
 function tierClass(id: Tier["id"]) {
@@ -88,7 +131,7 @@ export default function PricingGrid({
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    <span>{feature}</span>
+                    <InlineText text={feature} />
                   </li>
                 ))}
               </ul>
