@@ -15,3 +15,5 @@ docs/dist/
 www/node_modules/
 www/.astro/
 www/dist/
+
+.chitchat/
