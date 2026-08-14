@@ -3,8 +3,8 @@ import { analyzeSamples } from "../helpers";
 import { attachLayoutToNodes, computeNodeLayouts } from "../../src/layoutGraph";
 
 describe("layoutGraph", () => {
-  it("assigns layout coordinates to every node", () => {
-    const result = analyzeSamples();
+  it("assigns layout coordinates to every node", async () => {
+    const result = await analyzeSamples();
     const laidOut = attachLayoutToNodes(result.graph.nodes, result.graph.edges);
 
     expect(laidOut.length).toBe(result.graph.nodes.length);
@@ -15,8 +15,8 @@ describe("layoutGraph", () => {
     }
   });
 
-  it("returns stable positions for the same graph", () => {
-    const result = analyzeSamples();
+  it("returns stable positions for the same graph", async () => {
+    const result = await analyzeSamples();
     const first = computeNodeLayouts(result.graph.nodes, result.graph.edges);
     const second = computeNodeLayouts(result.graph.nodes, result.graph.edges);
 

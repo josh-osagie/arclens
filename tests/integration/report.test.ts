@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { analyzeProject } from "../../src/analyzeProject";
 import { buildInsights, countInsightsBySeverity } from "../../src/insights";
 import {
@@ -11,18 +11,19 @@ import {
   writeReportFile,
 } from "../../src/report";
 import { analyzeFixture, analyzeSamples } from "../helpers";
+import type { AnalysisResult } from "../../src/analyzeProject";
 
 describe("insights", () => {
-  it("counts severities for terminal summary", () => {
-    const result = analyzeSamples();
+  it("counts severities for terminal summary", async () => {
+    const result = await analyzeSamples();
     const insights = buildInsights(result);
     const counts = countInsightsBySeverity(insights);
 
     expect(counts.warning + counts.info + counts.tip).toBeGreaterThanOrEqual(1);
   });
 
-  it("references @eslint-react for hook violations", () => {
-    const result = analyzeFixture("hooks-violation");
+  it("references @eslint-react for hook violations", async () => {
+    const result = await analyzeFixture("hooks-violation");
     const hookInsight = buildInsights(result).find((i) =>
       i.title.includes("Rules of Hooks")
     );
@@ -31,9 +32,13 @@ describe("insights", () => {
 });
 
 describe("report", () => {
-  const result = analyzeSamples();
+  let result: AnalysisResult;
 
-  it("includes product-facing terminal sections", () => {
+  beforeAll(async () => {
+    result = await analyzeSamples();
+  });
+
+  it("includes product-facing terminal sections", async () => {
     const text = formatReport(result, { insights: true, color: false });
 
     expect(text).toContain("Project:");
@@ -48,17 +53,17 @@ describe("report", () => {
     expect(text).toContain("react");
   });
 
-  it("shows usage counts in Most referenced section", () => {
+  it("shows usage counts in Most referenced section", async () => {
     const text = formatReport(result, { insights: true, color: false });
     expect(text).toMatch(/Most referenced[\s\S]*incoming/);
   });
 
-  it("detects report format from file extension", () => {
+  it("detects report format from file extension", async () => {
     expect(getReportFormat("out.txt")).toBe("text");
     expect(getReportFormat("out.json")).toBe("json");
   });
 
-  it("writes structured JSON report", () => {
+  it("writes structured JSON report", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-test-"));
     const jsonPath = path.join(dir, "report.json");
 
@@ -74,7 +79,7 @@ describe("report", () => {
     expect(parsed.graph.nodes.length).toBeGreaterThan(0);
   });
 
-  it("writes human-readable text report", () => {
+  it("writes human-readable text report", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-test-"));
     const txtPath = path.join(dir, "report.txt");
 
@@ -90,8 +95,8 @@ describe("report", () => {
 });
 
 describe("graph output shape (viewer contract)", () => {
-  it("produces nodes and edges for graph.json", () => {
-    const { graph } = analyzeProject(path.join(process.cwd(), "samples"));
+  it("produces nodes and edges for graph.json", async () => {
+    const { graph } = await analyzeProject(path.join(process.cwd(), "samples"));
 
     expect(graph.meta?.projectName).toBe("samples");
 
@@ -114,8 +119,8 @@ describe("graph output shape (viewer contract)", () => {
     }
   });
 
-  it("buildJsonReport embeds graph for machine-readable pipelines", () => {
-    const result = analyzeSamples();
+  it("buildJsonReport embeds graph for machine-readable pipelines", async () => {
+    const result = await analyzeSamples();
     const json = buildJsonReport(result, { verbose: true, insights: true });
 
     expect(json.nodesByType.component.count).toBeGreaterThan(0);

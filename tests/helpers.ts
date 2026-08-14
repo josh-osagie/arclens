@@ -12,17 +12,17 @@ export function fixturePath(name: string): string {
   return path.join(fixturesDir, name);
 }
 
-export function analyzeFixture(
+export async function analyzeFixture(
   name: string,
   options?: { maxFiles?: number; cache?: boolean }
-): AnalysisResult {
+): Promise<AnalysisResult> {
   return analyzeProject(fixturePath(name), { cache: false, ...options });
 }
 
-export function analyzeSamples(options?: {
+export async function analyzeSamples(options?: {
   maxFiles?: number;
   cache?: boolean;
-}): AnalysisResult {
+}): Promise<AnalysisResult> {
   return analyzeProject(samplesDir, { cache: false, ...options });
 }
 

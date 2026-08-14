@@ -13,7 +13,6 @@ export default defineConfig({
       : "https://arclens.dev"),
   redirects: {
     "/docs": "/docs/introduction/",
-    "/docs/": "/docs/introduction/",
   },
   integrations: [
     react(),

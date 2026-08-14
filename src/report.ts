@@ -93,10 +93,10 @@ function createColors(enabled: boolean) {
 function countNodesByType(nodes: GraphNode[]): Record<NodeType, number> {
   return nodes.reduce(
     (counts, node) => {
-      counts[node.type] += 1;
+      counts[node.type] = (counts[node.type] ?? 0) + 1;
       return counts;
     },
-    { component: 0, hook: 0, utility: 0, context: 0, entry: 0, config: 0 }
+    { component: 0, hook: 0, utility: 0, context: 0, entry: 0, config: 0, route: 0 } as Record<NodeType, number>
   );
 }
 

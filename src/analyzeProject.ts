@@ -48,8 +48,15 @@ import {
   type AnalyzeProgressReporter,
 } from "./analyzeProgress";
 import {
+  applyPluginEntitlements,
+  loadInstalledPlugins,
+  makeProMeta,
+  runPluginExtendGraph,
+} from "./pluginLoader";
+import {
   entitlementsFor,
   formatFileCountLimitMessage,
+  getActiveEntitlements,
   type Entitlements,
 } from "./entitlements";
 
@@ -81,6 +88,7 @@ export type AnalysisResult = {
   reactAssessment: ReactAssessment;
   cacheHits?: number;
   cacheMisses?: number;
+  pluginWarnings?: string[];
 };
 
 const IGNORED_PATH_PARTS = [
@@ -100,14 +108,19 @@ function isSafeSourceFile(filePath: string): boolean {
  * - ts-morph parses source text into an AST (same as your editor/tsc)
  * - analyzed code is NEVER imported, required, or executed
  */
-export function analyzeProject(
+export async function analyzeProject(
   targetDir: string,
   options: AnalyzeOptions = {}
-): AnalysisResult {
+): Promise<AnalysisResult> {
   const started = Date.now();
   const legacyProgress = options.onProgress;
   const progress = options.progress;
-  const entitlements = options.entitlements ?? entitlementsFor("free");
+
+  const plugins = loadInstalledPlugins();
+  const baseEntitlements =
+    options.entitlements ?? getActiveEntitlements() ?? entitlementsFor("free");
+  const entitlements = applyPluginEntitlements(baseEntitlements, plugins);
+
   const maxFiles = options.maxFiles ?? entitlements.maxFiles;
   const useCache = options.cache !== false;
   const projectName = resolveProjectName(targetDir);
@@ -247,7 +260,7 @@ export function analyzeProject(
     buildGraph(merged.importEdges, merged.exports, merged.renders, merged.uses)
   );
   applyModuleClassification(merged.moduleTypeByFile, merged.exports, graph);
-  const enrichedGraph = runWithPhaseHeartbeat(
+  let enrichedGraph = runWithPhaseHeartbeat(
     progress,
     formatEnrichGraphPhase(),
     () => enrichGraph(graph, merged.exports, merged.propsByNodeId)
@@ -272,7 +285,23 @@ export function analyzeProject(
     isReactProject: reactAssessment.isReactProject,
     signals: reactAssessment.signals,
     ...(reactAssessment.message ? { notice: reactAssessment.message } : {}),
+    pro: makeProMeta(),
   };
+
+  // Run Pro plugin hooks (Next adapter, coupling/cycles insights, impact)
+  let pluginWarnings: string[] = [];
+  if (plugins.length > 0) {
+    const { graph: extendedGraph, warnings } = await runPluginExtendGraph(
+      {
+        graph: enrichedGraph,
+        targetDir,
+        scannedFiles: merged.scannedFiles,
+      },
+      plugins
+    );
+    enrichedGraph = extendedGraph;
+    pluginWarnings = warnings;
+  }
 
   const durationMs = Date.now() - started;
   progress?.complete(
@@ -297,5 +326,7 @@ export function analyzeProject(
     reactAssessment,
     cacheHits,
     cacheMisses,
+    pluginWarnings: pluginWarnings.length > 0 ? pluginWarnings : undefined,
   };
 }
+

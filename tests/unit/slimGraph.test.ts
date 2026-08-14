@@ -3,8 +3,8 @@ import { analyzeSamples } from "../helpers";
 import { slimGraphForExport } from "../../src/slimGraph";
 
 describe("slimGraphForExport", () => {
-  it("removes connections from nodes but keeps edges and stats", () => {
-    const result = analyzeSamples();
+  it("removes connections from nodes but keeps edges and stats", async () => {
+    const result = await analyzeSamples();
     const slim = slimGraphForExport(result.graph);
 
     expect(slim.meta?.projectName).toBe("samples");
@@ -18,8 +18,8 @@ describe("slimGraphForExport", () => {
     }
   });
 
-  it("shrinks serialized size versus enriched graph", () => {
-    const result = analyzeSamples();
+  it("shrinks serialized size versus enriched graph", async () => {
+    const result = await analyzeSamples();
     const full = JSON.stringify(result.graph);
     const slim = JSON.stringify(slimGraphForExport(result.graph));
 

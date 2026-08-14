@@ -19,6 +19,7 @@ import {
   getCheckoutUrl,
   getPricingUrl,
 } from "./entitlements";
+import { installProPlugin, isProPluginInstalled } from "./pluginInstall";
 
 const program = new Command();
 const version = getPackageVersion();
@@ -37,6 +38,7 @@ function wantsVersion(argv: string[]): boolean {
     "activate",
     "deactivate",
     "license",
+    "install-pro",
   ]);
   return !argv.some((arg) => commands.has(arg));
 }
@@ -54,7 +56,7 @@ program
 
 program
   .command("activate")
-  .description("Activate an Arclens Pro or Team license key")
+  .description("Activate an Arclens Pro license key")
   .argument("<key>", "Lemon Squeezy license key")
   .action(async (key: string) => {
     console.log("Activating Arclens license key...");
@@ -66,6 +68,11 @@ program
       console.log(`  Instance:  ${res.data.instanceName}`);
       console.log(`  Plan:      ${entitlements.label}`);
       console.log(`  Max files: ${entitlements.maxFiles.toLocaleString()}`);
+      const installed = isProPluginInstalled();
+      if (!installed) {
+        console.log("");
+        console.log("→ Next step: run `arclens install-pro` to install Pro features.");
+      }
       process.exitCode = 0;
     } else {
       console.error(`\n✗ License activation failed: ${res.error}`);
@@ -104,6 +111,8 @@ program
       if (res.data.expiresAt) {
         console.log(`  Expires:   ${res.data.expiresAt}`);
       }
+      const installed = isProPluginInstalled();
+      console.log(`  Pro plugin:${installed ? " installed" : " not installed (run arclens install-pro)"}`);
     } else {
       console.log(`  Plan:      ${entitlements.label}`);
       console.log("  Status:    Local-first free tier");
@@ -112,7 +121,7 @@ program
     console.log(`  Max files: ${entitlements.maxFiles.toLocaleString()}`);
     console.log(
       `  Features:  large projects ${entitlements.features.largeProjects ? "on" : "off"}, ` +
-        `CI ${entitlements.features.ciIntegration ? "on" : "reserved"}`
+        `adapters ${entitlements.features.frameworkAdapters ? "on" : "reserved"}`
     );
 
     if (entitlements.plan === "free") {
@@ -120,9 +129,26 @@ program
       console.log("");
       console.log("  Upgrade:");
       console.log(`    ${checkout ?? getPricingUrl()}`);
-      console.log("    Then: arclens activate <license-key>");
+      console.log("    Then: arclens activate <license-key> && arclens install-pro");
     }
     process.exitCode = 0;
+  });
+
+program
+  .command("install-pro")
+  .description("Install the Arclens Pro plugin after activation")
+  .option("--from-tarball <path>", "install from a local .tgz tarball instead of registry")
+  .option("--registry <url>", "custom npm registry URL (private org, e.g. npm:@arclens)")
+  .option("--dry-run", "print what would happen without installing", false)
+  .option("--no-color", "disable ANSI colors")
+  .action(async (opts: { fromTarball?: string; registry?: string; dryRun?: boolean; color?: boolean }) => {
+    const exit = await installProPlugin({
+      fromTarball: opts.fromTarball,
+      registry: opts.registry,
+      dryRun: opts.dryRun,
+      color: opts.color,
+    });
+    process.exitCode = exit;
   });
 
 program
@@ -139,8 +165,8 @@ const analyzeCmd = program
   .argument("[path]", "directory to analyze", "./samples");
 
 addAnalyzeOptions(analyzeCmd);
-analyzeCmd.action((inputPath: string, options: AnalyzeOptions) => {
-  process.exitCode = runAnalyze(inputPath, options);
+analyzeCmd.action(async (inputPath: string, options: AnalyzeOptions) => {
+  process.exitCode = await runAnalyze(inputPath, options);
 });
 
 const watchCmd = program

@@ -30,8 +30,8 @@ function graphNode(
 }
 
 describe("buildInsights gates", () => {
-  it("does not warn component or hook naming for samples", () => {
-    const result = analyzeSamples();
+  it("does not warn component or hook naming for samples", async () => {
+    const result = await analyzeSamples();
     const titles = buildInsights(result).map((insight) => insight.title);
 
     expect(titles.some((title) => title.includes("Component naming:"))).toBe(
@@ -40,7 +40,7 @@ describe("buildInsights gates", () => {
     expect(titles.some((title) => title.includes("Hook naming:"))).toBe(false);
   });
 
-  it("skips component naming when symbol is never rendered as JSX", () => {
+  it("skips component naming when symbol is never rendered as JSX", async () => {
     const file = "/src/components/ErrorHandler.tsx";
     const exports: ExportRecord[] = [
       {
@@ -54,8 +54,9 @@ describe("buildInsights gates", () => {
     const nodes = [graphNode("generateFileError", file, "component")];
     const edges: GraphEdge[] = [];
 
+    const samplesResult = await analyzeSamples();
     const titles = buildInsights({
-      ...analyzeSamples(),
+      ...samplesResult,
       graph: { nodes, edges },
       exports,
       importEdges: [],
@@ -70,7 +71,7 @@ describe("buildInsights gates", () => {
 });
 
 describe("hookRuleViolationsToInsights", () => {
-  it("groups duplicate hook violations in the same file", () => {
+  it("groups duplicate hook violations in the same file", async () => {
     const file = "/src/features/LoanApply.tsx";
     const insights = hookRuleViolationsToInsights([
       {
@@ -96,7 +97,7 @@ describe("hookRuleViolationsToInsights", () => {
     expect(insights[0]?.detail).toContain("At lines 42, 78.");
   });
 
-  it("keeps separate insights for different hooks or contexts", () => {
+  it("keeps separate insights for different hooks or contexts", async () => {
     const file = "/src/Comp.tsx";
     const insights = hookRuleViolationsToInsights([
       {

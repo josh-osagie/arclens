@@ -233,7 +233,6 @@ function createStaticServer(
           features: entitlements.features,
           pricingUrl: getPricingUrl(),
           checkoutProUrl: getCheckoutUrl("pro"),
-          checkoutTeamUrl: getCheckoutUrl("team"),
         });
         return;
       }

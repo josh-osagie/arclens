@@ -22,7 +22,7 @@ export function applyModuleClassification(
 
     const moduleType = moduleTypeByFile.get(exp.file);
     if (moduleType && exp.type === "utility") {
-      exp.type = moduleType;
+      exp.type = moduleType as ExportRecord["type"];
     }
   }
 

@@ -8,7 +8,7 @@ import { extractExportsDeclarations } from "../../src/extractors/exports";
 import { analyzeSamples, nodeByName } from "../helpers";
 
 describe("extractPropsFromDeclaration", () => {
-  it("reads inline destructured prop types", () => {
+  it("reads inline destructured prop types", async () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Button.tsx",
@@ -27,7 +27,7 @@ describe("extractPropsFromDeclaration", () => {
     ]);
   });
 
-  it("marks destructured defaults as optional when type info is missing", () => {
+  it("marks destructured defaults as optional when type info is missing", async () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Badge.tsx",
@@ -46,7 +46,7 @@ describe("extractPropsFromDeclaration", () => {
     ]);
   });
 
-  it("reads props from a named Props interface", () => {
+  it("reads props from a named Props interface", async () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Card.tsx",
@@ -65,7 +65,7 @@ describe("extractPropsFromDeclaration", () => {
     expect(props.find((prop) => prop.name === "count")?.optional).toBe(true);
   });
 
-  it("returns no props for components without a props parameter", () => {
+  it("returns no props for components without a props parameter", async () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Shell.tsx",
@@ -78,8 +78,8 @@ describe("extractPropsFromDeclaration", () => {
 });
 
 describe("extractComponentProps integration", () => {
-  it("attaches Button props in samples graph", () => {
-    const result = analyzeSamples();
+  it("attaches Button props in samples graph", async () => {
+    const result = await analyzeSamples();
     const button = nodeByName(result, "Button");
 
     expect(button?.props).toEqual(
@@ -94,15 +94,15 @@ describe("extractComponentProps integration", () => {
     );
   });
 
-  it("omits props on components without parameters", () => {
-    const result = analyzeSamples();
+  it("omits props on components without parameters", async () => {
+    const result = await analyzeSamples();
     const counter = nodeByName(result, "Counter");
     expect(counter?.props).toBeUndefined();
   });
 });
 
 describe("extractComponentProps map", () => {
-  it("indexes props by node id", () => {
+  it("indexes props by node id", async () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
       "Widget.tsx",

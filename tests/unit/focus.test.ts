@@ -1,11 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { formatFocusReport } from "../../src/focus";
 import { analyzeSamples } from "../helpers";
+import type { AnalysisResult } from "../../src/analyzeProject";
 
 describe("focus", () => {
-  const result = analyzeSamples();
+  let result: AnalysisResult;
 
-  it("shows incoming and outgoing connections for Button", () => {
+  beforeAll(async () => {
+    result = await analyzeSamples();
+  });
+
+  it("shows incoming and outgoing connections for Button", async () => {
     const report = formatFocusReport(result, "Button", { color: false });
 
     expect(report).toContain("Focus: Button");
@@ -15,7 +20,7 @@ describe("focus", () => {
     expect(report).toContain("Used by:");
   });
 
-  it("lists known nodes when name is not found", () => {
+  it("lists known nodes when name is not found", async () => {
     const report = formatFocusReport(result, "NotARealComponent", {
       color: false,
     });

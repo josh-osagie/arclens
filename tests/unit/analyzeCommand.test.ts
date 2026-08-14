@@ -12,7 +12,7 @@ describe("runAnalyze", () => {
     vi.restoreAllMocks();
   });
 
-  it("prints the terminal report before attempting to write graph.json", () => {
+  it("prints the terminal report before attempting to write graph.json", async () => {
     const originalWrite = fs.writeFileSync.bind(fs);
     const logs: string[] = [];
     const errors: string[] = [];
@@ -32,8 +32,8 @@ describe("runAnalyze", () => {
       }
     );
 
-    const status = runAnalyze(samples, {
-      maxFiles: "3000",
+    const status = await runAnalyze(samples, {
+      maxFiles: "500",
       insights: true,
       quiet: false,
       color: false,
@@ -45,15 +45,15 @@ describe("runAnalyze", () => {
     expect(errors.join("\n")).toMatch(/Could not write .*graph\.json/);
   });
 
-  it("returns success when graph.json is written to a writable directory", () => {
+  it("returns success when graph.json is written to a writable directory", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-analyze-cmd-"));
     const graphPath = path.join(dir, "graph.json");
     const previousCwd = process.cwd();
 
     try {
       process.chdir(dir);
-      const status = runAnalyze(samples, {
-        maxFiles: "3000",
+      const status = await runAnalyze(samples, {
+        maxFiles: "500",
         output: graphPath,
         quiet: true,
         color: false,

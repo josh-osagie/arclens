@@ -124,7 +124,7 @@ export async function runWatch(
 
   process.env.ARCLENS_WATCH_TARGET = targetDir;
 
-  const initialStatus = runAnalyze(inputPath, watchOptions);
+  const initialStatus = await runAnalyze(inputPath, watchOptions);
   if (initialStatus !== 0) {
     delete process.env.ARCLENS_WATCH_TARGET;
     return initialStatus;
@@ -135,7 +135,7 @@ export async function runWatch(
   let pending = false;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const runReanalyze = () => {
+  const runReanalyze = async () => {
     if (stopped) {
       return;
     }
@@ -145,12 +145,12 @@ export async function runWatch(
     }
     running = true;
     try {
-      runAnalyze(inputPath, watchOptions);
+      await runAnalyze(inputPath, watchOptions);
     } finally {
       running = false;
       if (pending) {
         pending = false;
-        runReanalyze();
+        void runReanalyze();
       }
     }
   };
@@ -164,7 +164,7 @@ export async function runWatch(
     }
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
-      runReanalyze();
+      void runReanalyze();
     }, 300);
   };
 

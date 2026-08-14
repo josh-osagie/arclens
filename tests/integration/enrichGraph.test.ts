@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { analyzeFixture, analyzeSamples, nodeByName } from "../helpers";
 
 describe("enrichGraph", () => {
-  it("adds connections and stats to every node", () => {
-    const result = analyzeSamples();
+  it("adds connections and stats to every node", async () => {
+    const result = await analyzeSamples();
 
     for (const node of result.graph.nodes) {
       expect(node.connections).toBeDefined();
@@ -14,8 +14,8 @@ describe("enrichGraph", () => {
     }
   });
 
-  it("records outgoing connections for Counter -> Button", () => {
-    const result = analyzeSamples();
+  it("records outgoing connections for Counter -> Button", async () => {
+    const result = await analyzeSamples();
     const counter = nodeByName(result, "Counter");
     expect(counter).toBeDefined();
 
@@ -25,8 +25,8 @@ describe("enrichGraph", () => {
     expect(rendersButton).toBe(true);
   });
 
-  it("includes exportKind and kind on project nodes", () => {
-    const result = analyzeSamples();
+  it("includes exportKind and kind on project nodes", async () => {
+    const result = await analyzeSamples();
     const button = nodeByName(result, "Button");
     expect(button?.exportKind).toBe("named");
     expect(button?.kind).toBeTruthy();
@@ -34,13 +34,13 @@ describe("enrichGraph", () => {
 });
 
 describe("context detection", () => {
-  it("detects createContext exports in samples", () => {
-    const result = analyzeSamples();
+  it("detects createContext exports in samples", async () => {
+    const result = await analyzeSamples();
     expect(nodeByName(result, "ThemeContext")?.type).toBe("context");
   });
 
-  it("detects createContext in fixture", () => {
-    const result = analyzeFixture("with-context");
+  it("detects createContext in fixture", async () => {
+    const result = await analyzeFixture("with-context");
     expect(nodeByName(result, "AuthContext")?.type).toBe("context");
   });
 });
