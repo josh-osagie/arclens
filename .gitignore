@@ -17,3 +17,4 @@ www/.astro/
 www/dist/
 
 .chitchat/
+.env
