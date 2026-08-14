@@ -174,7 +174,7 @@ async function refreshLicenseQuietly(): Promise<void> {
   }
 }
 
-export function runAnalyze(inputPath: string, options: AnalyzeOptions): number {
+export async function runAnalyze(inputPath: string, options: AnalyzeOptions): Promise<number> {
   const progress = createAnalyzeProgressReporter({
     quiet: options.quiet,
     verbose: options.verbose,
@@ -189,7 +189,7 @@ export function runAnalyze(inputPath: string, options: AnalyzeOptions): number {
     const entitlements = getActiveEntitlements();
     const maxFiles = resolveMaxFiles(options.maxFiles, entitlements);
 
-    const result = analyzeProject(targetDir, {
+    const result = await analyzeProject(targetDir, {
       maxFiles,
       cache: options.cache,
       verbose: options.verbose,
