@@ -146,7 +146,7 @@ export default function PricingGrid({
               Monthly
             </button>
             <button
-              className={`relative group rounded-none px-4 py-1.5 text-sm font-mono font-medium transition-colors ${
+              className={`relative group rounded-none px-4 py-1.5 text-xs font-mono font-medium transition-colors ${
                 frequency === "year"
                   ? "bg-accent text-ink"
                   : "text-text-muted hover:text-text"
@@ -177,20 +177,18 @@ export default function PricingGrid({
             return (
               <article
                 key={tier.id}
-                className={`${tierClass(tier.id)} relative`}
+                className={tierClass(tier.id)}
                 data-tier={tier.id}
               >
-                {/* Badge - Absolute Positioned so it doesn't push down card headers */}
-                {tier.recommended ? (
-                  <div className="absolute -top-3.5 right-6 z-10">
-                    <span className="pricing-badge m-0 shadow-[0_0_15px_rgba(77,176,216,0.3)]">
-                      Recommended
-                    </span>
-                  </div>
-                ) : null}
+                {/* Fixed-height badge slot — keeps both cards aligned */}
+                <div className="h-7 mb-3 flex items-center">
+                  {tier.recommended ? (
+                    <span className="pricing-badge m-0">Recommended</span>
+                  ) : null}
+                </div>
 
-                {/* Header - Identical top padding and baseline */}
-                <header className="pricing-tier-header flex flex-col justify-start min-h-[140px] pb-4">
+                {/* Header */}
+                <header className="pricing-tier-header flex flex-col justify-start pb-4">
                   <p className="pricing-tier-name">{tier.name}</p>
                   <p className="pricing-price-row flex items-baseline gap-1 my-1">
                     <span className="pricing-price text-4xl font-semibold tracking-tight">{displayPrice}</span>
