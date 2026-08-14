@@ -233,7 +233,7 @@
   }
 
   .pricing-badge {
-    @apply inline-flex items-center rounded-full border border-accent/40 bg-accent/15 px-2.5 py-0.5 font-mono text-[0.625rem] font-semibold tracking-wider text-accent-strong uppercase shadow-[0_0_12px_rgba(77,176,216,0.25)];
+    @apply inline-flex items-center rounded-none border border-accent/40 bg-accent/15 px-2.5 py-0.5 font-mono text-[0.625rem] font-semibold tracking-wider text-accent-strong uppercase shadow-[0_0_12px_rgba(77,176,216,0.25)];
   }
 
   .pricing-tier-name {

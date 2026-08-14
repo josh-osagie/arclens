@@ -1,0 +1,32 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<BaseLayout title="Page Not Found - Arclens">
+  <Nav />
+  <main class="bg-ink py-24 text-text min-h-[60vh] flex flex-col items-center justify-center">
+    <div class="wrap max-w-xl mx-auto text-center space-y-6">
+      <h1 class="font-display text-8xl font-bold text-accent tracking-tighter opacity-20">
+        404
+      </h1>
+      <h2 class="font-display text-3xl font-bold tracking-tight">
+        Page Not Found
+      </h2>
+      <p class="text-text-muted">
+        The page you are looking for doesn't exist, has been moved, or is temporarily unavailable.
+      </p>
+      
+      <div class="pt-6">
+        <a 
+          href="/" 
+          class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-ink bg-accent hover:bg-accent-strong transition-colors"
+        >
+          Go back home
+        </a>
+      </div>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>

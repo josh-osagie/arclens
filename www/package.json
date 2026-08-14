@@ -13,6 +13,7 @@
   "dependencies": {
     "@astrojs/react": "^6.0.2",
     "@astrojs/starlight": "^0.41.4",
+    "@paddle/paddle-js": "^1.6.4",
     "astro": "^7.2.0",
     "gsap": "^3.14.2",
     "react": "^19.2.3",

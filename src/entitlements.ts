@@ -1,13 +1,13 @@
 /**
- * Plan entitlements for open-core monetization (Lemon Squeezy licenses).
+ * Plan entitlements for open-core monetization (Paddle Billing licenses).
  *
- * Free stays fully usable for mid-size apps. Pro/Team raise scale limits and
- * reserve flags for features that ship later (incremental watch, CI, adapters).
+ * Free stays fully usable for mid-size apps. Pro raises scale limits and
+ * reserves flags for features that ship later (incremental watch, adapters).
  */
 
 import { readLocalLicense, type LicenseData } from "./license";
 
-export type PlanId = "free" | "pro" | "team";
+export type PlanId = "free" | "pro";
 
 export type Entitlements = {
   plan: PlanId;
@@ -40,13 +40,13 @@ export function getPricingUrl(): string {
   return process.env.ARCLENS_PRICING_URL || `${getSiteUrl()}/#pricing`;
 }
 
-export function getCheckoutUrl(plan: "pro" | "team"): string | null {
-  const envKey =
-    plan === "pro"
-      ? process.env.ARCLENS_CHECKOUT_PRO ||
-        process.env.PUBLIC_LEMON_CHECKOUT_PRO
-      : process.env.ARCLENS_CHECKOUT_TEAM ||
-        process.env.PUBLIC_LEMON_CHECKOUT_TEAM;
+/**
+ * Paddle Billing checkout share URL for Pro plan.
+ * ARCLENS_CHECKOUT_PRO should be set to a Paddle checkout link, e.g.
+ * https://buy.paddle.com/product/<product-id> or a custom share URL.
+ */
+export function getCheckoutUrl(plan: "pro"): string | null {
+  const envKey = process.env.ARCLENS_CHECKOUT_PRO;
   return envKey?.trim() || null;
 }
 
@@ -75,24 +75,11 @@ const PLAN_TABLE: Record<PlanId, Entitlements> = {
       sharedViews: false,
     },
   },
-  team: {
-    plan: "team",
-    label: "Team",
-    maxFiles: 100_000,
-    features: {
-      largeProjects: true,
-      incrementalWatch: true,
-      frameworkAdapters: true,
-      ciIntegration: true,
-      sharedViews: true,
-    },
-  },
 };
 
-/** Map Lemon Squeezy variant_name → plan id. */
+/** Map Paddle Billing variant_name → plan id. */
 export function planFromVariantName(variantName: string | undefined): PlanId {
   const name = (variantName ?? "").toLowerCase();
-  if (name.includes("team") || name.includes("business")) return "team";
   if (name.includes("pro") || name.includes("plus")) return "pro";
   return "free";
 }
@@ -235,7 +222,7 @@ export function formatUpgradeHint(featureLabel: string): string {
   const checkout = getCheckoutUrl("pro");
   const buyLine = checkout ? `Buy Pro: ${checkout}` : `See plans: ${pricing}`;
   return [
-    `${featureLabel} requires Arclens Pro or Team.`,
+    `${featureLabel} requires Arclens Pro.`,
     buyLine,
     `After purchase: arclens activate <license-key>`,
   ].join("\n");

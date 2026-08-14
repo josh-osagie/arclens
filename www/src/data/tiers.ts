@@ -1,16 +1,15 @@
 import {
   getProCheckoutUrl,
-  getTeamCheckoutUrl,
   hasLiveCheckout,
 } from "./commerce";
 
-export type TierId = "free" | "pro" | "team";
+export type TierId = "free" | "pro";
 
 export type TierCta = {
   label: string;
   href: string;
   kind: "primary" | "secondary" | "ghost";
-  /** Open Lemon Squeezy checkout in a new tab when live */
+  /** Open Paddle Billing checkout in a new tab when live */
   external?: boolean;
 };
 
@@ -22,6 +21,7 @@ export type Tier = {
   blurb: string;
   features: string[];
   cta: TierCta;
+  priceId?: { month: string; year: string };
   recommended?: boolean;
   featured?: boolean;
 };
@@ -40,7 +40,8 @@ export const tiers: Tier[] = [
       "Component, hook, context & utility extraction",
       "Interactive graph viewer & neighborhood focus",
       "CLI terminal reports & orphan detection",
-      "Export graph snapshot (`graph.json`)"
+      "Export graph snapshot (`graph.json`)",
+      "Community support & open documentation",
     ],
     cta: {
       label: "Get started",
@@ -54,42 +55,26 @@ export const tiers: Tier[] = [
     price: "$5",
     period: "/month",
     blurb:
-      "For repos that outgrow Free limits: larger graphs, scale, and Pro depth.",
+      "For repos that outgrow Free limits: larger graphs, Next.js depth, and Pro insights.",
+    priceId: {
+      month: "pri_01m00nnjq4kgg4n02g09agqwpp",
+      year: "pri_01m00np50cn2pnk0m70cpz9m2g",
+    },
     recommended: true,
     features: [
       "Everything in Free tier",
       "Large codebase support (up to 25,000 files)",
-      "Higher --max-files ceiling & large-graph UX",
+      "Next.js App Router + Pages Router adapter",
+      "Circular dependency & coupling detection (Pro insights)",
       "Pro roadmap: incremental watch & impact depth",
-      "Pro roadmap: Next.js & Remix router adapters",
       "Priority email & GitHub issue support",
+      "Paddle Billing handles global tax + email receipt delivery",
     ],
     cta: {
       label: hasLiveCheckout("pro") ? "Get Pro" : "Get Pro",
       href: getProCheckoutUrl(),
       kind: "secondary",
       external: hasLiveCheckout("pro"),
-    },
-  },
-  {
-    id: "team",
-    name: "Team",
-    price: "$10",
-    period: "/month",
-    blurb: "CI integration, shared architecture views, and PR impact reports.",
-    features: [
-      "Everything in Pro tier",
-      "Higher scale ceiling (up to 100,000 files)",
-      "Team roadmap: GitHub Actions & CI impact checks",
-      "Team roadmap: shared graph views & PR reports",
-      "Team roadmap: monorepo workspace graphs",
-      "Priority team support & setup assistance",
-    ],
-    cta: {
-      label: hasLiveCheckout("team") ? "Get Team" : "Get Team",
-      href: getTeamCheckoutUrl(),
-      kind: "ghost",
-      external: hasLiveCheckout("team"),
     },
   },
 ];
@@ -99,4 +84,5 @@ export const GITHUB_URL = "https://github.com/josh-osagie/arclens";
 export const NPM_URL = "https://www.npmjs.com/package/arclens";
 export const INSTALL_CMD = "npm install -g arclens";
 export const ANALYZE_CMD = "npx arclens analyze ./src --insights";
-export const ACTIVATE_CMD = "arclens activate <license-key>";
+/** License key validation uses Paddle Billing — see ARCLENS_PADDLE_API_BASE_URL in root .env */
+export const INSTALL_CMD_PRO = "npx arclens install-pro <license-key>";

@@ -1,0 +1,205 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<BaseLayout title="Welcome to Arclens Pro">
+  <Nav />
+  <main
+    class="relative bg-ink py-16 text-text min-h-[70vh] flex flex-col items-center justify-center overflow-hidden"
+  >
+    <!-- Subtle background glow -->
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"
+    >
+    </div>
+
+    <div class="wrap max-w-xl mx-auto text-center space-y-6 relative z-10">
+      <div
+        class="animate-check-badge inline-flex items-center justify-center w-14 h-14 rounded-none bg-accent/10 border border-accent/25 text-accent mx-auto mb-3 shadow-[0_0_25px_rgba(77,176,216,0.2)]"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2.5"
+          stroke="currentColor"
+          class="w-7 h-7"
+        >
+          <circle cx="12" cy="12" r="9" class="opacity-40" stroke-width="2"
+          ></circle>
+          <path
+            class="animate-checkmark"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M8.5 12.5L11 15L15.5 9.5"></path>
+        </svg>
+      </div>
+
+      <h1
+        class="font-display text-4xl sm:text-5xl font-bold tracking-tight text-white"
+      >
+        Welcome to Pro
+      </h1>
+      <p class="text-lg text-text-body">
+        Your payment was successful. We've just sent your license key and
+        receipt to your email address.
+      </p>
+
+      <div
+        class="mt-12 text-left mx-auto bg-ink-elevated rounded-none shadow-2xl overflow-hidden backdrop-blur-sm"
+      >
+        <div
+          class="px-6 py-4 bg-ink-raised/50 flex items-center justify-between"
+        >
+          <h2 class="font-display text-lg font-medium text-text">Next Steps</h2>
+          <div class="flex gap-1.5 opacity-50">
+            <div class="w-2.5 h-2.5 bg-text-muted"></div>
+            <div class="w-2.5 h-2.5 bg-text-muted"></div>
+            <div class="w-2.5 h-2.5 bg-text-muted"></div>
+          </div>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+          <p class="text-text-muted text-sm">
+            Run these commands in your terminal to unlock your Pro features:
+          </p>
+
+          <div class="space-y-5">
+            <div>
+              <p
+                class="text-[0.7rem] text-accent font-semibold tracking-widest uppercase font-mono mb-2"
+              >
+                1. Activate your license
+              </p>
+              <div class="flex items-center bg-black/60 rounded-none p-3.5 group">
+                <span class="text-text-muted mr-3 select-none">$</span>
+                <code
+                  class="font-mono text-sm text-text-body group-hover:text-text transition-colors"
+                  >arclens activate &lt;your-license-key&gt;</code
+                >
+              </div>
+            </div>
+
+            <div>
+              <p
+                class="text-[0.7rem] text-accent font-semibold tracking-widest uppercase font-mono mb-2"
+              >
+                2. Install the Pro package
+              </p>
+              <div class="flex items-center bg-black/60 rounded-none p-3.5 group">
+                <span class="text-text-muted mr-3 select-none">$</span>
+                <code
+                  class="font-mono text-sm text-text-body group-hover:text-text transition-colors"
+                  >arclens install-pro</code
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-8">
+        <a
+          href="/"
+          class="inline-flex items-center gap-2 text-sm text-text-muted hover:text-accent transition-colors font-medium"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+            class="w-4 h-4"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"></path>
+          </svg>
+          Return to home
+        </a>
+      </div>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  @keyframes popScale {
+    0% {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.08);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes popScaleHover {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.12);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes drawCheck {
+    0% {
+      stroke-dashoffset: 20;
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+  }
+
+  @keyframes drawCheckHover {
+    0% {
+      stroke-dashoffset: 20;
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+  }
+
+  .animate-check-badge {
+    animation: popScale 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    cursor: pointer;
+  }
+
+  .animate-check-badge:hover {
+    animation: popScaleHover 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    border-color: rgba(77, 176, 216, 0.4);
+    box-shadow: 0 0 35px rgba(77, 176, 216, 0.3);
+  }
+
+  .animate-checkmark {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    animation: drawCheck 0.6s cubic-bezier(0.65, 0, 0.45, 1) 0.2s forwards;
+  }
+
+  .animate-check-badge:hover .animate-checkmark {
+    animation: drawCheckHover 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+  }
+</style>
