@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { tiers, DOCS_URL, type Tier } from "../data/tiers";
+import { isProCheckoutLive, isProComingSoon } from "../data/commerce";
 import { usePaddlePrices } from "../hooks/usePaddlePrices";
 import {
   type Environments,
@@ -76,19 +77,30 @@ function tierClass(id: Tier["id"]) {
 
 export default function PricingGrid({
   headline = "Start free. Upgrade when it hurts.",
-  sub = "Local-first. Pay for scale, framework depth, and team features.",
+  sub,
   className = "",
   country = "OTHERS",
 }: Props) {
+  const proComingSoon = isProComingSoon();
+  const defaultSub = proComingSoon
+    ? "Install the free CLI today. Pro checkout opens when the paid tier is ready."
+    : "Local-first. Pay for scale, framework depth, and team features.";
+  const pricingSub = sub ?? defaultSub;
+  const proCheckoutLive = isProCheckoutLive();
   const [frequency, setFrequency] = useState<"month" | "year">("month");
   const [paddle, setPaddle] = useState<Paddle | undefined>();
 
-  const { prices, loading } = usePaddlePrices(paddle, country);
+  const { prices, loading } = usePaddlePrices(
+    proCheckoutLive ? paddle : undefined,
+    country
+  );
 
   useEffect(() => {
+    if (!proCheckoutLive) return;
+
     const token = import.meta.env.PUBLIC_PADDLE_CLIENT_TOKEN;
     const env = import.meta.env.PUBLIC_PADDLE_ENV as Environments;
-    
+
     if (!env) {
       throw new Error("Missing PUBLIC_PADDLE_ENV environment variable. Never run without specifying the environment.");
     }
@@ -102,13 +114,15 @@ export default function PricingGrid({
       token,
       environment: env,
     }).then((p) => p && setPaddle(p));
-  }, []);
+  }, [proCheckoutLive]);
 
   function handleSubscribe(tier: Tier) {
     if (tier.id === "free") {
       window.location.href = tier.cta.href;
       return;
     }
+
+    if (proComingSoon) return;
 
     if (!paddle || !tier.priceId) return;
 
@@ -132,8 +146,9 @@ export default function PricingGrid({
         <div className="section-head pricing-head mx-auto text-center flex flex-col items-center max-w-2xl">
           <p className="eyebrow">Pricing</p>
           <h2 id="pricing-title" className="text-center">{headline}</h2>
-          <p className="pricing-sub text-center max-w-md">{sub}</p>
-          
+          <p className="pricing-sub text-center max-w-md">{pricingSub}</p>
+
+          {!proComingSoon ? (
           <div className="mt-8 inline-flex items-center rounded-none border border-line bg-ink p-1">
             <button
               className={`rounded-none px-2 py-1 text-xs font-mono font-medium transition-colors ${
@@ -162,17 +177,28 @@ export default function PricingGrid({
               </span>
             </button>
           </div>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 md:max-w-4xl md:mx-auto mt-4">
           {tiers.map((tier) => {
             const priceId = tier.priceId?.[frequency];
             const formattedPrice = priceId ? prices[priceId] : null;
-            const displayPrice = tier.id === "pro" 
-              ? (loading || !formattedPrice ? "..." : formattedPrice)
-              : tier.price;
-            
-            const displayPeriod = tier.id === "pro" ? `/${frequency}` : tier.period;
+            const displayPrice =
+              tier.id === "pro" && proComingSoon
+                ? "$xx"
+                : tier.id === "pro"
+                  ? loading || !formattedPrice
+                    ? "..."
+                    : formattedPrice
+                  : tier.price;
+
+            const displayPeriod =
+              tier.id === "pro" && proComingSoon
+                ? null
+                : tier.id === "pro"
+                  ? `/${frequency}`
+                  : tier.period;
 
             return (
               <article
@@ -182,7 +208,9 @@ export default function PricingGrid({
               >
                 {/* Fixed-height badge slot — keeps both cards aligned */}
                 <div className="h-7 mb-3 flex items-center">
-                  {tier.recommended ? (
+                  {tier.id === "pro" && proComingSoon ? (
+                    <span className="pricing-badge m-0">Coming soon</span>
+                  ) : tier.recommended ? (
                     <span className="pricing-badge m-0">Recommended</span>
                   ) : null}
                 </div>
@@ -227,9 +255,18 @@ export default function PricingGrid({
                 {/* CTA Footer - Uniform button alignment */}
                 <div className="mt-auto pt-4 flex flex-col items-center">
                   <button
-                    className={`${ctaClass(tier.cta.kind)} w-full cursor-pointer`}
+                    className={`${ctaClass(tier.cta.kind)} w-full ${
+                      tier.id === "pro" && proComingSoon
+                        ? "cursor-not-allowed opacity-70"
+                        : "cursor-pointer"
+                    }`}
                     onClick={() => handleSubscribe(tier)}
-                    disabled={tier.id === "pro" && !paddle}
+                    disabled={
+                      tier.id === "pro" && (proComingSoon || !paddle)
+                    }
+                    aria-disabled={
+                      tier.id === "pro" && proComingSoon ? true : undefined
+                    }
                   >
                     {tier.cta.label}
                   </button>
@@ -241,6 +278,10 @@ export default function PricingGrid({
                       >
                         Docs
                       </a>
+                    ) : proComingSoon ? (
+                      <span className="text-center text-xs text-text-muted">
+                        Preview of planned Pro features
+                      </span>
                     ) : (
                       <span className="text-center text-xs text-text-muted">
                         License key emailed after checkout

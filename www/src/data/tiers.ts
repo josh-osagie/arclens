@@ -1,6 +1,7 @@
 import {
   getProCheckoutUrl,
   hasLiveCheckout,
+  isProComingSoon,
 } from "./commerce";
 
 export type TierId = "free" | "pro";
@@ -71,10 +72,10 @@ export const tiers: Tier[] = [
       "Paddle Billing handles global tax + email receipt delivery",
     ],
     cta: {
-      label: hasLiveCheckout("pro") ? "Get Pro" : "Get Pro",
+      label: isProComingSoon() ? "Coming soon" : "Get Pro",
       href: getProCheckoutUrl(),
       kind: "secondary",
-      external: hasLiveCheckout("pro"),
+      external: hasLiveCheckout("pro") && !isProComingSoon(),
     },
   },
 ];

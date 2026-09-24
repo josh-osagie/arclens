@@ -52,21 +52,26 @@ import TerminalDemo from "./TerminalDemo";
           Static analysis → interactive graph. Understand unfamiliar codebases
           in minutes.
         </p>
-        <div class="cta-row flex gap-4 mt-6">
+        <div class="cta-row flex flex-col gap-3 mt-6 sm:flex-row sm:items-center sm:gap-4">
           <div class="relative w-full sm:w-[240px]">
             <button
+              type="button"
               class="js-install-btn btn btn-primary rounded-none w-full sm:w-[240px] group relative overflow-hidden transition-all duration-300 h-11 border border-transparent hover:border-accent"
             >
               <span class="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-full">
-                Install Free
+                Install free CLI
               </span>
               <span class="absolute inset-0 flex items-center justify-center translate-y-full transition-transform duration-300 group-hover:translate-y-0 font-mono text-sm bg-accent text-ink">
-                <span class="js-install-btn-text">npm install -g arclens</span>
+                <span class="js-install-btn-text">{INSTALL_CMD}</span>
               </span>
             </button>
           </div>
           <a class="btn btn-ghost rounded-none" href={DOCS_URL}>Docs</a>
         </div>
+        <p class="mt-3 max-w-md text-[0.8125rem] leading-relaxed text-text-muted">
+          The npm package is the free tier — analyze, watch, and view locally.
+          <a class="text-text-body underline-offset-2 hover:text-accent hover:underline" href="#pricing">Pro</a> is coming soon.
+        </p>
       </div>
 
       <div id="install">
@@ -213,13 +218,14 @@ import TerminalDemo from "./TerminalDemo";
             </p>
           </div>
           <button
+            type="button"
             class="js-install-btn btn btn-primary rounded-none w-full sm:w-[240px] group relative overflow-hidden transition-all duration-300 h-11 border border-transparent hover:border-accent"
           >
             <span class="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-full">
-              Install
+              Install free CLI
             </span>
             <span class="absolute inset-0 flex items-center justify-center translate-y-full transition-transform duration-300 group-hover:translate-y-0 font-mono text-sm bg-accent text-ink">
-              <span class="js-install-btn-text">npm install -g arclens</span>
+              <span class="js-install-btn-text">{INSTALL_CMD}</span>
             </span>
           </button>
         </div>
@@ -267,13 +273,13 @@ import TerminalDemo from "./TerminalDemo";
 <Footer />
 <EditorialMotion client:load />
 
-<script>
+<script define:vars={{ installCmd: INSTALL_CMD }}>
   const installBtns = document.querySelectorAll(".js-install-btn");
 
   installBtns.forEach((btn) => {
     btn.addEventListener("click", async () => {
       const textSpan = btn.querySelector(".js-install-btn-text");
-      const cmd = "npm install -g arclens";
+      const cmd = installCmd;
       try {
         await navigator.clipboard.writeText(cmd);
         if (textSpan) {

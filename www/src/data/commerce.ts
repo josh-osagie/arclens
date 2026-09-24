@@ -23,3 +23,21 @@ export function hasLiveCheckout(plan: "pro"): boolean {
   const raw = import.meta.env.PUBLIC_PADDLE_CHECKOUT_PRO;
   return Boolean(raw?.trim());
 }
+
+/**
+ * Pro sales gate for the marketing site. Defaults to coming soon so a deploy
+ * with Paddle env vars does not open checkout until you opt in.
+ *
+ * Set PUBLIC_PRO_AVAILABLE=true in production when Pro is ready to sell.
+ */
+export function isProComingSoon(): boolean {
+  const flag = import.meta.env.PUBLIC_PRO_AVAILABLE;
+  if (flag === "true") return false;
+  if (flag === "false") return true;
+  return true;
+}
+
+/** Paddle overlay checkout is allowed only when Pro is live and configured. */
+export function isProCheckoutLive(): boolean {
+  return !isProComingSoon() && hasLiveCheckout("pro");
+}
