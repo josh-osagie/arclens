@@ -8,3 +8,6 @@ node_modules/
 # environment variables
 .env
 .env.production
+
+# vercel build output
+.vercel/
