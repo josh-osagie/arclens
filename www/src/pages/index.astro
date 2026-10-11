@@ -1,12 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import EditorialLanding from "../components/EditorialLanding.astro";
-
-export const prerender = false;
-
-const country = Astro.request.headers.get("x-vercel-ip-country") ?? "OTHERS";
 ---
 
 <BaseLayout>
-  <EditorialLanding country={country} />
+  <EditorialLanding />
 </BaseLayout>

@@ -234,7 +234,8 @@ function extractPaddleSignature(
 }
 
 export const POST: APIRoute = async ({ request }) => {
-  const signingSecret = import.meta.env[SECRET_ENV_NAME] as string | undefined;
+  const signingSecret: string | undefined =
+    process.env[SECRET_ENV_NAME] ?? import.meta.env.PADDLE_NOTIFICATION_SECRET;
 
   let rawBody = "";
   try {
