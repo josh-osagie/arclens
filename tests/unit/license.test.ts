@@ -23,13 +23,21 @@ describe("license module", () => {
     expiresAt: null,
   };
 
+  const originalProxyUrl = process.env.ARCLENS_LICENSE_PROXY_URL;
+
   beforeEach(() => {
     removeLocalLicense();
+    process.env.ARCLENS_LICENSE_PROXY_URL = "https://license.arclens.dev";
   });
 
   afterEach(() => {
     removeLocalLicense();
     vi.restoreAllMocks();
+    if (originalProxyUrl !== undefined) {
+      process.env.ARCLENS_LICENSE_PROXY_URL = originalProxyUrl;
+    } else {
+      delete process.env.ARCLENS_LICENSE_PROXY_URL;
+    }
   });
 
   it("handles empty/missing local license", () => {
@@ -120,5 +128,33 @@ describe("license module", () => {
     expect(readLocalLicense()).toBeNull();
 
     fetchSpy.mockRestore();
+  });
+
+  it("activates license locally in offline mode when proxy is unset", async () => {
+    delete process.env.ARCLENS_LICENSE_PROXY_URL;
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const res = await activateLicense("OFFLINE-KEY");
+    expect(res.success).toBe(true);
+    expect(res.data?.variantName).toBe("Pro");
+    expect(res.data?.licenseKey).toBe("OFFLINE-KEY");
+    expect(readLocalLicense()?.licenseKey).toBe("OFFLINE-KEY");
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
+  });
+
+  it("validates expired license locally in offline mode", async () => {
+    delete process.env.ARCLENS_LICENSE_PROXY_URL;
+    const expiredLicense: LicenseData = {
+      ...sampleLicense,
+      expiresAt: new Date(Date.now() - 10000).toISOString(),
+    };
+    writeLocalLicense(expiredLicense);
+
+    const res = await validateLicense();
+    expect(res.valid).toBe(false);
+    expect(res.error).toBe("License has expired");
+    expect(readLocalLicense()?.status).toBe("expired");
   });
 });

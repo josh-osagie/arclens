@@ -90,7 +90,13 @@ export function removeLocalLicense(): void {
  *      can always add the proxy later by flipping the env var in a release.
  */
 
-const PROXY_URL = process.env.ARCLENS_LICENSE_PROXY_URL?.replace(/\/$/, "") || "";
+export function getProxyUrl(options?: { apiUrl?: string }): string {
+  return (
+    options?.apiUrl?.replace(/\/$/, "") ||
+    process.env.ARCLENS_LICENSE_PROXY_URL?.replace(/\/$/, "") ||
+    ""
+  );
+}
 
 function sha256HostnameInstance(): string {
   const host = os.hostname() || "arclens-local";
@@ -107,10 +113,11 @@ export async function activateLicense(
   }
 
   const instanceName = os.hostname() || "Arclens Machine";
+  const proxyUrl = getProxyUrl(options);
 
-  if (PROXY_URL) {
+  if (proxyUrl) {
     try {
-      const response = await fetch(`${PROXY_URL}/activate`, {
+      const response = await fetch(`${proxyUrl}/activate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -123,22 +130,56 @@ export async function activateLicense(
       });
 
       const resData = (await response.json()) as {
-        success: boolean;
+        success?: boolean;
+        activated?: boolean;
         data?: LicenseData;
         error?: string;
+        instance?: { id?: string; name?: string };
+        license_key?: { status?: string; expires_at?: string | null };
+        meta?: {
+          variant_name?: string;
+          customer_email?: string;
+          customer_name?: string;
+        };
       };
 
-      if (!response.ok || !resData.success) {
+      if (
+        !response.ok ||
+        resData.success === false ||
+        resData.activated === false ||
+        Boolean(resData.error)
+      ) {
         return {
           success: false,
-          error: resData.error || `Proxy returned HTTP ${response.status}`,
+          error:
+            resData.error ||
+            (!response.ok
+              ? `Proxy returned HTTP ${response.status}`
+              : "License key is invalid or activation limit reached"),
         };
       }
 
       if (resData.data) {
         writeLocalLicense(resData.data);
+        return { success: true, data: resData.data };
       }
-      return { success: true, data: resData.data };
+
+      const licenseRecord: LicenseData = {
+        licenseKey: cleanKey,
+        instanceId: String(resData.instance?.id ?? sha256HostnameInstance()),
+        instanceName: resData.instance?.name ?? instanceName,
+        status:
+          (resData.license_key?.status as LicenseData["status"]) || "active",
+        variantName: resData.meta?.variant_name ?? "Pro",
+        customerEmail:
+          resData.meta?.customer_email ?? "customer@domain.com",
+        customerName: resData.meta?.customer_name,
+        activatedAt: new Date().toISOString(),
+        expiresAt: resData.license_key?.expires_at ?? null,
+      };
+
+      writeLocalLicense(licenseRecord);
+      return { success: true, data: licenseRecord };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { success: false, error: `Proxy activation failed: ${msg}` };
@@ -181,9 +222,10 @@ export async function deactivateLicense(options?: {
     return { success: false, error: "No active license found locally" };
   }
 
-  if (PROXY_URL) {
+  const proxyUrl = getProxyUrl(options);
+  if (proxyUrl) {
     try {
-      await fetch(`${PROXY_URL}/deactivate`, {
+      await fetch(`${proxyUrl}/deactivate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -210,9 +252,10 @@ export async function validateLicense(options?: {
     return { valid: false, error: "No local license stored" };
   }
 
-  if (PROXY_URL) {
+  const proxyUrl = getProxyUrl(options);
+  if (proxyUrl) {
     try {
-      const response = await fetch(`${PROXY_URL}/validate`, {
+      const response = await fetch(`${proxyUrl}/validate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -225,20 +268,34 @@ export async function validateLicense(options?: {
       });
 
       const resData = (await response.json()) as {
-        valid: boolean;
+        valid?: boolean;
         data?: LicenseData;
         error?: string;
+        license_key?: {
+          status?: string;
+          expires_at?: string | null;
+        };
       };
 
-      if (response.ok && resData.valid) {
+      if (
+        response.ok &&
+        (resData.valid || resData.license_key?.status === "active")
+      ) {
         const updated: LicenseData = resData.data
           ? { ...resData.data }
-          : { ...current, status: "active" };
+          : {
+              ...current,
+              status: "active",
+              expiresAt: resData.license_key?.expires_at ?? current.expiresAt,
+            };
         writeLocalLicense(updated);
         return { valid: true, data: updated };
       }
 
-      if (response.ok && !resData.valid) {
+      if (
+        response.ok &&
+        (resData.valid === false || resData.license_key?.status === "disabled")
+      ) {
         const disabled: LicenseData = { ...current, status: "disabled" };
         writeLocalLicense(disabled);
         return {
