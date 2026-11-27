@@ -168,7 +168,7 @@ export async function fitViewportInSafeArea(
   return rf.setViewport(
     {
       x: Math.round(fitted.x + offsetX),
-      y: Math.round(Math.max(12, fitted.y)),
+      y: Math.round(Math.max(12 - bounds.y * fitted.zoom, fitted.y)),
       zoom: fitted.zoom,
     },
     { duration }

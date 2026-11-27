@@ -48,6 +48,7 @@ import {
 } from "./buildFlowGraph";
 import {
   popViewport,
+  pushBreadcrumbItem,
   pushViewport,
   type CameraHistoryEntry,
 } from "./cameraHistory";
@@ -660,6 +661,8 @@ export default function App() {
   > | null>(null);
   const historyStackRef = useRef<NavigationSnapshot[]>([]);
   historyStackRef.current = historyStack;
+  const nodesRef = useRef<FlowNode<AtlasNodeData>[]>([]);
+  nodesRef.current = nodes;
 
   const cameraSeqRef = useRef(0);
   const buildSigRef = useRef<string>("");
@@ -974,10 +977,11 @@ export default function App() {
     const items: BreadcrumbTrailItem[] = [];
     const seenKeys = new Set<string>();
 
-    const pushItem = (item: BreadcrumbTrailItem) => {
-      if (seenKeys.has(item.scopeKey)) return;
-      seenKeys.add(item.scopeKey);
-      items.push(item);
+    const pushItem = (
+      item: BreadcrumbTrailItem,
+      options?: { moveDuplicateToEnd?: boolean }
+    ) => {
+      pushBreadcrumbItem(items, seenKeys, item, options);
     };
 
     const isAtOverviewRoot =
@@ -1030,45 +1034,60 @@ export default function App() {
           prevSnap?.activeDomain &&
           focusDom &&
           prevSnap.activeDomain !== focusDom;
-        pushItem({
-          scopeKey: `story:${focusNode.id}`,
-          label: focusNode.name,
-          sublabel: crossedArea
-            ? humanizeAreaIdentity(focusDom).title
-            : undefined,
-          isCurrent: true,
-        });
+        pushItem(
+          {
+            scopeKey: `story:${focusNode.id}`,
+            label: focusNode.name,
+            sublabel: crossedArea
+              ? humanizeAreaIdentity(focusDom).title
+              : undefined,
+            isCurrent: true,
+          },
+          { moveDuplicateToEnd: true }
+        );
       }
     } else if (activeDomain) {
-      pushItem({
-        scopeKey: `area:${activeDomain}`,
-        label: humanizeAreaIdentity(activeDomain).title,
-        isCurrent: !selectedUnclusteredNodeId,
-      });
+      pushItem(
+        {
+          scopeKey: `area:${activeDomain}`,
+          label: humanizeAreaIdentity(activeDomain).title,
+          isCurrent: !selectedUnclusteredNodeId,
+        },
+        { moveDuplicateToEnd: true }
+      );
       if (selectedUnclusteredNodeId) {
         const n = nodeById.get(selectedUnclusteredNodeId);
         if (n) {
-          pushItem({
-            scopeKey: `node:${n.id}`,
-            label: n.name,
-            isCurrent: true,
-          });
+          pushItem(
+            {
+              scopeKey: `node:${n.id}`,
+              label: n.name,
+              isCurrent: true,
+            },
+            { moveDuplicateToEnd: true }
+          );
         }
       }
     } else if (selectedDomain) {
-      pushItem({
-        scopeKey: `preview:${selectedDomain}`,
-        label: humanizeAreaIdentity(selectedDomain).title,
-        isCurrent: true,
-      });
+      pushItem(
+        {
+          scopeKey: `preview:${selectedDomain}`,
+          label: humanizeAreaIdentity(selectedDomain).title,
+          isCurrent: true,
+        },
+        { moveDuplicateToEnd: true }
+      );
     } else if (selectedUnclusteredNodeId) {
       const n = nodeById.get(selectedUnclusteredNodeId);
       if (n) {
-        pushItem({
-          scopeKey: `node:${n.id}`,
-          label: n.name,
-          isCurrent: true,
-        });
+        pushItem(
+          {
+            scopeKey: `node:${n.id}`,
+            label: n.name,
+            isCurrent: true,
+          },
+          { moveDuplicateToEnd: true }
+        );
       }
     }
 
@@ -1180,7 +1199,15 @@ export default function App() {
                 inspectorOpen: technicalInspectorOpen,
               }
             );
-            if (cancelled || !storyBuilt) return;
+            if (cancelled) return;
+            if (!storyBuilt) {
+              setStoryFocusId(null);
+              setStoryViaId(null);
+              setStoryExpandedGroups(new Set());
+              setTechnicalInspectorOpen(false);
+              queueCamera({ kind: "fit-readable", duration: 220 });
+              return;
+            }
 
             buildSigRef.current = viewKey;
             baseEdgesRef.current = storyBuilt.edges;
@@ -1206,8 +1233,9 @@ export default function App() {
                     built.edges,
                     entryIds
                   ),
-                  [],
-                  applySavedLayoutRef.current
+                  nodesRef.current,
+                  applySavedLayoutRef.current ||
+                    draggedNodeIdsRef.current.size > 0
                     ? savedNodePositionsRef.current
                     : null,
                   draggedNodeIdsRef.current
@@ -1289,6 +1317,7 @@ export default function App() {
     overviewFocusClusterId,
     crossAreaLabels,
     hoveredNodeId,
+    queueCamera,
     setNodes,
     setEdges,
   ]);
@@ -1337,6 +1366,7 @@ export default function App() {
     overviewFocusClusterId,
     crossAreaLabels,
     hoveredNodeId,
+    queueCamera,
     setNodes,
     setEdges,
   ]);
@@ -1998,7 +2028,9 @@ export default function App() {
               );
 
         if (graphKey && !isOverviewMap) {
-          saveNodePositions(graphKey, nodePositionsFromNodes(next));
+          const positions = nodePositionsFromNodes(next);
+          savedNodePositionsRef.current = positions;
+          saveNodePositions(graphKey, positions);
         }
 
         return next;

@@ -101,4 +101,32 @@ describe("storyGraph", () => {
     expect(ids).toContain("uiSelect");
     expect(ids).toContain("uiCard");
   });
+
+  it("uses import wording instead of claiming renders when components are only statically imported", () => {
+    const importOnlyFixture: AtlasGraph = {
+      nodes: storyFixture.nodes,
+      edges: [
+        { from: "applyPage", to: "step1", type: "imports" },
+        { from: "applyPage", to: "uiBtn", type: "imports" },
+        { from: "applyPage", to: "uiInput", type: "imports" },
+        { from: "applyPage", to: "uiSelect", type: "imports" },
+      ],
+    };
+
+    const built = buildFeatureStoryView(importOnlyFixture, "applyPage");
+    expect(built).not.toBeNull();
+
+    const anchor = built!.nodes.find((n) => n.id === "applyPage")!;
+    const summary = String(
+      (anchor.data as unknown as { summary: string }).summary
+    );
+    expect(summary).toContain("imports 1 feature component");
+    expect(summary).toContain("imports 3 shared UI primitives");
+    expect(summary).not.toContain("Directly renders");
+
+    const sharedEdge = built!.edges.find(
+      (e) => e.id === "story-out::shared-ui"
+    )!;
+    expect(sharedEdge.label).toBe("imports 3 shared UI");
+  });
 });

@@ -231,30 +231,58 @@ function buildFocusStorySummary(
     return `${upPart} Leaf element with no outgoing project dependencies.`;
   }
 
-  let featureUi = 0;
-  let sharedUi = 0;
+  let renderedFeatureUi = 0;
+  let importedFeatureUi = 0;
+  let renderedSharedUi = 0;
+  let importedSharedUi = 0;
   let hooks = 0;
   let modules = 0;
 
   for (const item of downstream) {
     const r = item.roleInfo.role;
-    if (r === "screen" || r === "component" || r === "entry") featureUi += 1;
-    else if (r === "shared-ui") sharedUi += 1;
-    else if (r === "hook" || r === "context") hooks += 1;
-    else modules += 1;
+    const hasRenders = item.edgeTypes.includes("renders");
+    if (r === "screen" || r === "component" || r === "entry") {
+      if (hasRenders) renderedFeatureUi += 1;
+      else importedFeatureUi += 1;
+    } else if (r === "shared-ui") {
+      if (hasRenders) renderedSharedUi += 1;
+      else importedSharedUi += 1;
+    } else if (r === "hook" || r === "context") {
+      hooks += 1;
+    } else {
+      modules += 1;
+    }
   }
 
   const downParts: string[] = [];
-  if (featureUi > 0) {
+  if (renderedFeatureUi > 0 && importedFeatureUi > 0) {
     downParts.push(
-      `renders ${featureUi} feature ${featureUi === 1 ? "component" : "components"}`
+      `renders ${renderedFeatureUi} and imports ${importedFeatureUi} feature components`
+    );
+  } else if (renderedFeatureUi > 0) {
+    downParts.push(
+      `renders ${renderedFeatureUi} feature ${renderedFeatureUi === 1 ? "component" : "components"}`
+    );
+  } else if (importedFeatureUi > 0) {
+    downParts.push(
+      `imports ${importedFeatureUi} feature ${importedFeatureUi === 1 ? "component" : "components"}`
     );
   }
-  if (sharedUi > 0) {
+
+  if (renderedSharedUi > 0 && importedSharedUi > 0) {
     downParts.push(
-      `uses ${sharedUi} shared UI ${sharedUi === 1 ? "primitive" : "primitives"}`
+      `renders ${renderedSharedUi} and imports ${importedSharedUi} shared UI primitives`
+    );
+  } else if (renderedSharedUi > 0) {
+    downParts.push(
+      `renders ${renderedSharedUi} shared UI ${renderedSharedUi === 1 ? "primitive" : "primitives"}`
+    );
+  } else if (importedSharedUi > 0) {
+    downParts.push(
+      `imports ${importedSharedUi} shared UI ${importedSharedUi === 1 ? "primitive" : "primitives"}`
     );
   }
+
   if (hooks > 0) {
     downParts.push(
       `connects to ${hooks} state ${hooks === 1 ? "hook/context" : "hooks/contexts"}`
@@ -739,23 +767,39 @@ export function buildFeatureStoryView(
       } as unknown as AtlasNodeData,
     });
 
+    const renderedSharedCount = sharedUiPrimitives.filter((u) =>
+      u.edgeTypes.includes("renders")
+    ).length;
+    const sharedGroupStroke =
+      renderedSharedCount > 0 ? edgeColors.renders : edgeColors.imports;
+    const sharedGroupLabel =
+      renderedSharedCount === sharedUiPrimitives.length
+        ? `renders ${sharedUiPrimitives.length} shared UI`
+        : renderedSharedCount === 0
+          ? `imports ${sharedUiPrimitives.length} shared UI`
+          : `renders ${renderedSharedCount} · imports ${sharedUiPrimitives.length - renderedSharedCount} shared UI`;
+
     flowEdges.push({
       id: "story-out::shared-ui",
       source: focusNode.id,
       target: groupId,
       type: "smoothstep",
-      label: `renders ${sharedUiPrimitives.length} shared UI`,
-      labelStyle: { fill: "#bae6fd", fontSize: 10.5, fontWeight: 600 },
+      label: sharedGroupLabel,
+      labelStyle: {
+        fill: renderedSharedCount > 0 ? "#bae6fd" : "#cbd5e1",
+        fontSize: 10.5,
+        fontWeight: 600,
+      },
       labelBgStyle: { fill: "#18181b", fillOpacity: 0.92 },
       labelBgPadding: [6, 3],
       labelBgBorderRadius: 4,
       style: {
-        stroke: edgeColors.renders,
+        stroke: sharedGroupStroke,
         strokeWidth: 1.85,
         strokeDasharray: isExpanded ? undefined : "4 3",
         opacity: 0.9,
       },
-      markerEnd: { type: "arrowclosed", color: edgeColors.renders },
+      markerEnd: { type: "arrowclosed", color: sharedGroupStroke },
     });
 
     rightY += STORY_GROUP_H + CARD_GAP_Y;

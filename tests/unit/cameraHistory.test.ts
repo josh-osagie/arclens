@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   popViewport,
+  pushBreadcrumbItem,
   pushViewport,
   type CameraHistoryEntry,
 } from "../../viewer/src/cameraHistory";
@@ -95,5 +96,47 @@ describe("cameraHistory", () => {
     expect(stack).toHaveLength(4);
     expect(stack[0]?.scopeKey).toBe("domain:2");
     expect(stack[3]?.scopeKey).toBe("domain:5");
+  });
+
+  it("moves duplicate scopeKey to the end when pushing the current breadcrumb item", () => {
+    type Crumb = { scopeKey: string; label: string; isCurrent: boolean };
+    const items: Crumb[] = [];
+    const seen = new Set<string>();
+
+    pushBreadcrumbItem(items, seen, {
+      scopeKey: "overview",
+      label: "Overview",
+      isCurrent: false,
+    });
+    pushBreadcrumbItem(items, seen, {
+      scopeKey: "area:features/auth",
+      label: "Authentication",
+      isCurrent: false,
+    });
+    pushBreadcrumbItem(items, seen, {
+      scopeKey: "story:LoginForm",
+      label: "LoginForm",
+      isCurrent: false,
+    });
+    pushBreadcrumbItem(
+      items,
+      seen,
+      {
+        scopeKey: "area:features/auth",
+        label: "Authentication",
+        isCurrent: true,
+      },
+      { moveDuplicateToEnd: true }
+    );
+
+    expect(items).toEqual([
+      { scopeKey: "overview", label: "Overview", isCurrent: false },
+      { scopeKey: "story:LoginForm", label: "LoginForm", isCurrent: false },
+      {
+        scopeKey: "area:features/auth",
+        label: "Authentication",
+        isCurrent: true,
+      },
+    ]);
   });
 });

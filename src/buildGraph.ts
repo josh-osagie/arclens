@@ -71,9 +71,36 @@ export function buildGraph(
     string,
     ReturnType<typeof extractImportEdges>
   >();
+  const importedNamesByFile = new Map<string, Set<string>>();
+
+  const recordImportedName = (file: string, localName: string) => {
+    let set = importedNamesByFile.get(file);
+    if (!set) {
+      set = new Set<string>();
+      importedNamesByFile.set(file, set);
+    }
+    set.add(localName);
+  };
 
   for (const imp of importEdges) {
     if (imp.isTypeOnly) continue;
+
+    if (imp.defaultImport) {
+      recordImportedName(imp.from, imp.defaultImport);
+    }
+    if (imp.namespaceImport) {
+      recordImportedName(imp.from, imp.namespaceImport);
+    }
+    if (imp.localBindings && imp.localBindings.length > 0) {
+      for (const binding of imp.localBindings) {
+        recordImportedName(imp.from, binding.local);
+      }
+    } else {
+      for (const symbol of imp.namedImports) {
+        recordImportedName(imp.from, symbol);
+      }
+    }
+
     if (!imp.resolvedTo || imp.resolvedTo.includes("node_modules")) {
       continue;
     }
@@ -152,20 +179,34 @@ export function buildGraph(
           imp.resolvedTo,
           hookName,
           true,
-          reExports
+          reExports,
+          false
         );
         if (match) return match;
       }
-      if (imp.namedImports.includes(hookName)) {
+      const aliasedBinding = imp.localBindings?.find(
+        (b) => b.local === hookName
+      );
+      const importedSymbol = aliasedBinding
+        ? aliasedBinding.imported
+        : imp.namedImports.includes(hookName)
+          ? hookName
+          : undefined;
+      if (importedSymbol) {
         const match = resolveImportedExport(
           exports,
           imp.resolvedTo,
-          hookName,
+          importedSymbol,
           false,
-          reExports
+          reExports,
+          false
         );
         if (match) return match;
       }
+    }
+
+    if (importedNamesByFile.get(callerFile)?.has(hookName)) {
+      return undefined;
     }
 
     return (

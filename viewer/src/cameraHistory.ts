@@ -61,3 +61,29 @@ export function popViewport<T extends CameraHistoryEntry>(
   const entry = stack[stack.length - 1] ?? null;
   return { entry, nextStack };
 }
+
+/**
+ * Append a breadcrumb item to `items`, deduplicating by `scopeKey`.
+ * When an active/current scope already appeared earlier in `historyStack` with
+ * `isCurrent: false`, move it to the tail instead of dropping the current crumb.
+ */
+export function pushBreadcrumbItem<
+  T extends { scopeKey: string; isCurrent: boolean },
+>(
+  items: T[],
+  seenKeys: Set<string>,
+  item: T,
+  options?: { moveDuplicateToEnd?: boolean }
+): void {
+  if (seenKeys.has(item.scopeKey)) {
+    if (!item.isCurrent && !options?.moveDuplicateToEnd) return;
+    const existingIdx = items.findIndex((i) => i.scopeKey === item.scopeKey);
+    if (existingIdx >= 0) {
+      items.splice(existingIdx, 1);
+    }
+    items.push(item);
+    return;
+  }
+  seenKeys.add(item.scopeKey);
+  items.push(item);
+}

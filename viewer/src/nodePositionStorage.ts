@@ -74,7 +74,10 @@ export function mergeNodePositions(
   return nextNodes.map((node) => {
     if (draggedNodeIds.has(node.id)) {
       const current = currentById.get(node.id);
-      if (current) {
+      if (
+        current &&
+        (!current.type || !node.type || current.type === node.type)
+      ) {
         return { ...node, position: current.position, draggable: true };
       }
     }

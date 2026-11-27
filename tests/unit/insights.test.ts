@@ -167,6 +167,125 @@ describe("buildInsights gates", () => {
       )
     ).toBe(true);
   });
+
+  it("handles dependency hook collisions, barrel default re-exports, and symbol-accurate same-file refs", async () => {
+    const dir = makeTempApp({
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          jsx: "react-jsx",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          target: "ES2020",
+        },
+        include: ["src/**/*"],
+      }),
+      // Unrelated local `useQuery` export must NOT hijack external `@tanstack/react-query` `useQuery`
+      "src/legacy/useQuery.ts": `
+        export function useQuery() {
+          return { data: null };
+        }
+      `,
+      "src/features/Profile.tsx": `
+        import { useQuery } from "@tanstack/react-query";
+        export function Profile() {
+          const { data } = useQuery({ queryKey: ["me"] });
+          return <div>{String(data)}</div>;
+        }
+      `,
+      // Barrel with both a named export `Widget` and `export { default } from "./RealDefault"`
+      "src/widgets/RealDefault.tsx": `
+        export default function RealDefault() {
+          return <span>Real</span>;
+        }
+      `,
+      "src/widgets/index.ts": `
+        export { default } from "./RealDefault";
+        export function Widget() {
+          return <span>UnrelatedNamed</span>;
+        }
+      `,
+      // Multi-declarator `export const base = 1, derived = base + 1`
+      "src/constants/math.ts": `
+        export const base = 1, derived = base + 1;
+      `,
+      // Shadowed parameter `value` must NOT count as a reference to `export const value = 1`
+      "src/utils/shadowed.ts": `
+        export const value = 1;
+        export function consume(value: number) {
+          return value;
+        }
+      `,
+      // Single export used by another top-level statement in the same file
+      "src/bootstrap/singleRef.ts": `
+        export const createToken = () => "tok";
+        const BOOT_TOKEN = createToken();
+        void BOOT_TOKEN;
+      `,
+      "src/main.tsx": `
+        import { createRoot } from "react-dom/client";
+        import Widget from "./widgets";
+        import { Profile } from "./features/Profile";
+        import { derived } from "./constants/math";
+        import { consume } from "./utils/shadowed";
+        function App() {
+          return <div>{derived}{consume(2)}<Widget /><Profile /></div>;
+        }
+        createRoot(document.getElementById("root")!).render(<App />);
+      `,
+    });
+
+    const result = await analyzeProject(dir, { cache: false });
+    const titles = buildInsights(result).map((i) => i.title);
+
+    const profileNode = result.graph.nodes.find((n) => n.name === "Profile")!;
+    const localUseQuery = result.graph.nodes.find(
+      (n) => n.name === "useQuery" && n.file !== "external"
+    )!;
+    expect(
+      result.graph.edges.some(
+        (e) =>
+          e.from === profileNode.id &&
+          e.to === localUseQuery.id &&
+          e.type === "uses"
+      )
+    ).toBe(false);
+    expect(
+      result.graph.edges.some(
+        (e) =>
+          e.from === profileNode.id &&
+          e.to === "external::useQuery" &&
+          e.type === "uses"
+      )
+    ).toBe(true);
+
+    // Default import `import Widget from "./widgets"` points to RealDefault, not named Widget
+    const mainNode = result.graph.nodes.find((n) => n.name === "main")!;
+    const realDefault = result.graph.nodes.find(
+      (n) => n.name === "RealDefault"
+    )!;
+    const namedWidget = result.graph.nodes.find((n) => n.name === "Widget")!;
+    expect(
+      result.graph.edges.some(
+        (e) =>
+          e.from === mainNode.id &&
+          e.to === realDefault.id &&
+          e.type === "imports"
+      )
+    ).toBe(true);
+    expect(
+      result.graph.edges.some(
+        (e) =>
+          e.from === mainNode.id &&
+          e.to === namedWidget.id &&
+          e.type === "imports"
+      )
+    ).toBe(false);
+
+    // Same-file reference accuracy
+    expect(titles).not.toContain("Orphan export: base");
+    expect(titles).not.toContain("Orphan export: createToken");
+    expect(titles).toContain("Orphan export: value");
+  });
 });
 
 describe("hookRuleViolationsToInsights", () => {

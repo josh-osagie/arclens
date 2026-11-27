@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Node, SourceFile, SyntaxKind } from "ts-morph";
+import { Node, SourceFile, SyntaxKind, ts } from "ts-morph";
 import { classifyExport, resolveDefaultExportName } from "./reactFunction";
 
 export type ExportRecord = {
@@ -7,8 +7,22 @@ export type ExportRecord = {
   /** Resolved symbol name (e.g. App, not "default") */
   name: string;
   exportKind: "default" | "named";
+  /** True when the same symbol is exported both as a named export and `export default` */
+  hasDefaultExport?: boolean;
   kind: string | undefined;
   type: "component" | "hook" | "utility" | "context" | "entry" | "config";
+};
+
+export type RawImportEdge = {
+  from: string;
+  to: string;
+  defaultImport: string | undefined;
+  namespaceImport?: string | undefined;
+  namedImports: string[];
+  localBindings?: Array<{ imported: string; local: string }>;
+  line: number;
+  isTypeOnly: boolean;
+  resolvedTo: string | undefined;
 };
 
 export type ReExportRecord = {
@@ -100,28 +114,42 @@ export function dedupeExports(exports: ExportRecord[]): ExportRecord[] {
     }
 
     if (existing.exportKind === "default" && exp.exportKind === "named") {
-      byKey.set(key, exp);
+      byKey.set(key, { ...exp, hasDefaultExport: true });
+    } else if (
+      existing.exportKind === "named" &&
+      exp.exportKind === "default"
+    ) {
+      byKey.set(key, { ...existing, hasDefaultExport: true });
     }
   }
 
   return [...byKey.values()];
 }
 
-export function extractImportEdges(sourceFile: SourceFile) {
-  return sourceFile.getImportDeclarations().map((i) => ({
-    from: sourceFile.getFilePath(),
-    to: i.getModuleSpecifierValue(),
-    defaultImport: i.isTypeOnly() ? undefined : i.getDefaultImport()?.getText(),
-    namedImports: i.isTypeOnly()
+export function extractImportEdges(sourceFile: SourceFile): RawImportEdge[] {
+  return sourceFile.getImportDeclarations().map((i) => {
+    const runtimeNamed = i.isTypeOnly()
       ? []
-      : i
-          .getNamedImports()
-          .filter((n) => !n.isTypeOnly())
-          .map((n) => n.getName()),
-    line: i.getStartLineNumber(),
-    isTypeOnly: i.isTypeOnly(),
-    resolvedTo: i.getModuleSpecifierSourceFile()?.getFilePath(),
-  }));
+      : i.getNamedImports().filter((n) => !n.isTypeOnly());
+    return {
+      from: sourceFile.getFilePath(),
+      to: i.getModuleSpecifierValue(),
+      defaultImport: i.isTypeOnly()
+        ? undefined
+        : i.getDefaultImport()?.getText(),
+      namespaceImport: i.isTypeOnly()
+        ? undefined
+        : i.getNamespaceImport()?.getText(),
+      namedImports: runtimeNamed.map((n) => n.getName()),
+      localBindings: runtimeNamed.map((n) => ({
+        imported: n.getName(),
+        local: (n.getAliasNode() ?? n.getNameNode()).getText(),
+      })),
+      line: i.getStartLineNumber(),
+      isTypeOnly: i.isTypeOnly(),
+      resolvedTo: i.getModuleSpecifierSourceFile()?.getFilePath(),
+    };
+  });
 }
 
 export function extractExportsDeclarations(
@@ -202,12 +230,13 @@ export function extractReExports(sourceFile: SourceFile): ReExportRecord[] {
   return reExports;
 }
 
-function topLevelStatement(node: Node): Node | undefined {
+function isInsideAnyNode(node: Node, containers: ReadonlySet<Node>): boolean {
   let current: Node | undefined = node;
-  while (current && current.getParent() && !Node.isSourceFile(current.getParent())) {
+  while (current && !Node.isSourceFile(current)) {
+    if (containers.has(current)) return true;
     current = current.getParent();
   }
-  return current;
+  return false;
 }
 
 function isReferenceIdentifier(id: Node): boolean {
@@ -227,7 +256,9 @@ function isReferenceIdentifier(id: Node): boolean {
   if (
     (Node.isFunctionDeclaration(parent) ||
       Node.isVariableDeclaration(parent) ||
-      Node.isClassDeclaration(parent)) &&
+      Node.isClassDeclaration(parent) ||
+      Node.isParameterDeclaration(parent) ||
+      Node.isBindingElement(parent)) &&
     parent.getNameNode() === id
   ) {
     return false;
@@ -235,40 +266,61 @@ function isReferenceIdentifier(id: Node): boolean {
   return true;
 }
 
-/** Exported symbols used by another top-level declaration in the same file (e.g. cva variants). */
+/** Exported symbols used by another declaration or statement in the same file (e.g. cva variants). */
 export function extractSameFileExportRefs(
   sourceFile: SourceFile,
   exports: ExportRecord[]
 ): string[] {
-  if (exports.length <= 1) return [];
+  if (exports.length === 0) return [];
 
   const filePath = path.normalize(sourceFile.getFilePath());
-  const exportStatements = new Map<string, Set<Node>>();
+  const exportDecls = new Map<
+    string,
+    { decls: Set<Node>; compilerNodes: Set<ts.Node> }
+  >();
   const exported = sourceFile.getExportedDeclarations();
 
   for (const exp of exports) {
     if (path.normalize(exp.file) !== filePath) continue;
     const key = exp.exportKind === "default" ? "default" : exp.name;
     const decls = exported.get(key) ?? exported.get(exp.name) ?? [];
-    const stmts = new Set<Node>();
+    const declSet = new Set<Node>();
+    const compilerSet = new Set<ts.Node>();
     for (const decl of decls) {
-      const stmt = topLevelStatement(decl);
-      if (stmt) stmts.add(stmt);
+      declSet.add(decl);
+      compilerSet.add(decl.compilerNode);
     }
-    if (stmts.size > 0) {
-      exportStatements.set(exp.name, stmts);
+    if (declSet.size > 0) {
+      exportDecls.set(exp.name, {
+        decls: declSet,
+        compilerNodes: compilerSet,
+      });
     }
   }
 
+  if (exportDecls.size === 0) return [];
+
+  const tc = sourceFile.getProject().getTypeChecker().compilerObject;
   const referenced = new Set<string>();
+
   for (const id of sourceFile.getDescendantsOfKind(SyntaxKind.Identifier)) {
     const name = id.getText();
-    const ownStmts = exportStatements.get(name);
-    if (!ownStmts || referenced.has(name)) continue;
+    const own = exportDecls.get(name);
+    if (!own || referenced.has(name)) continue;
     if (!isReferenceIdentifier(id)) continue;
+    if (isInsideAnyNode(id, own.decls)) continue;
 
-    const usageStmt = topLevelStatement(id);
-    if (usageStmt && !ownStmts.has(usageStmt)) {
+    const parent = id.getParent();
+    let tsSym =
+      parent && Node.isShorthandPropertyAssignment(parent)
+        ? tc.getShorthandAssignmentValueSymbol(parent.compilerNode)
+        : tc.getSymbolAtLocation(id.compilerNode);
+    if (tsSym && (tsSym.flags & ts.SymbolFlags.Alias) !== 0) {
+      tsSym = tc.getAliasedSymbol(tsSym);
+    }
+
+    const targetDecls = tsSym?.getDeclarations() ?? [];
+    if (targetDecls.some((d) => own.compilerNodes.has(d))) {
       referenced.add(name);
     }
   }

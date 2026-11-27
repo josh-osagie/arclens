@@ -23,7 +23,9 @@ export function findDefaultExportInFile(
   file: string
 ): ExportRecord | undefined {
   return exports.find(
-    (exp) => exp.file === file && exp.exportKind === "default"
+    (exp) =>
+      exp.file === file &&
+      (exp.exportKind === "default" || exp.hasDefaultExport === true)
   );
 }
 
@@ -59,15 +61,16 @@ export function resolveImportedExport(
   resolvedFile: string,
   symbolName: string,
   isDefault = false,
-  reExports: ReExportRecord[] = []
+  reExports: ReExportRecord[] = [],
+  allowGlobalFallback = true
 ): ExportRecord | undefined {
   if (isDefault) {
     const directDefault = findDefaultExportInFile(exports, resolvedFile);
     if (directDefault) return directDefault;
+  } else {
+    const direct = findExportInFile(exports, resolvedFile, symbolName);
+    if (direct) return direct;
   }
-
-  const direct = findExportInFile(exports, resolvedFile, symbolName);
-  if (direct) return direct;
 
   if (reExports.length > 0) {
     let curFile = resolvedFile;
@@ -75,7 +78,7 @@ export function resolveImportedExport(
     for (let depth = 0; depth < 5; depth++) {
       const hop =
         reExports.find((r) => r.file === curFile && r.exportName === curName) ??
-        (isDefault
+        (isDefault && depth > 0
           ? reExports.find(
               (r) => r.file === curFile && r.exportName === symbolName
             )
@@ -83,6 +86,9 @@ export function resolveImportedExport(
       if (!hop) break;
 
       const match =
+        (hop.targetName === "default"
+          ? findDefaultExportInFile(exports, hop.targetFile)
+          : undefined) ??
         findExportInFile(exports, hop.targetFile, hop.targetName) ??
         (hop.exportName === "default"
           ? findDefaultExportInFile(exports, hop.targetFile)
@@ -94,13 +100,16 @@ export function resolveImportedExport(
     }
   }
 
-  const dir = path.dirname(resolvedFile);
-  const prefix = dir.endsWith(path.sep) ? dir : `${dir}${path.sep}`;
-  const inSubtree = exports.find(
-    (exp) => exp.name === symbolName && exp.file.startsWith(prefix)
-  );
-  if (inSubtree) return inSubtree;
+  if (!isDefault) {
+    const dir = path.dirname(resolvedFile);
+    const prefix = dir.endsWith(path.sep) ? dir : `${dir}${path.sep}`;
+    const inSubtree = exports.find(
+      (exp) => exp.name === symbolName && exp.file.startsWith(prefix)
+    );
+    if (inSubtree) return inSubtree;
+  }
 
+  if (!allowGlobalFallback || isDefault) return undefined;
   return findExportByName(exports, symbolName);
 }
 

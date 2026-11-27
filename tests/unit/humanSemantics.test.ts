@@ -112,6 +112,29 @@ describe("humanSemantics", () => {
     const area = describeAreaForHumans("features/loans", sampleGraph);
     expect(area.startingScreens.map((n) => n.id)).toEqual(["loanPage"]);
     expect(area.purposeSummary).toContain("ApplyLoanPage");
+
+    // Object.prototype keys like "constructor" must not resolve to Object function
+    expect(humanizeAreaIdentity("features/constructor").title).toBe(
+      "Constructor"
+    );
+    expect(humanizeAreaIdentity("components/constructor").title).toBe(
+      "Constructor UI"
+    );
+
+    // Context-only area must not label its count as "1 hook"
+    const contextOnlyGraph: AtlasGraph = {
+      nodes: [
+        {
+          id: "authCtx",
+          name: "AuthContext",
+          file: "/repo/src/features/auth/AuthContext.tsx",
+          type: "context",
+        },
+      ],
+      edges: [],
+    };
+    const ctxArea = describeAreaForHumans("features/auth", contextOnlyGraph);
+    expect(ctxArea.cardSubtitle).toBe("1 context");
   });
 
   it("explains JSX renders, hook calls, and static imports without fabricating runtime execution", () => {

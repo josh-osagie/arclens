@@ -60,30 +60,31 @@ export type RelationshipExplanation = {
   certaintyBadge: string;
 };
 
-const KNOWN_SLUG_TITLES: Record<string, string> = {
-  auth: "Authentication",
-  kyc: "Identity Verification",
-  ui: "Shared UI Primitives",
-  api: "API Services",
-  nav: "Navigation",
-  navigation: "Navigation",
-  prefs: "Preferences",
-  config: "Configuration",
-  utils: "Shared Helpers",
-  helpers: "Shared Helpers",
-  hooks: "Shared Hooks",
-  constants: "Constants & Config",
-  layouts: "Page Layouts",
-  typography: "Typography",
-  common: "Common UI",
-  shared: "Shared Components",
-  assets: "Static Assets",
-  icons: "Icons",
-};
+const KNOWN_SLUG_TITLES = new Map<string, string>([
+  ["auth", "Authentication"],
+  ["kyc", "Identity Verification"],
+  ["ui", "Shared UI Primitives"],
+  ["api", "API Services"],
+  ["nav", "Navigation"],
+  ["navigation", "Navigation"],
+  ["prefs", "Preferences"],
+  ["config", "Configuration"],
+  ["utils", "Shared Helpers"],
+  ["helpers", "Shared Helpers"],
+  ["hooks", "Shared Hooks"],
+  ["constants", "Constants & Config"],
+  ["layouts", "Page Layouts"],
+  ["typography", "Typography"],
+  ["common", "Common UI"],
+  ["shared", "Shared Components"],
+  ["assets", "Static Assets"],
+  ["icons", "Icons"],
+]);
 
 function titleCaseWords(raw: string): string {
   const lower = raw.toLowerCase();
-  if (KNOWN_SLUG_TITLES[lower]) return KNOWN_SLUG_TITLES[lower]!;
+  const known = KNOWN_SLUG_TITLES.get(lower);
+  if (known !== undefined) return known;
   return raw
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .split(/[-_.\s/]+/)
@@ -326,7 +327,7 @@ export function humanizeAreaIdentity(domain: string): {
   const componentMatch = norm.match(/^(?:src\/)?components\/(.+)$/i);
   if (componentMatch) {
     const slug = componentMatch[1]!;
-    const mapped = KNOWN_SLUG_TITLES[slug.toLowerCase()];
+    const mapped = KNOWN_SLUG_TITLES.get(slug.toLowerCase());
     return {
       title: mapped ?? `${titleCaseWords(slug)} UI`,
       categoryLabel: "Shared interface",
@@ -351,7 +352,7 @@ export function humanizeAreaIdentity(domain: string): {
     const slug = coreMatch[1]!.toLowerCase();
     const isUi = slug === "assets" || slug === "icons" || slug === "styles" || slug === "design";
     return {
-      title: KNOWN_SLUG_TITLES[slug] ?? titleCaseWords(slug),
+      title: KNOWN_SLUG_TITLES.get(slug) ?? titleCaseWords(slug),
       categoryLabel: isUi ? "Shared interface" : "Shared foundation",
       isNeutralFallback: false,
       evidenceNote: `Grouped from shared '${norm}' directory.`,
@@ -456,9 +457,17 @@ export function describeAreaForHumans(
   if (counts.sharedUi > 0) {
     pillParts.push(`${counts.sharedUi} shared UI`);
   }
-  if (counts.hooks + counts.contexts > 0) {
+  if (counts.hooks > 0 && counts.contexts > 0) {
     const hc = counts.hooks + counts.contexts;
-    pillParts.push(`${hc} ${hc === 1 ? "hook" : "hooks"}`);
+    pillParts.push(`${hc} hooks/contexts`);
+  } else if (counts.hooks > 0) {
+    pillParts.push(
+      `${counts.hooks} ${counts.hooks === 1 ? "hook" : "hooks"}`
+    );
+  } else if (counts.contexts > 0) {
+    pillParts.push(
+      `${counts.contexts} ${counts.contexts === 1 ? "context" : "contexts"}`
+    );
   }
   if (counts.services > 0 && pillParts.length < 3) {
     pillParts.push(

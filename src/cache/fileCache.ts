@@ -13,7 +13,7 @@ export {
   resolveCacheFilePath,
 } from "../paths";
 
-export const CACHE_VERSION = 2;
+export const CACHE_VERSION = 3;
 
 export type FileCacheEntry = {
   mtimeMs: number;
