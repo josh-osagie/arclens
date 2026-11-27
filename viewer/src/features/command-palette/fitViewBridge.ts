@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, type Node } from "@xyflow/react";
+import type { AtlasNodeData } from "../../buildFlowGraph";
+import { fitViewportInSafeArea } from "../../fitViewSafeArea";
 
 type FitViewOptions = {
   padding?: number;
@@ -16,19 +18,21 @@ export function registerFitViewHandler(
 
 export function triggerFitView(options?: FitViewOptions): void {
   fitViewHandler?.({
-    padding: 0.22,
+    padding: 0.18,
     duration: 280,
     ...options,
   });
 }
 
 export function FitViewBridge() {
-  const { fitView } = useReactFlow();
+  const rf = useReactFlow<Node<AtlasNodeData>>();
 
   useEffect(() => {
-    registerFitViewHandler(fitView);
+    registerFitViewHandler((options) => {
+      void fitViewportInSafeArea(rf, options);
+    });
     return () => registerFitViewHandler(null);
-  }, [fitView]);
+  }, [rf]);
 
   return null;
 }

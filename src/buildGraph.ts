@@ -1,6 +1,7 @@
 import type { Graph, GraphEdge, GraphNode } from "./types";
 import {
   ExportRecord,
+  ReExportRecord,
   extractHookUsage,
   extractImportEdges,
   extractJsxRenders,
@@ -9,6 +10,7 @@ import {
   findExportByName,
   findExportInFile,
   findDefaultExportInFile,
+  resolveImportedExport,
   externalNodeId,
   nodeId,
   resolveFromExport,
@@ -54,7 +56,8 @@ export function buildGraph(
   importEdges: ReturnType<typeof extractImportEdges>,
   exports: ExportRecord[],
   renders: ReturnType<typeof extractJsxRenders>,
-  uses: ReturnType<typeof extractHookUsage>
+  uses: ReturnType<typeof extractHookUsage>,
+  reExports: ReExportRecord[] = []
 ): Graph {
   const nodes: GraphNode[] = exports.map((e) =>
     createBaseNode(nodeId(e), e.name, e.file, e.type, {
@@ -64,21 +67,61 @@ export function buildGraph(
   );
 
   const graphEdges: GraphEdge[] = [];
+  const importsByFile = new Map<
+    string,
+    ReturnType<typeof extractImportEdges>
+  >();
+  const importedNamesByFile = new Map<string, Set<string>>();
+
+  const recordImportedName = (file: string, localName: string) => {
+    let set = importedNamesByFile.get(file);
+    if (!set) {
+      set = new Set<string>();
+      importedNamesByFile.set(file, set);
+    }
+    set.add(localName);
+  };
 
   for (const imp of importEdges) {
+    if (imp.isTypeOnly) continue;
+
+    if (imp.defaultImport) {
+      recordImportedName(imp.from, imp.defaultImport);
+    }
+    if (imp.namespaceImport) {
+      recordImportedName(imp.from, imp.namespaceImport);
+    }
+    if (imp.localBindings && imp.localBindings.length > 0) {
+      for (const binding of imp.localBindings) {
+        recordImportedName(imp.from, binding.local);
+      }
+    } else {
+      for (const symbol of imp.namedImports) {
+        recordImportedName(imp.from, symbol);
+      }
+    }
+
     if (!imp.resolvedTo || imp.resolvedTo.includes("node_modules")) {
       continue;
     }
+
+    const fileImports = importsByFile.get(imp.from) ?? [];
+    fileImports.push(imp);
+    importsByFile.set(imp.from, fileImports);
 
     const fromExport = resolveFromExport(exports, imp.from);
     ensureNode(nodes, fromExport);
 
     if (imp.defaultImport) {
-      const toExport =
-        findDefaultExportInFile(exports, imp.resolvedTo) ??
-        findExportInFile(exports, imp.resolvedTo, imp.defaultImport);
+      const toExport = resolveImportedExport(
+        exports,
+        imp.resolvedTo,
+        imp.defaultImport,
+        true,
+        reExports
+      );
 
-      if (toExport) {
+      if (toExport && nodeId(toExport) !== nodeId(fromExport)) {
         graphEdges.push({
           from: nodeId(fromExport),
           to: nodeId(toExport),
@@ -88,11 +131,15 @@ export function buildGraph(
     }
 
     for (const symbol of imp.namedImports) {
-      const toExport =
-        findExportInFile(exports, imp.resolvedTo, symbol) ??
-        findExportByName(exports, symbol);
+      const toExport = resolveImportedExport(
+        exports,
+        imp.resolvedTo,
+        symbol,
+        false,
+        reExports
+      );
 
-      if (toExport) {
+      if (toExport && nodeId(toExport) !== nodeId(fromExport)) {
         graphEdges.push({
           from: nodeId(fromExport),
           to: nodeId(toExport),
@@ -116,9 +163,75 @@ export function buildGraph(
     });
   }
 
+  const resolveLocalHook = (
+    callerFile: string,
+    hookName: string
+  ): ExportRecord | undefined => {
+    const sameFile = findExportInFile(exports, callerFile, hookName);
+    if (sameFile) return sameFile;
+
+    const fileImports = importsByFile.get(callerFile) ?? [];
+    for (const imp of fileImports) {
+      if (!imp.resolvedTo) continue;
+      if (imp.defaultImport === hookName) {
+        const match = resolveImportedExport(
+          exports,
+          imp.resolvedTo,
+          hookName,
+          true,
+          reExports,
+          false
+        );
+        if (match) return match;
+      }
+      const aliasedBinding = imp.localBindings?.find(
+        (b) => b.local === hookName
+      );
+      const importedSymbol = aliasedBinding
+        ? aliasedBinding.imported
+        : imp.namedImports.includes(hookName)
+          ? hookName
+          : undefined;
+      if (importedSymbol) {
+        const match = resolveImportedExport(
+          exports,
+          imp.resolvedTo,
+          importedSymbol,
+          false,
+          reExports,
+          false
+        );
+        if (match) return match;
+      }
+    }
+
+    if (importedNamesByFile.get(callerFile)?.has(hookName)) {
+      return undefined;
+    }
+
+    return (
+      exports.find((exp) => exp.name === hookName && exp.type === "hook") ??
+      findExportByName(exports, hookName)
+    );
+  };
+
   for (const use of uses) {
     const fromExport = resolveFromExport(exports, use.file);
     ensureNode(nodes, fromExport);
+    const fromId = nodeId(fromExport);
+
+    const localHook = resolveLocalHook(use.file, use.uses);
+    if (localHook) {
+      const localHookId = nodeId(localHook);
+      if (localHookId !== fromId) {
+        graphEdges.push({
+          from: fromId,
+          to: localHookId,
+          type: "uses",
+        });
+      }
+      continue;
+    }
 
     const hookId = externalNodeId(use.uses);
 
@@ -127,7 +240,7 @@ export function buildGraph(
     }
 
     graphEdges.push({
-      from: nodeId(fromExport),
+      from: fromId,
       to: hookId,
       type: "uses",
     });

@@ -1,4 +1,5 @@
-import { SourceFile, SyntaxKind } from "ts-morph";
+import path from "node:path";
+import { Node, SourceFile, SyntaxKind, ts } from "ts-morph";
 import { classifyExport, resolveDefaultExportName } from "./reactFunction";
 
 export type ExportRecord = {
@@ -6,9 +7,99 @@ export type ExportRecord = {
   /** Resolved symbol name (e.g. App, not "default") */
   name: string;
   exportKind: "default" | "named";
+  /** True when the same symbol is exported both as a named export and `export default` */
+  hasDefaultExport?: boolean;
   kind: string | undefined;
   type: "component" | "hook" | "utility" | "context" | "entry" | "config";
 };
+
+export type RawImportEdge = {
+  from: string;
+  to: string;
+  defaultImport: string | undefined;
+  namespaceImport?: string | undefined;
+  namedImports: string[];
+  localBindings?: Array<{ imported: string; local: string }>;
+  line: number;
+  isTypeOnly: boolean;
+  resolvedTo: string | undefined;
+};
+
+export type ReExportRecord = {
+  file: string;
+  exportName: string;
+  targetFile: string;
+  targetName: string;
+};
+
+const NON_RUNTIME_EXPORT_KINDS = new Set<SyntaxKind>([
+  SyntaxKind.InterfaceDeclaration,
+  SyntaxKind.TypeAliasDeclaration,
+  SyntaxKind.TypeParameter,
+  SyntaxKind.ModuleDeclaration,
+  SyntaxKind.SourceFile,
+]);
+
+function hasInlineExportModifier(node: Node): boolean {
+  let current: Node | undefined = node;
+  while (current && !Node.isSourceFile(current)) {
+    if (Node.isExportable(current) && current.isExported()) {
+      return true;
+    }
+    if (Node.isVariableStatement(current) && current.isExported()) {
+      return true;
+    }
+    current = current.getParent();
+  }
+  return false;
+}
+
+function collectTypeOnlyNamedExports(sourceFile: SourceFile): Set<string> {
+  const typeOnly = new Set<string>();
+  const valueNamed = new Set<string>();
+
+  for (const decl of sourceFile.getExportDeclarations()) {
+    const declTypeOnly = decl.isTypeOnly();
+    for (const named of decl.getNamedExports()) {
+      const name = (named.getAliasNode() ?? named.getNameNode()).getText();
+      if (declTypeOnly || named.isTypeOnly()) {
+        typeOnly.add(name);
+      } else {
+        valueNamed.add(name);
+      }
+    }
+  }
+
+  for (const name of valueNamed) {
+    typeOnly.delete(name);
+  }
+  return typeOnly;
+}
+
+function isRuntimeLocalDeclaration(
+  decl: Node,
+  normalizedFilePath: string
+): boolean {
+  if (NON_RUNTIME_EXPORT_KINDS.has(decl.getKind())) return false;
+  return path.normalize(decl.getSourceFile().getFilePath()) === normalizedFilePath;
+}
+
+function resolveReExportTargetName(
+  decl: Node,
+  exportKey: string,
+  targetFile: string
+): string {
+  if (Node.isFunctionDeclaration(decl) || Node.isClassDeclaration(decl)) {
+    return decl.getName() ?? resolveDefaultExportName(decl, targetFile);
+  }
+  if (Node.isVariableDeclaration(decl)) {
+    return decl.getName();
+  }
+  if (exportKey === "default") {
+    return resolveDefaultExportName(decl, targetFile);
+  }
+  return exportKey;
+}
 
 export function dedupeExports(exports: ExportRecord[]): ExportRecord[] {
   const byKey = new Map<string, ExportRecord>();
@@ -23,23 +114,42 @@ export function dedupeExports(exports: ExportRecord[]): ExportRecord[] {
     }
 
     if (existing.exportKind === "default" && exp.exportKind === "named") {
-      byKey.set(key, exp);
+      byKey.set(key, { ...exp, hasDefaultExport: true });
+    } else if (
+      existing.exportKind === "named" &&
+      exp.exportKind === "default"
+    ) {
+      byKey.set(key, { ...existing, hasDefaultExport: true });
     }
   }
 
   return [...byKey.values()];
 }
 
-export function extractImportEdges(sourceFile: SourceFile) {
-  return sourceFile.getImportDeclarations().map((i) => ({
-    from: sourceFile.getFilePath(),
-    to: i.getModuleSpecifierValue(),
-    defaultImport: i.getDefaultImport()?.getText(),
-    namedImports: i.getNamedImports().map((n) => n.getName()),
-    line: i.getStartLineNumber(),
-    isTypeOnly: i.isTypeOnly(),
-    resolvedTo: i.getModuleSpecifierSourceFile()?.getFilePath(),
-  }));
+export function extractImportEdges(sourceFile: SourceFile): RawImportEdge[] {
+  return sourceFile.getImportDeclarations().map((i) => {
+    const runtimeNamed = i.isTypeOnly()
+      ? []
+      : i.getNamedImports().filter((n) => !n.isTypeOnly());
+    return {
+      from: sourceFile.getFilePath(),
+      to: i.getModuleSpecifierValue(),
+      defaultImport: i.isTypeOnly()
+        ? undefined
+        : i.getDefaultImport()?.getText(),
+      namespaceImport: i.isTypeOnly()
+        ? undefined
+        : i.getNamespaceImport()?.getText(),
+      namedImports: runtimeNamed.map((n) => n.getName()),
+      localBindings: runtimeNamed.map((n) => ({
+        imported: n.getName(),
+        local: (n.getAliasNode() ?? n.getNameNode()).getText(),
+      })),
+      line: i.getStartLineNumber(),
+      isTypeOnly: i.isTypeOnly(),
+      resolvedTo: i.getModuleSpecifierSourceFile()?.getFilePath(),
+    };
+  });
 }
 
 export function extractExportsDeclarations(
@@ -47,24 +157,175 @@ export function extractExportsDeclarations(
 ): ExportRecord[] {
   const exported = sourceFile.getExportedDeclarations();
   const filePath = sourceFile.getFilePath();
+  const normalizedFilePath = path.normalize(filePath);
+  const typeOnlyNamedExports = collectTypeOnlyNamedExports(sourceFile);
   const records: ExportRecord[] = [];
 
   for (const [exportKey, declarations] of exported.entries()) {
+    const runtimeDecls = declarations.filter((decl) =>
+      isRuntimeLocalDeclaration(decl, normalizedFilePath)
+    );
+    if (runtimeDecls.length === 0) continue;
+
+    if (
+      typeOnlyNamedExports.has(exportKey) &&
+      !runtimeDecls.some((decl) => hasInlineExportModifier(decl))
+    ) {
+      continue;
+    }
+
     const isDefault = exportKey === "default";
     const name = isDefault
-      ? resolveDefaultExportName(declarations[0], filePath)
+      ? resolveDefaultExportName(runtimeDecls[0], filePath)
       : exportKey;
 
     records.push({
       file: filePath,
       name,
       exportKind: isDefault ? "default" : "named",
-      kind: declarations[0]?.getKindName(),
-      type: classifyExport(name, declarations, filePath),
+      kind: runtimeDecls[0]?.getKindName(),
+      type: classifyExport(name, runtimeDecls, filePath),
     });
   }
 
   return dedupeExports(records);
+}
+
+/** Capture barrel re-exports (`export { X } from "./X"`, `export * from "./X"`) without creating duplicate nodes. */
+export function extractReExports(sourceFile: SourceFile): ReExportRecord[] {
+  const exported = sourceFile.getExportedDeclarations();
+  const filePath = sourceFile.getFilePath();
+  const normalizedFilePath = path.normalize(filePath);
+  const typeOnlyNamedExports = collectTypeOnlyNamedExports(sourceFile);
+  const reExports: ReExportRecord[] = [];
+
+  for (const [exportKey, declarations] of exported.entries()) {
+    if (typeOnlyNamedExports.has(exportKey)) continue;
+
+    const hasLocalRuntime = declarations.some((decl) =>
+      isRuntimeLocalDeclaration(decl, normalizedFilePath)
+    );
+    if (hasLocalRuntime) continue;
+
+    const externalRuntime = declarations.find((decl) => {
+      if (NON_RUNTIME_EXPORT_KINDS.has(decl.getKind())) return false;
+      const targetFile = path.normalize(decl.getSourceFile().getFilePath());
+      return targetFile !== normalizedFilePath && !targetFile.includes(`${path.sep}node_modules${path.sep}`);
+    });
+    if (!externalRuntime) continue;
+
+    const targetFile = externalRuntime.getSourceFile().getFilePath();
+    reExports.push({
+      file: filePath,
+      exportName: exportKey,
+      targetFile,
+      targetName: resolveReExportTargetName(
+        externalRuntime,
+        exportKey,
+        targetFile
+      ),
+    });
+  }
+
+  return reExports;
+}
+
+function isInsideAnyNode(node: Node, containers: ReadonlySet<Node>): boolean {
+  let current: Node | undefined = node;
+  while (current && !Node.isSourceFile(current)) {
+    if (containers.has(current)) return true;
+    current = current.getParent();
+  }
+  return false;
+}
+
+function isReferenceIdentifier(id: Node): boolean {
+  const parent = id.getParent();
+  if (!parent) return false;
+  if (Node.isImportSpecifier(parent) || Node.isImportClause(parent)) return false;
+  if (Node.isExportSpecifier(parent) || Node.isExportAssignment(parent)) return false;
+  if (Node.isPropertyAccessExpression(parent) && parent.getNameNode() === id) {
+    return false;
+  }
+  if (Node.isPropertyAssignment(parent) && parent.getNameNode() === id) {
+    return false;
+  }
+  if (Node.isTypeReference(parent) || Node.isInterfaceDeclaration(parent) || Node.isTypeAliasDeclaration(parent)) {
+    return false;
+  }
+  if (
+    (Node.isFunctionDeclaration(parent) ||
+      Node.isVariableDeclaration(parent) ||
+      Node.isClassDeclaration(parent) ||
+      Node.isParameterDeclaration(parent) ||
+      Node.isBindingElement(parent)) &&
+    parent.getNameNode() === id
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/** Exported symbols used by another declaration or statement in the same file (e.g. cva variants). */
+export function extractSameFileExportRefs(
+  sourceFile: SourceFile,
+  exports: ExportRecord[]
+): string[] {
+  if (exports.length === 0) return [];
+
+  const filePath = path.normalize(sourceFile.getFilePath());
+  const exportDecls = new Map<
+    string,
+    { decls: Set<Node>; compilerNodes: Set<ts.Node> }
+  >();
+  const exported = sourceFile.getExportedDeclarations();
+
+  for (const exp of exports) {
+    if (path.normalize(exp.file) !== filePath) continue;
+    const key = exp.exportKind === "default" ? "default" : exp.name;
+    const decls = exported.get(key) ?? exported.get(exp.name) ?? [];
+    const declSet = new Set<Node>();
+    const compilerSet = new Set<ts.Node>();
+    for (const decl of decls) {
+      declSet.add(decl);
+      compilerSet.add(decl.compilerNode);
+    }
+    if (declSet.size > 0) {
+      exportDecls.set(exp.name, {
+        decls: declSet,
+        compilerNodes: compilerSet,
+      });
+    }
+  }
+
+  if (exportDecls.size === 0) return [];
+
+  const tc = sourceFile.getProject().getTypeChecker().compilerObject;
+  const referenced = new Set<string>();
+
+  for (const id of sourceFile.getDescendantsOfKind(SyntaxKind.Identifier)) {
+    const name = id.getText();
+    const own = exportDecls.get(name);
+    if (!own || referenced.has(name)) continue;
+    if (!isReferenceIdentifier(id)) continue;
+    if (isInsideAnyNode(id, own.decls)) continue;
+
+    const parent = id.getParent();
+    let tsSym =
+      parent && Node.isShorthandPropertyAssignment(parent)
+        ? tc.getShorthandAssignmentValueSymbol(parent.compilerNode)
+        : tc.getSymbolAtLocation(id.compilerNode);
+    if (tsSym && (tsSym.flags & ts.SymbolFlags.Alias) !== 0) {
+      tsSym = tc.getAliasedSymbol(tsSym);
+    }
+
+    const targetDecls = tsSym?.getDeclarations() ?? [];
+    if (targetDecls.some((d) => own.compilerNodes.has(d))) {
+      referenced.add(name);
+    }
+  }
+
+  return [...referenced];
 }
 
 export { classifyExport } from "./reactFunction";

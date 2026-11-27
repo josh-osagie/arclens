@@ -36,8 +36,8 @@ const LEGACY_LAYOUT_PRESETS: Record<string, LayoutPreset> = {
 
 export const NODE_W = 196;
 export const NODE_H = 88;
-export const CLUSTER_NODE_W = 168;
-export const CLUSTER_NODE_H = 104;
+export const CLUSTER_NODE_W = 184;
+export const CLUSTER_NODE_H = 112;
 
 export type LayoutContext = {
   entryIds?: string[];
@@ -51,14 +51,46 @@ export class LayoutCancelledError extends Error {
   }
 }
 
-/** Prefer render-tree edges for ranked layout — matches React Flow dagre examples. */
-export function filterEdgesForDagreLayout(edges: Edge[]): Edge[] {
+/**
+ * Prefer render-tree edges when they connect most of the graph; otherwise use all
+ * relationship edges (critical for domain clusters and non-JSX layers like api/hooks/utils).
+ */
+export function filterEdgesForDagreLayout(
+  edges: Edge[],
+  nodes?: Node<AtlasNodeData>[]
+): Edge[] {
+  if (nodes?.some((node) => node.type === "cluster")) {
+    return edges;
+  }
+
   const renders = edges.filter((edge) => {
     const types = edge.data?.edgeTypes as string[] | undefined;
     if (types?.includes("renders")) return true;
     return edge.data?.edgeType === "renders";
   });
-  return renders.length > 0 ? renders : edges;
+
+  if (renders.length === 0) return edges;
+
+  if (nodes && nodes.length > 0) {
+    const allEndpoints = new Set<string>();
+    const renderEndpoints = new Set<string>();
+    for (const edge of edges) {
+      allEndpoints.add(edge.source);
+      allEndpoints.add(edge.target);
+    }
+    for (const edge of renders) {
+      renderEndpoints.add(edge.source);
+      renderEndpoints.add(edge.target);
+    }
+    if (
+      allEndpoints.size > 0 &&
+      renderEndpoints.size < allEndpoints.size * 0.5
+    ) {
+      return edges;
+    }
+  }
+
+  return renders;
 }
 
 export function nodeLayoutDimensions(node: Node<AtlasNodeData>): {
@@ -82,7 +114,7 @@ function toDagreRequest(
   direction: DagreDirection,
   entryIds: string[]
 ): DagreLayoutRequest {
-  const layoutEdges = filterEdgesForDagreLayout(edges);
+  const layoutEdges = filterEdgesForDagreLayout(edges, nodes);
   return {
     direction,
     entryIds,
@@ -137,17 +169,21 @@ export function getDagreLayoutedNodes(
   );
 }
 
-/** Nudge nodes that dagre placed at the same coordinates (common for isolated clusters). */
+/** Nudge nodes that dagre placed at overlapping coordinates (common for isolated clusters). */
 export function spreadCoincidentNodes(
   nodes: Node<AtlasNodeData>[]
 ): Node<AtlasNodeData>[] {
   const spread = spreadCoincidentPositions(
-    nodes.map((node) => ({
-      id: node.id,
-      x: node.position.x,
-      y: node.position.y,
-      height: nodeLayoutDimensions(node).height,
-    }))
+    nodes.map((node) => {
+      const dims = nodeLayoutDimensions(node);
+      return {
+        id: node.id,
+        x: node.position.x,
+        y: node.position.y,
+        width: dims.width,
+        height: dims.height,
+      };
+    })
   );
   const byId = new Map(spread.map((item) => [item.id, item]));
 

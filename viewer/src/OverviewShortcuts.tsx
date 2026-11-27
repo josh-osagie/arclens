@@ -1,11 +1,12 @@
 import { useCallback, useState, type ReactNode } from "react";
+import { formatRelativePath, truncatePath } from "./buildFlowGraph";
 import type {
+  EntryOverview,
   FolderOverview,
   HubOverview,
-  EntryOverview,
 } from "./graphOverview";
+import { classifyHumanRole, humanizeAreaIdentity } from "./humanSemantics";
 import { InfoTip } from "./InfoTip";
-import { formatRelativePath, truncatePath } from "./buildFlowGraph";
 import {
   loadSidebarSections,
   saveSidebarSections,
@@ -15,7 +16,7 @@ import {
 } from "./sidebarPrefs";
 import type { AtlasGraphNode } from "./types";
 
-const DEFAULT_VISIBLE = 3;
+const DEFAULT_VISIBLE = 5;
 
 type Props = {
   entries: EntryOverview<AtlasGraphNode>[];
@@ -28,10 +29,6 @@ type Props = {
   onFolderClick: (folder: FolderOverview) => void;
   onHubClick: (node: AtlasGraphNode) => void;
 };
-
-function folderLabel(folder: string): string {
-  return folder.split("/").pop() ?? folder;
-}
 
 type SectionProps<T> = {
   sectionKey: SidebarSectionKey;
@@ -138,8 +135,8 @@ export function OverviewShortcuts({
     <div className="overview-shortcuts">
       <OverviewSection
         sectionKey="entries"
-        title="Entry points"
-        tip="Where the app starts — main.tsx, createRoot bootstrap, or Next.js root layouts. Click to spotlight on the canvas; click again to clear."
+        title="Start here"
+        tip="Where the application boots up — click to follow the story from the root entry point."
         items={entries}
         expanded={sectionPrefs.entries}
         onToggleSection={onToggleSection}
@@ -148,8 +145,6 @@ export function OverviewShortcuts({
           const relativePath = truncatePath(
             formatRelativePath(entry.file, projectRoot)
           );
-          const exportSuffix =
-            entry.exportCount > 1 ? ` · ${entry.exportCount} exports` : "";
 
           return (
             <button
@@ -159,11 +154,10 @@ export function OverviewShortcuts({
               aria-pressed={spotlightNodeId === entry.node.id}
             >
               <span className="overview-shortcuts__label">
-                {entry.node.name}
+                Application Startup ({entry.node.name})
               </span>
               <span className="overview-shortcuts__meta" title={relativePath}>
-                {relativePath}
-                {exportSuffix}
+                App entry point · {relativePath}
               </span>
             </button>
           );
@@ -172,51 +166,58 @@ export function OverviewShortcuts({
 
       <OverviewSection
         sectionKey="folders"
-        title="Top folders"
-        tip="Folders with the most nodes — click to spotlight that folder on the canvas."
+        title="Application areas"
+        tip="Major functional areas of the project — click any area to explore its features and screens."
         items={folders}
         expanded={sectionPrefs.folders}
         onToggleSection={onToggleSection}
         itemKey={(folder) => folder.folder}
-        renderItem={(folder) => (
-          <button
-            type="button"
-            className={`overview-shortcuts__btn${spotlightFolder === folder.folder ? " overview-shortcuts__btn--active" : ""}`}
-            onClick={() => onFolderClick(folder)}
-            aria-pressed={spotlightFolder === folder.folder}
-          >
-            <span className="overview-shortcuts__label">
-              {folderLabel(folder.folder)}
-            </span>
-            <span className="overview-shortcuts__meta" title={folder.folder}>
-              {folder.count} node{folder.count === 1 ? "" : "s"} ·{" "}
-              {truncatePath(folder.folder)}
-            </span>
-          </button>
-        )}
+        renderItem={(folder) => {
+          const identity = humanizeAreaIdentity(folder.folder);
+          return (
+            <button
+              type="button"
+              className={`overview-shortcuts__btn${spotlightFolder === folder.folder ? " overview-shortcuts__btn--active" : ""}`}
+              onClick={() => onFolderClick(folder)}
+              aria-pressed={spotlightFolder === folder.folder}
+            >
+              <span className="overview-shortcuts__label">
+                {identity.title}
+              </span>
+              <span className="overview-shortcuts__meta" title={folder.folder}>
+                {identity.categoryLabel} · {folder.count}{" "}
+                {folder.count === 1 ? "item" : "items"}
+              </span>
+            </button>
+          );
+        }}
       />
 
       <OverviewSection
         sectionKey="hubs"
-        title="Hub nodes"
-        tip="Most connected nodes by incoming and outgoing edges. Click to spotlight on the canvas; click again to clear."
+        title="Most connected"
+        tip="Shared components, hooks, and modules used heavily across the project — click to inspect how they connect."
         items={hubs}
         expanded={sectionPrefs.hubs}
         onToggleSection={onToggleSection}
         itemKey={({ node }) => node.id}
-        renderItem={({ node, degree }) => (
-          <button
-            type="button"
-            className={`overview-shortcuts__btn${spotlightNodeId === node.id ? " overview-shortcuts__btn--active" : ""}`}
-            onClick={() => onHubClick(node)}
-            aria-pressed={spotlightNodeId === node.id}
-          >
-            <span className="overview-shortcuts__label">{node.name}</span>
-            <span className="overview-shortcuts__meta">
-              {degree} connection{degree === 1 ? "" : "s"} · {node.type}
-            </span>
-          </button>
-        )}
+        renderItem={({ node, degree }) => {
+          const role = classifyHumanRole(node);
+          return (
+            <button
+              type="button"
+              className={`overview-shortcuts__btn${spotlightNodeId === node.id ? " overview-shortcuts__btn--active" : ""}`}
+              onClick={() => onHubClick(node)}
+              aria-pressed={spotlightNodeId === node.id}
+            >
+              <span className="overview-shortcuts__label">{node.name}</span>
+              <span className="overview-shortcuts__meta">
+                {role.shortLabel} · {degree}{" "}
+                {degree === 1 ? "connection" : "connections"}
+              </span>
+            </button>
+          );
+        }}
       />
     </div>
   );

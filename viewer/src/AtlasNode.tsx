@@ -10,14 +10,11 @@ function AtlasNodeComponent({
   sourcePosition,
   targetPosition,
 }: NodeProps) {
-  const nodeData = data as AtlasNodeData & {
-    selected?: boolean;
-    dimmed?: boolean;
-    compact?: boolean;
-  };
+  const nodeData = data as AtlasNodeData;
   const type = nodeData.type in typeLabels ? nodeData.type : "utility";
   const accent = typeColors[type];
   const isSelected = selected || nodeData.selected;
+  const isBridge = Boolean(nodeData.linkedFrom);
   const targetPos = targetPosition ?? Position.Top;
   const sourcePos = sourcePosition ?? Position.Bottom;
 
@@ -27,6 +24,7 @@ function AtlasNodeComponent({
         "atlas-node",
         nodeData.compact ? "atlas-node--compact" : "",
         isSelected ? "atlas-node--selected" : "",
+        isBridge ? "atlas-node--bridge" : "",
         nodeData.dimmed ? "atlas-node--dimmed" : "",
         dragging ? "atlas-node--dragging" : "",
       ]
@@ -40,7 +38,17 @@ function AtlasNodeComponent({
         className="atlas-handle"
         isConnectable={false}
       />
-      <div className="atlas-node__header">{typeLabels[type].toLowerCase()}</div>
+      <div className="atlas-node__header">
+        <span>{typeLabels[type].toLowerCase()}</span>
+        {nodeData.linkedFrom && (
+          <span
+            className="atlas-node__bridge-badge"
+            title={`Connected directly to ${nodeData.linkedFrom}`}
+          >
+            linked · {nodeData.linkedFrom}
+          </span>
+        )}
+      </div>
       <div className="atlas-node__body">
         <span className="atlas-node__swatch" aria-hidden="true" />
         <div className="atlas-node__text">

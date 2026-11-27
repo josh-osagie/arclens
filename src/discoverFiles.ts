@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { isNonProductionFile } from "./entryPoints";
 import { ALL_CACHE_DIR_NAMES } from "./paths";
 import { isConfigFile } from "./extractors/reactFunction";
 
@@ -12,6 +13,14 @@ const IGNORED_DIRS = new Set([
   ".next",
   "out",
   ...ALL_CACHE_DIR_NAMES,
+]);
+
+const NON_PRODUCTION_DIRS = new Set([
+  "test",
+  "tests",
+  "__tests__",
+  "__mocks__",
+  "stories",
 ]);
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
@@ -31,8 +40,16 @@ function isIgnoredSourceFile(fileName: string): boolean {
   return false;
 }
 
-export function discoverSourceFiles(rootDir: string): string[] {
+export type DiscoverSourceFilesOptions = {
+  includeTests?: boolean;
+};
+
+export function discoverSourceFiles(
+  rootDir: string,
+  options: DiscoverSourceFilesOptions = {}
+): string[] {
   const files: string[] = [];
+  const includeTests = Boolean(options.includeTests);
 
   function walk(currentDir: string) {
     let entries: fs.Dirent[];
@@ -47,18 +64,27 @@ export function discoverSourceFiles(rootDir: string): string[] {
       const fullPath = path.join(currentDir, entry.name);
 
       if (entry.isDirectory()) {
-        if (!IGNORED_DIRS.has(entry.name)) {
-          walk(fullPath);
+        if (IGNORED_DIRS.has(entry.name)) continue;
+        if (!includeTests && NON_PRODUCTION_DIRS.has(entry.name.toLowerCase())) {
+          continue;
         }
+        walk(fullPath);
         continue;
       }
 
       if (!entry.isFile()) continue;
 
       const ext = path.extname(entry.name);
-      if (SOURCE_EXTENSIONS.has(ext) && !isIgnoredSourceFile(entry.name)) {
-        files.push(fullPath);
+      if (!SOURCE_EXTENSIONS.has(ext) || isIgnoredSourceFile(entry.name)) {
+        continue;
       }
+
+      if (!includeTests) {
+        const relativePath = path.relative(rootDir, fullPath);
+        if (isNonProductionFile(relativePath)) continue;
+      }
+
+      files.push(fullPath);
     }
   }
 

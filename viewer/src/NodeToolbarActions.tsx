@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { NodeToolbar, Position, useReactFlow } from "@xyflow/react";
+import { NodeToolbar, Position, useReactFlow, type Node } from "@xyflow/react";
+import type { AtlasNodeData } from "./buildFlowGraph";
+import { fitViewportInSafeArea } from "./fitViewSafeArea";
 import type { AtlasGraphNode } from "./types";
 
 type Props = {
@@ -33,7 +35,7 @@ function CheckIcon() {
 }
 
 export function NodeToolbarActions({ node, onFocus }: Props) {
-  const { fitView } = useReactFlow();
+  const rf = useReactFlow<Node<AtlasNodeData>>();
   const [copied, setCopied] = useState<CopiedAction | null>(null);
   const resetTimerRef = useRef<number | null>(null);
 
@@ -67,11 +69,11 @@ export function NodeToolbarActions({ node, onFocus }: Props) {
 
   const focusNode = () => {
     onFocus();
-    fitView({
-      nodes: [{ id: node.id }],
-      padding: 0.55,
+    void fitViewportInSafeArea(rf, {
+      nodeIds: [node.id],
+      padding: 0.48,
       duration: 350,
-      maxZoom: 1.4,
+      maxZoom: 1.35,
     });
   };
 

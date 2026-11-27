@@ -28,7 +28,7 @@ import {
   type RenderEdge,
   type UseEdge,
 } from "./extractFileAnalysis";
-import type { ExportRecord } from "./extractors/exports";
+import type { ExportRecord, ReExportRecord } from "./extractors/exports";
 import {
   applyModuleClassification,
   assessReactProject,
@@ -69,6 +69,7 @@ export type AnalyzeOptions = {
   progress?: AnalyzeProgressReporter;
   verbose?: boolean;
   cache?: boolean;
+  includeTests?: boolean;
   /** When set, over-limit messaging uses plan-aware upgrade copy */
   entitlements?: Entitlements;
 };
@@ -82,6 +83,8 @@ export type AnalysisResult = {
   graph: Graph;
   importEdges: ImportEdge[];
   exports: ExportRecord[];
+  reExports?: ReExportRecord[];
+  sameFileRefIds?: Set<string>;
   renders: RenderEdge[];
   uses: UseEdge[];
   hookRuleViolations: HookRuleViolation[];
@@ -129,7 +132,9 @@ export async function analyzeProject(
   progress?.discoveryScan(targetDir);
   legacyProgress?.("Discovering TypeScript files...");
 
-  const discoveredFiles = discoverSourceFiles(targetDir);
+  const discoveredFiles = discoverSourceFiles(targetDir, {
+    includeTests: options.includeTests,
+  });
 
   if (discoveredFiles.length === 0) {
     throw new UnsupportedProjectError(
@@ -257,7 +262,13 @@ export async function analyzeProject(
   }
 
   const graph = runWithPhaseHeartbeat(progress, formatBuildGraphPhase(), () =>
-    buildGraph(merged.importEdges, merged.exports, merged.renders, merged.uses)
+    buildGraph(
+      merged.importEdges,
+      merged.exports,
+      merged.renders,
+      merged.uses,
+      merged.reExports
+    )
   );
   applyModuleClassification(merged.moduleTypeByFile, merged.exports, graph);
   let enrichedGraph = runWithPhaseHeartbeat(
@@ -320,6 +331,8 @@ export async function analyzeProject(
     graph: enrichedGraph,
     importEdges: merged.importEdges,
     exports: merged.exports,
+    reExports: merged.reExports,
+    sameFileRefIds: merged.sameFileRefIds,
     renders: merged.renders,
     uses: merged.uses,
     hookRuleViolations: merged.hookRuleViolations,

@@ -12,20 +12,34 @@ import {
   BackgroundVariant,
   ConnectionLineType,
   MiniMap,
-  Panel,
   ReactFlow,
   useEdgesState,
   useNodesState,
   useReactFlow,
   type Edge,
-  type Node,
+  type Node as FlowNode,
   type OnNodeDrag,
+  type ReactFlowInstance,
+  type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { AtlasClusterNode } from "./AtlasClusterNode";
+import { AreaContextBanner } from "./AreaContextBanner";
+import {
+  AtlasClusterNode,
+  OPEN_CLUSTER_EVENT,
+  type ClusterNodeData,
+} from "./AtlasClusterNode";
 import { AtlasNode } from "./AtlasNode";
 import {
+  AtlasStoryAnchorNode,
+  AtlasStoryCardNode,
+  AtlasStoryGroupNode,
+  AtlasStoryHeaderNode,
+} from "./AtlasStoryNodes";
+import { AtlasTierHeaderNode } from "./AtlasTierHeaderNode";
+import {
   buildFlowGraph,
+  formatRelativePath,
   layoutFlowGraphNodesAsync,
   nodeTypes as legendTypes,
   relayoutFlowNodesAsync,
@@ -33,51 +47,54 @@ import {
   typeColors,
 } from "./buildFlowGraph";
 import {
+  popViewport,
+  pushBreadcrumbItem,
+  pushViewport,
+  type CameraHistoryEntry,
+} from "./cameraHistory";
+import {
   applyClusterView,
-  buildClusteredVisibleIds,
+  buildDomainDrilldownGraph,
   clusterNodeId,
-  collapseAllClusterFoldersState,
-  collapseClusterFolderState,
   computeSearchHighlightIds,
+  filterExternalNodes,
+  findDomainBridgeNodes,
   findEntryNodes,
-  findSearchMatchingNodeIds,
   folderFromClusterId,
   folderKey,
   groupNodesByFolder,
   isClusterId,
-  listExpandedFolders,
   mergeSearchPartialReveals,
-  nextClusterReveal,
-  revealNodeForSpotlight,
 } from "./clusterGraph";
-import { FocusOnSelect } from "./FocusOnSelect";
-import { computeFolderSpotlightIds } from "./folderSpotlight";
-import { computeNodeSpotlightIds } from "./nodeSpotlight";
+import { DomainSummaryPanel } from "./DomainSummaryPanel";
 import { filterEdgesByVisibility } from "./edgeVisibility";
 import {
+  DEFAULT_EDGE_VISIBILITY,
   loadEdgeVisibility,
   saveEdgeVisibility,
   setEdgeTypeVisible,
-  DEFAULT_EDGE_VISIBILITY,
   type EdgeVisibilityPrefs,
 } from "./edgeVisibilityPrefs";
-import { GraphActions } from "./GraphActions";
-import { GraphLegend } from "./GraphLegend";
-import { CommandPalette } from "./features/command-palette/CommandPalette";
 import { ExportBridge, triggerExport } from "./exportGraphBridge";
+import type { CommandPaletteActions } from "./features/command-palette/commandRegistry";
+import { CommandPalette } from "./features/command-palette/CommandPalette";
 import {
   FitViewBridge,
   triggerFitView,
 } from "./features/command-palette/fitViewBridge";
-import type { CommandPaletteActions } from "./features/command-palette/commandRegistry";
 import { MobileBanner } from "./features/mobile-banner/MobileBanner";
-import { FloatingPanel, PanelMinimizeButton } from "./FloatingPanel";
+import {
+  ensureNodeComfortablyVisible,
+  fitViewportInSafeArea,
+} from "./fitViewSafeArea";
+import { GraphActions } from "./GraphActions";
 import {
   buildNodeById,
   enrichNodeForDetails,
   getConnectedNodeIdsFromEdges,
   graphSignature,
 } from "./graphConnections";
+import { GraphLegend } from "./GraphLegend";
 import {
   computeEntryPoints,
   computeHubNodes,
@@ -85,48 +102,21 @@ import {
   type FolderOverview,
 } from "./graphOverview";
 import {
-  computeHelperLines,
-  HelperLinesOverlay,
-  type HelperLine,
-} from "./HelperLines";
-import { InsightsBadge } from "./InsightsBadge";
-import { InfoTip } from "./InfoTip";
-import { NodeDetails } from "./NodeDetails";
-import { OverviewShortcuts } from "./OverviewShortcuts";
-import { NodeToolbarActions } from "./NodeToolbarActions";
-import { defaultDetailsPanelRect, defaultMainPanelRect } from "./panelStorage";
-import {
-  loadNodePositions,
-  mergeNodePositions,
-  nodePositionsFromNodes,
-  saveNodePositions,
-} from "./nodePositionStorage";
-import { findPathFromEntries, pathEdgeKeys } from "./pathHighlight";
-import {
-  DEFAULT_NEIGHBORHOOD_HOPS,
-  defaultNeighborhoodFocusEnabled,
-  resolveHighlightIds,
-  shouldAutoEnableNeighborhoodFocus,
-} from "./neighborhoodFocus";
-import {
   emptyGraphPresentation,
   validateGraphData,
   type EmptyGraphPresentation,
 } from "./graphValidation";
-import type { AtlasGraph, AtlasGraphNode } from "./types";
-import { ViewportPersistence } from "./ViewportPersistence";
-import { ZoomControls } from "./ZoomControls";
-import { loadViewport } from "./viewportStorage";
 import {
-  FORCE_FULL_GRAPH,
-  GRAPH_POLL_MS,
-  GRAPH_POLL_MS_LARGE,
-  LARGE_GRAPH_THRESHOLD,
-  OVERVIEW_HUB_NODES,
-  OVERVIEW_TOP_FOLDERS,
-  VIRTUALIZE_THRESHOLD,
-} from "./viewerConfig";
-import "./graph.css";
+  computeHelperLines,
+  HelperLinesOverlay,
+  type HelperLine,
+} from "./HelperLines";
+import {
+  explainCrossAreaRelationship,
+  humanizeAreaIdentity,
+} from "./humanSemantics";
+import { InfoTip } from "./InfoTip";
+import { findNodeForInsight } from "./insightHelpers";
 import {
   LayoutCancelledError,
   loadLayoutPreset,
@@ -135,53 +125,232 @@ import {
   spreadCoincidentNodes,
   type LayoutPreset,
 } from "./layoutPresets";
+import { layoutTieredOverviewNodes } from "./layoutTieredOverview";
+import { formatEdgeTypeLabel } from "./mergeFlowEdges";
+import {
+  DEFAULT_NEIGHBORHOOD_HOPS,
+  defaultNeighborhoodFocusEnabled,
+  resolveHighlightIds,
+} from "./neighborhoodFocus";
+import { NodeDetails } from "./NodeDetails";
+import {
+  loadNodePositions,
+  mergeNodePositions,
+  nodePositionsFromNodes,
+  saveNodePositions,
+} from "./nodePositionStorage";
+import { NodeToolbarActions } from "./NodeToolbarActions";
+import { OverviewShortcuts } from "./OverviewShortcuts";
+import { findPathFromEntries, pathEdgeKeys } from "./pathHighlight";
+import {
+  buildFeatureStoryView,
+  STORY_GROUP_TOGGLE_EVENT,
+  STORY_INSPECT_CODE_EVENT,
+  STORY_OPEN_AREA_MAP_EVENT,
+  type StoryCardNodeData,
+  type StoryGroupNodeData,
+} from "./storyGraph";
+import type { AtlasGraph, AtlasGraphNode, GraphInsight } from "./types";
 import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
+import {
+  CLUSTER_OVERVIEW_THRESHOLD,
+  GRAPH_POLL_MS,
+  GRAPH_POLL_MS_LARGE,
+  LARGE_GRAPH_THRESHOLD,
+  OVERVIEW_HUB_NODES,
+  OVERVIEW_TOP_FOLDERS,
+  VIRTUALIZE_THRESHOLD,
+} from "./viewerConfig";
+import { ViewerHeader, type BreadcrumbTrailItem } from "./ViewerHeader";
+import { ViewportPersistence } from "./ViewportPersistence";
+import { loadViewport } from "./viewportStorage";
+import { ZoomControls } from "./ZoomControls";
+import "./graph.css";
 
-const flowNodeTypes = { atlas: AtlasNode, cluster: AtlasClusterNode };
+const flowNodeTypes = {
+  atlas: AtlasNode,
+  cluster: AtlasClusterNode,
+  tierHeader: AtlasTierHeaderNode,
+  storyHeader: AtlasStoryHeaderNode,
+  storyAnchor: AtlasStoryAnchorNode,
+  storyCard: AtlasStoryCardNode,
+  storyGroup: AtlasStoryGroupNode,
+};
 
 const PRO_OPTIONS = { hideAttribution: true } as const;
 const COMPACT_EDGE_DEFAULTS = {
   animated: false,
   type: "smoothstep" as const,
-  pathOptions: { borderRadius: 0, offset: 24 },
+  pathOptions: { borderRadius: 6, offset: 22 },
 } as const;
 
+const DENSE_DOMAIN_EDGE_LABEL_THRESHOLD = 20;
+const EMPTY_FOLDER_SET = new Set<string>();
+const EMPTY_PARTIAL_REVEALS = new Map<string, Set<string>>();
+
+type BridgeFocusState = {
+  fromDomain: string;
+  toDomain: string;
+  targetNodeIds: string[];
+  originClusterId: string;
+};
+
+type NavigationSnapshot = CameraHistoryEntry & {
+  crumbLabel: string;
+  crumbSublabel?: string;
+  activeDomain: string | null;
+  storyFocusId: string | null;
+  storyViaId: string | null;
+  bridgeFocus: BridgeFocusState | null;
+  expandedSubfolders: string[];
+  storyExpandedGroups: string[];
+};
+
+type CameraCommand =
+  | {
+      id: number;
+      kind: "fit-readable";
+      duration?: number;
+    }
+  | {
+      id: number;
+      kind: "fit-story";
+      duration?: number;
+    }
+  | {
+      id: number;
+      kind: "fit-nodes";
+      primaryNodeIds: string[];
+      originNodeId?: string;
+      duration?: number;
+    }
+  | {
+      id: number;
+      kind: "restore";
+      viewport: Viewport;
+      duration?: number;
+    }
+  | {
+      id: number;
+      kind: "ensure-node";
+      nodeId: string;
+    };
+
+function scopeStorageKey(
+  graphKey: string,
+  activeDomain: string | null,
+  storyFocusId: string | null
+): string {
+  if (!graphKey) return "";
+  if (storyFocusId) return `${graphKey}::v4::story::${storyFocusId}`;
+  return `${graphKey}::v4::${activeDomain ?? "overview"}`;
+}
+
 function nodeOpacity(
-  nodeId: string,
-  label: string,
+  node: FlowNode<AtlasNodeData>,
   searchLower: string,
   highlightIds: Set<string> | null
 ): number {
+  if (
+    node.type === "tierHeader" ||
+    node.type === "storyHeader" ||
+    node.type === "storyAnchor" ||
+    node.type === "storyCard" ||
+    node.type === "storyGroup"
+  ) {
+    return node.type === "tierHeader" && highlightIds && highlightIds.size > 0
+      ? 0.72
+      : 1;
+  }
+
+  const label = String(node.data.label ?? "");
   const matchesSearch =
     !searchLower || label.toLowerCase().includes(searchLower);
 
   if (highlightIds && highlightIds.size > 0) {
-    return highlightIds.has(nodeId) ? 1 : 0.18;
+    return highlightIds.has(node.id) ? 1 : 0.22;
   }
 
-  if (searchLower && !matchesSearch) return 0.22;
+  if (searchLower && !matchesSearch) return 0.24;
   return 1;
 }
 
 function patchNodePresentation(
-  nodes: Node<AtlasNodeData>[],
+  nodes: FlowNode<AtlasNodeData>[],
   searchLower: string,
   selectedId: string | null,
-  highlightIds: Set<string> | null
-): Node<AtlasNodeData>[] {
+  highlightIds: Set<string> | null,
+  bridgeFocus: BridgeFocusState | null
+): FlowNode<AtlasNodeData>[] {
+  const bridgeTargets = bridgeFocus ? new Set(bridgeFocus.targetNodeIds) : null;
+  const bridgeFromTitle = bridgeFocus
+    ? humanizeAreaIdentity(bridgeFocus.fromDomain).title
+    : undefined;
   let changed = false;
 
   const next = nodes.map((node) => {
-    const label = String(node.data.label ?? "");
-    const opacity = nodeOpacity(node.id, label, searchLower, highlightIds);
+    if (
+      node.type === "storyHeader" ||
+      node.type === "storyAnchor" ||
+      node.type === "storyCard" ||
+      node.type === "storyGroup"
+    ) {
+      return node;
+    }
+
+    if (node.type === "tierHeader") {
+      const opacity = nodeOpacity(node, searchLower, highlightIds);
+      const prevOpacity = node.style?.opacity ?? 1;
+      if (prevOpacity === opacity) return node;
+      changed = true;
+      return {
+        ...node,
+        style: { ...node.style, opacity },
+      };
+    }
+
+    const opacity = nodeOpacity(node, searchLower, highlightIds);
     const isSelected = selectedId === node.id;
     const dimmed = opacity < 1;
     const prevOpacity = node.style?.opacity ?? 1;
+
+    if (node.type === "cluster") {
+      const clusterData = node.data as unknown as ClusterNodeData;
+      const isBridgeOrigin = Boolean(
+        bridgeFocus && node.id === bridgeFocus.originClusterId
+      );
+      if (
+        node.selected === isSelected &&
+        clusterData.selected === isSelected &&
+        clusterData.dimmed === dimmed &&
+        clusterData.isBridgeOrigin === isBridgeOrigin &&
+        prevOpacity === opacity
+      ) {
+        return node;
+      }
+
+      changed = true;
+      return {
+        ...node,
+        selected: isSelected,
+        style: { ...node.style, opacity },
+        data: {
+          ...node.data,
+          selected: isSelected,
+          dimmed,
+          isBridgeOrigin,
+        } as AtlasNodeData,
+      };
+    }
+
+    const linkedFrom =
+      bridgeTargets && bridgeTargets.has(node.id) ? bridgeFromTitle : undefined;
 
     if (
       node.selected === isSelected &&
       node.data.selected === isSelected &&
       node.data.dimmed === dimmed &&
+      node.data.linkedFrom === linkedFrom &&
       prevOpacity === opacity
     ) {
       return node;
@@ -192,50 +361,16 @@ function patchNodePresentation(
       ...node,
       selected: isSelected,
       style: { ...node.style, opacity },
-      data: { ...node.data, selected: isSelected, dimmed },
+      data: {
+        ...node.data,
+        selected: isSelected,
+        dimmed,
+        linkedFrom,
+      },
     };
   });
 
   return changed ? next : nodes;
-}
-
-function patchEdgePresentation(
-  edges: Edge[],
-  highlightIds: Set<string> | null,
-  pathEdges: Set<string>,
-  highlight: boolean
-): Edge[] {
-  if (!highlight || !highlightIds) return edges;
-
-  let changed = false;
-  const next = edges.map((edge) => {
-    let onPath = false;
-    if (pathEdges.size > 0) {
-      for (const key of pathEdges) {
-        const [from, to] = key.split("|");
-        if (from === edge.source && to === edge.target) {
-          onPath = true;
-          break;
-        }
-      }
-    } else if (highlightIds) {
-      onPath = highlightIds.has(edge.source) && highlightIds.has(edge.target);
-    }
-
-    const opacity = onPath ? 1 : 0.1;
-    const prevOpacity = edge.style?.opacity ?? 1;
-
-    if (prevOpacity === opacity && edge.animated === false) return edge;
-
-    changed = true;
-    return {
-      ...edge,
-      animated: false,
-      style: { ...edge.style, opacity },
-    };
-  });
-
-  return changed ? next : edges;
 }
 
 function presentEdges(
@@ -243,64 +378,213 @@ function presentEdges(
   visibility: EdgeVisibilityPrefs,
   highlightIds: Set<string> | null,
   pathEdges: Set<string>,
-  highlight: boolean
+  highlight: boolean,
+  options: {
+    isStoryView: boolean;
+    isOverviewMap: boolean;
+    showOverviewEdges: boolean;
+    focusClusterId: string | null;
+    crossAreaLabels: ReadonlyMap<string, string>;
+    isDenseDomain: boolean;
+    hoveredNodeId: string | null;
+  }
 ): Edge[] {
-  return patchEdgePresentation(
-    filterEdgesByVisibility(edges, visibility),
-    highlightIds,
-    pathEdges,
-    highlight
-  );
+  if (options.isStoryView) {
+    return edges;
+  }
+
+  const visible = filterEdgesByVisibility(edges, visibility);
+
+  if (options.isOverviewMap && !options.showOverviewEdges) {
+    const focusId = options.focusClusterId;
+    if (!focusId) return [];
+
+    return visible
+      .filter((edge) => edge.source === focusId || edge.target === focusId)
+      .map((edge) => {
+        const label =
+          options.crossAreaLabels.get(`${edge.source}|${edge.target}`) ??
+          "connected";
+        return {
+          ...edge,
+          animated: false,
+          label,
+          labelStyle: {
+            fill: "#e2e8f0",
+            fontSize: 11,
+            fontWeight: 600,
+          },
+          labelBgStyle: {
+            fill: "#18181b",
+            fillOpacity: 0.92,
+          },
+          labelBgPadding: [6, 3] as [number, number],
+          labelBgBorderRadius: 4,
+          style: {
+            ...edge.style,
+            strokeWidth: 2,
+            opacity: 0.95,
+          },
+        };
+      });
+  }
+
+  return visible.map((edge) => {
+    let onPath = true;
+    if (highlight && highlightIds) {
+      if (pathEdges.size > 0) {
+        onPath = false;
+        for (const key of pathEdges) {
+          const [from, to] = key.split("|");
+          if (from === edge.source && to === edge.target) {
+            onPath = true;
+            break;
+          }
+        }
+      } else {
+        onPath =
+          highlightIds.has(edge.source) && highlightIds.has(edge.target);
+      }
+    }
+
+    const isHoveredEdge = Boolean(
+      options.hoveredNodeId &&
+        (edge.source === options.hoveredNodeId ||
+          edge.target === options.hoveredNodeId)
+    );
+
+    const opacity = highlight && highlightIds ? (onPath ? 1 : 0.1) : 0.72;
+    const showEdgeLabel = options.isDenseDomain
+      ? (highlight && highlightIds && onPath) || isHoveredEdge
+      : !highlight || onPath;
+
+    const edgeTypes = edge.data?.edgeTypes as
+      | Parameters<typeof formatEdgeTypeLabel>[0]
+      | undefined;
+    const computedLabel = showEdgeLabel
+      ? (edge.label ??
+        (edgeTypes ? formatEdgeTypeLabel(edgeTypes) : undefined))
+      : undefined;
+
+    return {
+      ...edge,
+      animated: false,
+      label: computedLabel,
+      style: {
+        ...edge.style,
+        strokeWidth: onPath && highlight ? 2.25 : 1.65,
+        opacity,
+      },
+    };
+  });
 }
 
-function FitViewOnce({
-  viewKey,
+function CameraController({
+  command,
+  layoutReady,
   nodeCount,
-  skip,
+  onHandled,
 }: {
-  viewKey: string;
+  command: CameraCommand | null;
+  layoutReady: boolean;
   nodeCount: number;
-  skip: boolean;
+  onHandled: (id: number) => void;
 }) {
-  const { fitView } = useReactFlow();
-  const lastKey = useRef("");
+  const rf = useReactFlow<FlowNode<AtlasNodeData>>();
+  const handledIdRef = useRef<number>(0);
 
   useEffect(() => {
-    if (skip || nodeCount === 0 || lastKey.current === viewKey) return;
+    if (!command || !layoutReady || nodeCount === 0) return;
+    if (handledIdRef.current === command.id) return;
 
-    const timer = window.setTimeout(() => {
-      fitView({
-        padding: 0.22,
-        duration: nodeCount > VIRTUALIZE_THRESHOLD ? 0 : 280,
+    let cancelled = false;
+    let raf2 = 0;
+
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        handledIdRef.current = command.id;
+
+        if (command.kind === "fit-readable") {
+          void fitViewportInSafeArea(rf, {
+            padding: 0.06,
+            duration: command.duration ?? 220,
+            enforceReadableFloor: true,
+          }).finally(() => {
+            if (!cancelled) onHandled(command.id);
+          });
+          return;
+        }
+
+        if (command.kind === "fit-story") {
+          void fitViewportInSafeArea(rf, {
+            padding: 0.08,
+            minZoom: 0.68,
+            maxZoom: 0.94,
+            duration: command.duration ?? 220,
+            enforceReadableFloor: true,
+          }).finally(() => {
+            if (!cancelled) onHandled(command.id);
+          });
+          return;
+        }
+
+        if (command.kind === "fit-nodes") {
+          const combinedIds = command.originNodeId
+            ? [...command.primaryNodeIds, command.originNodeId]
+            : command.primaryNodeIds;
+          const combinedNodes = combinedIds
+            .map((id) => rf.getNode(id))
+            .filter((n): n is FlowNode<AtlasNodeData> => Boolean(n));
+          const bounds =
+            combinedNodes.length > 0 ? rf.getNodesBounds(combinedNodes) : null;
+          const targetIds =
+            bounds && bounds.width <= 960 && bounds.height <= 620
+              ? combinedIds
+              : command.primaryNodeIds.slice(0, 4);
+
+          void fitViewportInSafeArea(rf, {
+            nodeIds: targetIds,
+            padding: 0.24,
+            minZoom: 0.68,
+            maxZoom: 0.9,
+            duration: command.duration ?? 240,
+            enforceReadableFloor: true,
+          }).finally(() => {
+            if (!cancelled) onHandled(command.id);
+          });
+          return;
+        }
+
+        if (command.kind === "restore") {
+          void rf
+            .setViewport(command.viewport, {
+              duration: command.duration ?? 240,
+            })
+            .finally(() => {
+              if (!cancelled) onHandled(command.id);
+            });
+          return;
+        }
+
+        if (command.kind === "ensure-node") {
+          void ensureNodeComfortablyVisible(rf, command.nodeId, 240).finally(
+            () => {
+              if (!cancelled) onHandled(command.id);
+            }
+          );
+        }
       });
-      lastKey.current = viewKey;
-    }, 120);
+    });
 
-    return () => window.clearTimeout(timer);
-  }, [fitView, nodeCount, viewKey, skip]);
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf1);
+      if (raf2) window.cancelAnimationFrame(raf2);
+    };
+  }, [command, layoutReady, nodeCount, rf, onHandled]);
 
   return null;
-}
-
-function emptyViewMessage(
-  mode: ViewGraphMode,
-  totalNodes: number,
-  matchCount: number,
-  searchLower: string
-): string {
-  if (mode === "overview" && !searchLower) {
-    return "Showing folder overview — click a folder to expand, or use shortcuts below.";
-  }
-  if (mode === "empty" && !searchLower) {
-    return `This graph has ${totalNodes.toLocaleString()} nodes — search for a component, hook, or file to explore.`;
-  }
-  if (mode === "empty" && searchLower) {
-    return `No nodes match "${searchLower}". Try another name or file path.`;
-  }
-  if (mode === "search" && matchCount > 0) {
-    return `Showing ${matchCount} match${matchCount === 1 ? "" : "es"} and nearby connections.`;
-  }
-  return "";
 }
 
 function EmptyGraphPanel({
@@ -326,116 +610,241 @@ export default function App() {
   const [emptyGraph, setEmptyGraph] = useState<EmptyGraphPresentation | null>(
     null
   );
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<AtlasGraphNode | null>(null);
+  const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [clusterMode, setClusterMode] = useState(false);
-  const [fullyExpandedFolders, setFullyExpandedFolders] = useState<Set<string>>(
+
+  // Canonical progressive exploration state (Overview → Area → Story)
+  const [activeDomain, setActiveDomain] = useState<string | null>(null);
+  const [storyFocusId, setStoryFocusId] = useState<string | null>(null);
+  const [storyViaId, setStoryViaId] = useState<string | null>(null);
+  const [storyExpandedGroups, setStoryExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
-  const [partialReveals, setPartialReveals] = useState<
-    Map<string, Set<string>>
-  >(() => new Map());
+  const [technicalInspectorOpen, setTechnicalInspectorOpen] = useState(false);
+  const [selectedUnclusteredNodeId, setSelectedUnclusteredNodeId] = useState<
+    string | null
+  >(null);
+  const [historyStack, setHistoryStack] = useState<NavigationSnapshot[]>([]);
+  const [bridgeFocus, setBridgeFocus] = useState<BridgeFocusState | null>(null);
+
+  const [expandedSubfolders, setExpandedSubfolders] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [showOverviewEdges, setShowOverviewEdges] = useState(false);
+  const [showExternalHooks, setShowExternalHooks] = useState(false);
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
-  const [focusOnSelect, setFocusOnSelect] = useState(true);
   const [neighborhoodFocus, setNeighborhoodFocus] = useState(false);
   const [neighborhoodHops, setNeighborhoodHops] = useState(
     DEFAULT_NEIGHBORHOOD_HOPS
   );
-  const [spotlightFolder, setSpotlightFolder] = useState<string | null>(null);
-  const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
-  const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
-  const [folderExpandFocus, setFolderExpandFocus] = useState<string | null>(
-    null
-  );
-  const [relayoutNonce, setRelayoutNonce] = useState(0);
   const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() =>
     loadLayoutPreset()
   );
   const [edgeVisibility, setEdgeVisibility] = useState<EdgeVisibilityPrefs>(
     () => loadEdgeVisibility()
   );
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<AtlasNodeData>>(
-    []
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<
+    FlowNode<AtlasNodeData>
+  >([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [renderedViewKey, setRenderedViewKey] = useState("");
+  const [cameraCommand, setCameraCommand] = useState<CameraCommand | null>(
+    null
+  );
+
+  const rfInstanceRef = useRef<ReactFlowInstance<
+    FlowNode<AtlasNodeData>
+  > | null>(null);
+  const historyStackRef = useRef<NavigationSnapshot[]>([]);
+  historyStackRef.current = historyStack;
+  const nodesRef = useRef<FlowNode<AtlasNodeData>[]>([]);
+  nodesRef.current = nodes;
+
+  const cameraSeqRef = useRef(0);
   const buildSigRef = useRef<string>("");
   const buildingGenRef = useRef(0);
   const baseEdgesRef = useRef<Edge[]>([]);
-  const hasSavedViewportRef = useRef(false);
   const savedNodePositionsRef =
     useRef<ReturnType<typeof loadNodePositions>>(null);
   const applySavedLayoutRef = useRef(true);
   const draggedNodeIdsRef = useRef<Set<string>>(new Set());
   const neighborhoodFocusTouchedRef = useRef(false);
 
+  const queueCamera = useCallback(
+    (
+      spec:
+        | { kind: "fit-readable"; duration?: number }
+        | { kind: "fit-story"; duration?: number }
+        | {
+            kind: "fit-nodes";
+            primaryNodeIds: string[];
+            originNodeId?: string;
+            duration?: number;
+          }
+        | { kind: "restore"; viewport: Viewport; duration?: number }
+        | { kind: "ensure-node"; nodeId: string }
+    ) => {
+      const id = ++cameraSeqRef.current;
+      setCameraCommand({ ...spec, id } as CameraCommand);
+    },
+    []
+  );
+
+  const handleCameraHandled = useCallback((id: number) => {
+    setCameraCommand((current) => (current?.id === id ? null : current));
+  }, []);
+
   const deferredSearch = useDeferredValue(search);
   const searchLower = deferredSearch.trim().toLowerCase();
 
-  const isLargeGraph = (graph?.nodes.length ?? 0) > LARGE_GRAPH_THRESHOLD;
+  const canvasBaseGraph = useMemo(
+    () => (graph ? filterExternalNodes(graph, showExternalHooks) : null),
+    [graph, showExternalHooks]
+  );
+
+  const nodeById = useMemo(
+    () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
+    [graph]
+  );
+
+  const activeFocusNode = useMemo(() => {
+    const id = storyFocusId ?? selectedUnclusteredNodeId;
+    if (!id || !graph) return null;
+    const base = nodeById.get(id);
+    return base ? enrichNodeForDetails(base, graph, nodeById) : null;
+  }, [storyFocusId, selectedUnclusteredNodeId, graph, nodeById]);
+
+  const isLargeGraph =
+    (canvasBaseGraph?.nodes.length ?? 0) > LARGE_GRAPH_THRESHOLD;
   const shouldVirtualize = nodes.length > VIRTUALIZE_THRESHOLD;
   const graphKey = graph ? graphSignature(graph) : "";
+  const persistenceKey = scopeStorageKey(graphKey, activeDomain, storyFocusId);
+
+  const isStoryView = Boolean(storyFocusId && !searchLower && canvasBaseGraph);
+  const isOverviewMap =
+    clusterMode && !activeDomain && !storyFocusId && !searchLower;
+  const isAreaMapView = Boolean(
+    activeDomain && !storyFocusId && !searchLower && canvasBaseGraph
+  );
 
   useEffect(() => {
     if (!graph) return;
     neighborhoodFocusTouchedRef.current = false;
-    const large = graph.nodes.length > LARGE_GRAPH_THRESHOLD;
-    setClusterMode(large);
-    setFullyExpandedFolders(new Set());
-    setPartialReveals(new Map());
-    setSpotlightFolder(null);
-    setSpotlightNodeId(null);
+    setHistoryStack([]);
+    const nonExternal = graph.nodes.filter((node) => node.file !== "external");
+    const large = nonExternal.length > LARGE_GRAPH_THRESHOLD;
+    const shouldCluster =
+      nonExternal.length > CLUSTER_OVERVIEW_THRESHOLD &&
+      groupNodesByFolder(nonExternal).size >= 2;
+    setClusterMode(shouldCluster);
+    setActiveDomain(null);
+    setStoryFocusId(null);
+    setStoryViaId(null);
+    setStoryExpandedGroups(new Set());
+    setTechnicalInspectorOpen(false);
+    setSelectedUnclusteredNodeId(null);
+    setBridgeFocus(null);
+    setSelectedDomain(null);
+    setHoveredNodeId(null);
+    setExpandedSubfolders(new Set());
     setNeighborhoodFocus(defaultNeighborhoodFocusEnabled(large));
-  }, [graphKey]);
+
+    const overviewKey = scopeStorageKey(graphKey, null, null);
+    const saved = overviewKey ? loadViewport(overviewKey) : null;
+    if (saved && saved.zoom >= 0.5) {
+      queueCamera({ kind: "restore", viewport: saved, duration: 0 });
+    } else {
+      queueCamera({ kind: "fit-readable", duration: 0 });
+    }
+  }, [graphKey, queueCamera]);
 
   const viewSelection = useMemo(() => {
-    if (!graph) {
+    if (!canvasBaseGraph) {
       return {
         graph: { nodes: [], edges: [] } as AtlasGraph,
         mode: "full" as ViewGraphMode,
         matchCount: 0,
       };
     }
-    return selectVisibleGraph(graph, searchLower, isLargeGraph);
-  }, [graph, searchLower, isLargeGraph]);
+    return selectVisibleGraph(canvasBaseGraph, searchLower, isLargeGraph);
+  }, [canvasBaseGraph, searchLower, isLargeGraph]);
 
   const effectivePartialReveals = useMemo(() => {
-    if (!graph || !searchLower || !isLargeGraph || !clusterMode) {
-      return partialReveals;
+    if (!canvasBaseGraph || !searchLower || !isLargeGraph || !clusterMode) {
+      return EMPTY_PARTIAL_REVEALS;
     }
-    return mergeSearchPartialReveals(graph, searchLower, partialReveals);
-  }, [graph, searchLower, isLargeGraph, clusterMode, partialReveals]);
+    return mergeSearchPartialReveals(
+      canvasBaseGraph,
+      searchLower,
+      EMPTY_PARTIAL_REVEALS
+    );
+  }, [canvasBaseGraph, searchLower, isLargeGraph, clusterMode]);
 
   const clusteredGraph = useMemo(() => {
-    if (!graph) return viewSelection.graph;
+    if (!canvasBaseGraph) return viewSelection.graph;
+    if (activeDomain && !storyFocusId && !searchLower) {
+      return buildDomainDrilldownGraph(
+        canvasBaseGraph,
+        activeDomain,
+        expandedSubfolders
+      );
+    }
     return applyClusterView(
       viewSelection.graph,
       clusterMode,
-      fullyExpandedFolders,
+      EMPTY_FOLDER_SET,
       effectivePartialReveals
     );
   }, [
-    graph,
+    canvasBaseGraph,
     viewSelection.graph,
+    activeDomain,
+    storyFocusId,
+    expandedSubfolders,
+    searchLower,
     clusterMode,
-    fullyExpandedFolders,
     effectivePartialReveals,
   ]);
+
+  const isDenseDomain =
+    !isOverviewMap &&
+    !isStoryView &&
+    clusteredGraph.nodes.length > DENSE_DOMAIN_EDGE_LABEL_THRESHOLD;
+
+  const crossAreaLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    if (!canvasBaseGraph || !isOverviewMap) return labels;
+    for (const edge of clusteredGraph.edges) {
+      if (!isClusterId(edge.from) || !isClusterId(edge.to)) continue;
+      const key = `${edge.from}|${edge.to}`;
+      if (labels.has(key)) continue;
+      const fromDomain = folderFromClusterId(edge.from);
+      const toDomain = folderFromClusterId(edge.to);
+      const exp = explainCrossAreaRelationship(
+        fromDomain,
+        toDomain,
+        canvasBaseGraph,
+        edgeVisibility
+      );
+      labels.set(key, exp.shortLabel);
+    }
+    return labels;
+  }, [canvasBaseGraph, isOverviewMap, clusteredGraph.edges, edgeVisibility]);
 
   const partialRevealKey = [...effectivePartialReveals.entries()]
     .map(([folder, ids]) => `${folder}:${[...ids].sort().join(",")}`)
     .sort()
     .join("|");
+  const expandedSubKey = [...expandedSubfolders].sort().join(",");
+  const storyExpandedKey = [...storyExpandedGroups].sort().join(",");
 
-  const viewKey = `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${[...fullyExpandedFolders].sort().join(",")}:${partialRevealKey}`;
-
-  /** Fit-all viewport key — excludes folder expand/collapse and search so local focus is not overridden. */
-  const fitViewKey = `${graphKey}:${clusterMode}:r${relayoutNonce}`;
-
-  const nodeById = useMemo(
-    () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
-    [graph]
-  );
+  const viewKey = isStoryView
+    ? `story:${storyFocusId}:${storyViaId ?? ""}:${storyExpandedKey}:${technicalInspectorOpen ? "insp" : ""}:${showExternalHooks}`
+    : `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${activeDomain ?? ""}:${expandedSubKey}:${showExternalHooks}:${partialRevealKey}`;
 
   const entryIds = useMemo(
     () => (graph ? findEntryNodes(graph).map((node) => node.id) : []),
@@ -443,14 +852,14 @@ export default function App() {
   );
 
   const pathIds = useMemo(() => {
-    if (!selected || !graph) return [] as string[];
-    return findPathFromEntries(graph, selected.id, entryIds);
-  }, [selected, graph, entryIds]);
+    if (!activeFocusNode || !graph) return [] as string[];
+    return findPathFromEntries(graph, activeFocusNode.id, entryIds);
+  }, [activeFocusNode, graph, entryIds]);
 
   const connectedIds = useMemo(() => {
-    if (!selected || !graph) return null;
-    return getConnectedNodeIdsFromEdges(selected.id, graph.edges);
-  }, [selected, graph]);
+    if (!activeFocusNode || !graph) return null;
+    return getConnectedNodeIdsFromEdges(activeFocusNode.id, graph.edges);
+  }, [activeFocusNode, graph]);
 
   const pathEdges = useMemo(
     () =>
@@ -460,25 +869,6 @@ export default function App() {
     [graph, pathIds]
   );
 
-  const folderSpotlightIds = useMemo(() => {
-    if (!spotlightFolder || !graph) return null;
-    return computeFolderSpotlightIds(
-      spotlightFolder,
-      graph.nodes,
-      clusteredGraph.nodes
-    );
-  }, [spotlightFolder, graph, clusteredGraph.nodes]);
-
-  const nodeSpotlightIds = useMemo(() => {
-    if (!spotlightNodeId || !graph) return null;
-    return computeNodeSpotlightIds(
-      spotlightNodeId,
-      graph.nodes,
-      clusteredGraph.nodes,
-      graph.edges
-    );
-  }, [spotlightNodeId, graph, clusteredGraph.nodes]);
-
   const searchHighlightIds = useMemo(() => {
     if (!searchLower || !graph) return null;
     return computeSearchHighlightIds(
@@ -486,114 +876,234 @@ export default function App() {
       viewSelection.graph,
       searchLower,
       clusterMode,
-      fullyExpandedFolders
+      EMPTY_FOLDER_SET
+    );
+  }, [searchLower, graph, viewSelection.graph, clusterMode]);
+
+  const selectionHighlightIds = useMemo(() => {
+    if (isStoryView) return null;
+    return resolveHighlightIds(
+      pathIds,
+      selectedUnclusteredNodeId,
+      graph?.edges ?? [],
+      connectedIds,
+      { neighborhoodFocus, neighborhoodHops }
     );
   }, [
-    searchLower,
-    graph,
-    viewSelection.graph,
-    clusterMode,
-    fullyExpandedFolders,
+    isStoryView,
+    pathIds,
+    selectedUnclusteredNodeId,
+    graph?.edges,
+    connectedIds,
+    neighborhoodFocus,
+    neighborhoodHops,
   ]);
 
-  const selectionHighlightIds = useMemo(
+  const activeBridgeFocus = useMemo(
     () =>
-      resolveHighlightIds(
-        pathIds,
-        selected?.id ?? null,
-        graph?.edges ?? [],
-        connectedIds,
-        { neighborhoodFocus, neighborhoodHops }
-      ),
-    [
-      pathIds,
-      connectedIds,
-      selected?.id,
-      graph?.edges,
-      neighborhoodFocus,
-      neighborhoodHops,
-    ]
+      !isStoryView && bridgeFocus && bridgeFocus.toDomain === activeDomain
+        ? bridgeFocus
+        : null,
+    [isStoryView, bridgeFocus, activeDomain]
   );
 
+  const bridgeHighlightIds = useMemo(() => {
+    if (!activeBridgeFocus || activeBridgeFocus.targetNodeIds.length === 0) {
+      return null;
+    }
+    return new Set<string>([
+      activeBridgeFocus.originClusterId,
+      ...activeBridgeFocus.targetNodeIds,
+    ]);
+  }, [activeBridgeFocus]);
+
+  const overviewFocusClusterId = useMemo(() => {
+    if (!isOverviewMap) return null;
+    if (hoveredNodeId && isClusterId(hoveredNodeId)) return hoveredNodeId;
+    if (selectedDomain) return clusterNodeId(selectedDomain);
+    return null;
+  }, [isOverviewMap, hoveredNodeId, selectedDomain]);
+
+  const overviewFocusHighlightIds = useMemo(() => {
+    if (!overviewFocusClusterId) return null;
+    const ids = new Set<string>([overviewFocusClusterId]);
+    for (const edge of clusteredGraph.edges) {
+      if (!edgeVisibility[edge.type]) continue;
+      if (edge.from === overviewFocusClusterId) ids.add(edge.to);
+      if (edge.to === overviewFocusClusterId) ids.add(edge.from);
+    }
+    return ids;
+  }, [overviewFocusClusterId, clusteredGraph.edges, edgeVisibility]);
+
   const highlightIds = useMemo(() => {
+    if (isStoryView) return null;
     if (selectionHighlightIds && selectionHighlightIds.size > 0) {
       return selectionHighlightIds;
     }
-    if (nodeSpotlightIds && nodeSpotlightIds.size > 0) {
-      return nodeSpotlightIds;
+    if (bridgeHighlightIds && bridgeHighlightIds.size > 0) {
+      return bridgeHighlightIds;
     }
-    if (folderSpotlightIds && folderSpotlightIds.size > 0) {
-      return folderSpotlightIds;
+    if (overviewFocusHighlightIds && overviewFocusHighlightIds.size > 0) {
+      return overviewFocusHighlightIds;
     }
     if (searchHighlightIds && searchHighlightIds.size > 0) {
       return searchHighlightIds;
     }
     return selectionHighlightIds;
   }, [
+    isStoryView,
     selectionHighlightIds,
-    nodeSpotlightIds,
-    folderSpotlightIds,
+    bridgeHighlightIds,
+    overviewFocusHighlightIds,
     searchHighlightIds,
   ]);
 
   const shouldHighlightEdges =
-    Boolean(selected) ||
-    Boolean(spotlightFolder) ||
-    Boolean(spotlightNodeId) ||
-    Boolean(searchLower && searchHighlightIds && searchHighlightIds.size > 0);
+    !isStoryView &&
+    (Boolean(selectedUnclusteredNodeId) ||
+      Boolean(bridgeHighlightIds) ||
+      Boolean(overviewFocusHighlightIds) ||
+      Boolean(searchLower && searchHighlightIds && searchHighlightIds.size > 0));
 
-  const spotlightFitIds = useMemo(() => {
-    if (folderSpotlightIds && folderSpotlightIds.size > 0) {
-      return [...folderSpotlightIds];
-    }
-    if (nodeSpotlightIds && nodeSpotlightIds.size > 0) {
-      return [...nodeSpotlightIds];
-    }
+  const selectedCanvasNodeId = useMemo(() => {
+    if (storyFocusId) return storyFocusId;
+    if (selectedUnclusteredNodeId) return selectedUnclusteredNodeId;
+    if (selectedDomain) return clusterNodeId(selectedDomain);
     return null;
-  }, [folderSpotlightIds, nodeSpotlightIds]);
+  }, [storyFocusId, selectedUnclusteredNodeId, selectedDomain]);
 
-  const expandFocusNodeIds = useMemo(() => {
-    if (!folderExpandFocus || !graph) return null;
-    const visible = new Set(clusteredGraph.nodes.map((node) => node.id));
-    const members =
-      groupNodesByFolder(graph.nodes).get(folderExpandFocus) ?? [];
-    const ids = members
-      .filter((member) => visible.has(member.id))
-      .map((member) => member.id);
-    return ids.length > 0 ? ids : null;
-  }, [folderExpandFocus, graph, clusteredGraph.nodes]);
+  // Single-source-of-truth Breadcrumb Trail derived from historyStack + current state
+  const trailItems = useMemo<BreadcrumbTrailItem[]>(() => {
+    const items: BreadcrumbTrailItem[] = [];
+    const seenKeys = new Set<string>();
 
-  const searchFitNodeIds = useMemo(() => {
-    if (!searchLower || !graph) return null;
-    const matches = findSearchMatchingNodeIds(graph, searchLower);
-    if (matches.size === 0) return null;
+    const pushItem = (
+      item: BreadcrumbTrailItem,
+      options?: { moveDuplicateToEnd?: boolean }
+    ) => {
+      pushBreadcrumbItem(items, seenKeys, item, options);
+    };
 
-    const visible = new Set(clusteredGraph.nodes.map((node) => node.id));
-    const visibleMatches = [...matches].filter((id) => visible.has(id));
-    if (visibleMatches.length > 0) return visibleMatches;
+    const isAtOverviewRoot =
+      !activeDomain &&
+      !storyFocusId &&
+      !selectedDomain &&
+      !selectedUnclusteredNodeId;
 
-    if (!clusterMode) return null;
+    pushItem({
+      scopeKey: "overview",
+      label: "Overview",
+      isCurrent: isAtOverviewRoot,
+    });
 
-    const clusterIds = new Set<string>();
-    for (const id of matches) {
-      const node = nodeById.get(id);
-      if (!node || node.file === "external") continue;
-      clusterIds.add(clusterNodeId(folderKey(node.file)));
+    for (const snap of historyStack) {
+      if (snap.scopeKey === "overview") continue;
+      pushItem({
+        scopeKey: snap.scopeKey,
+        label: snap.crumbLabel,
+        sublabel: snap.crumbSublabel,
+        isCurrent: false,
+      });
     }
-    return clusterIds.size > 0 ? [...clusterIds] : null;
-  }, [searchLower, graph, clusteredGraph.nodes, clusterMode, nodeById]);
 
-  const autoFitNodeIds =
-    spotlightFitIds ?? expandFocusNodeIds ?? searchFitNodeIds;
-  const autoFitNodeId =
-    spotlightFolder || spotlightNodeId || autoFitNodeIds
-      ? null
-      : (canvasFocusId ?? selected?.id ?? null);
+    if (storyFocusId) {
+      const focusNode = nodeById.get(storyFocusId);
+      const focusDom =
+        focusNode && focusNode.file !== "external"
+          ? folderKey(focusNode.file)
+          : activeDomain;
+      if (focusDom) {
+        const areaKey = `area:${focusDom}`;
+        if (!seenKeys.has(areaKey)) {
+          // Ensure home area appears in trail when jumping directly from Overview into a Story
+          const prevWasDifferentArea = historyStack.some(
+            (s) => s.activeDomain && s.activeDomain !== focusDom
+          );
+          if (!prevWasDifferentArea) {
+            pushItem({
+              scopeKey: areaKey,
+              label: humanizeAreaIdentity(focusDom).title,
+              isCurrent: false,
+            });
+          }
+        }
+      }
+      if (focusNode) {
+        const prevSnap = historyStack[historyStack.length - 1];
+        const crossedArea =
+          prevSnap?.activeDomain &&
+          focusDom &&
+          prevSnap.activeDomain !== focusDom;
+        pushItem(
+          {
+            scopeKey: `story:${focusNode.id}`,
+            label: focusNode.name,
+            sublabel: crossedArea
+              ? humanizeAreaIdentity(focusDom).title
+              : undefined,
+            isCurrent: true,
+          },
+          { moveDuplicateToEnd: true }
+        );
+      }
+    } else if (activeDomain) {
+      pushItem(
+        {
+          scopeKey: `area:${activeDomain}`,
+          label: humanizeAreaIdentity(activeDomain).title,
+          isCurrent: !selectedUnclusteredNodeId,
+        },
+        { moveDuplicateToEnd: true }
+      );
+      if (selectedUnclusteredNodeId) {
+        const n = nodeById.get(selectedUnclusteredNodeId);
+        if (n) {
+          pushItem(
+            {
+              scopeKey: `node:${n.id}`,
+              label: n.name,
+              isCurrent: true,
+            },
+            { moveDuplicateToEnd: true }
+          );
+        }
+      }
+    } else if (selectedDomain) {
+      pushItem(
+        {
+          scopeKey: `preview:${selectedDomain}`,
+          label: humanizeAreaIdentity(selectedDomain).title,
+          isCurrent: true,
+        },
+        { moveDuplicateToEnd: true }
+      );
+    } else if (selectedUnclusteredNodeId) {
+      const n = nodeById.get(selectedUnclusteredNodeId);
+      if (n) {
+        pushItem(
+          {
+            scopeKey: `node:${n.id}`,
+            label: n.name,
+            isCurrent: true,
+          },
+          { moveDuplicateToEnd: true }
+        );
+      }
+    }
 
-  const expandedFolders = useMemo(
-    () => listExpandedFolders(fullyExpandedFolders, partialReveals),
-    [fullyExpandedFolders, partialReveals]
-  );
+    // Keep last 5 crumbs if a user walks 10+ steps deep so header stays compact
+    if (items.length > 6) {
+      return [items[0]!, ...items.slice(items.length - 4)];
+    }
+    return items;
+  }, [
+    historyStack,
+    activeDomain,
+    storyFocusId,
+    selectedDomain,
+    selectedUnclusteredNodeId,
+    nodeById,
+  ]);
 
   const overviewEntries = useMemo(
     () => (graph ? computeEntryPoints(graph) : []),
@@ -601,14 +1111,29 @@ export default function App() {
   );
 
   const overviewFolders = useMemo(
-    () => (graph ? computeTopFolders(graph, OVERVIEW_TOP_FOLDERS) : []),
-    [graph]
+    () =>
+      canvasBaseGraph
+        ? computeTopFolders(canvasBaseGraph, OVERVIEW_TOP_FOLDERS)
+        : [],
+    [canvasBaseGraph]
   );
 
   const overviewHubs = useMemo(
-    () => (graph ? computeHubNodes(graph, OVERVIEW_HUB_NODES) : []),
-    [graph]
+    () =>
+      canvasBaseGraph
+        ? computeHubNodes(canvasBaseGraph, OVERVIEW_HUB_NODES)
+        : [],
+    [canvasBaseGraph]
   );
+
+  const primaryEntry = useMemo(() => {
+    const first = overviewEntries[0];
+    if (!first) return null;
+    return {
+      name: first.node.name,
+      fileLabel: formatRelativePath(first.file, graph?.meta?.targetDir),
+    };
+  }, [overviewEntries, graph?.meta?.targetDir]);
 
   const loadGraph = useCallback(async () => {
     try {
@@ -638,7 +1163,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    hasSavedViewportRef.current = Boolean(graphKey && loadViewport(graphKey));
     savedNodePositionsRef.current = graphKey
       ? loadNodePositions(graphKey)
       : null;
@@ -647,14 +1171,15 @@ export default function App() {
   }, [graphKey]);
 
   useEffect(() => {
-    loadGraph();
+    void loadGraph();
     const pollMs = isLargeGraph ? GRAPH_POLL_MS_LARGE : GRAPH_POLL_MS;
     const interval = window.setInterval(loadGraph, pollMs);
     return () => window.clearInterval(interval);
   }, [loadGraph, isLargeGraph]);
 
+  // Build & layout effect (Story View, Overview 4-Tier Map, or Domain/Full Dagre)
   useEffect(() => {
-    if (!graph) return;
+    if (!graph || !canvasBaseGraph) return;
     if (buildSigRef.current === viewKey) return;
 
     let cancelled = false;
@@ -664,52 +1189,96 @@ export default function App() {
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
+          if (isStoryView && storyFocusId) {
+            const storyBuilt = buildFeatureStoryView(
+              canvasBaseGraph,
+              storyFocusId,
+              storyExpandedGroups,
+              {
+                viaNodeId: storyViaId,
+                inspectorOpen: technicalInspectorOpen,
+              }
+            );
+            if (cancelled) return;
+            if (!storyBuilt) {
+              setStoryFocusId(null);
+              setStoryViaId(null);
+              setStoryExpandedGroups(new Set());
+              setTechnicalInspectorOpen(false);
+              queueCamera({ kind: "fit-readable", duration: 220 });
+              return;
+            }
+
+            buildSigRef.current = viewKey;
+            baseEdgesRef.current = storyBuilt.edges;
+            setNodes(storyBuilt.nodes);
+            setEdges(storyBuilt.edges);
+            setRenderedViewKey(viewKey);
+            return;
+          }
+
           const built = buildFlowGraph(clusteredGraph, {
-            compact: isLargeGraph,
+            compact: isLargeGraph && !activeDomain && !isOverviewMap,
             entryIds,
             skipLayout: true,
           });
-          const layoutedNodes = await layoutFlowGraphNodesAsync(
-            clusteredGraph,
-            built.nodes,
-            built.edges,
-            entryIds
-          );
-          if (cancelled) return;
 
-          buildSigRef.current = viewKey;
-          baseEdgesRef.current = built.edges;
-
-          setNodes((current) =>
-            patchNodePresentation(
-              spreadCoincidentNodes(
+          const positionedNodes = isOverviewMap
+            ? layoutTieredOverviewNodes(built.nodes)
+            : spreadCoincidentNodes(
                 mergeNodePositions(
-                  layoutedNodes,
-                  current,
-                  applySavedLayoutRef.current
+                  await layoutFlowGraphNodesAsync(
+                    clusteredGraph,
+                    built.nodes,
+                    built.edges,
+                    entryIds
+                  ),
+                  nodesRef.current,
+                  applySavedLayoutRef.current ||
+                    draggedNodeIdsRef.current.size > 0
                     ? savedNodePositionsRef.current
                     : null,
                   draggedNodeIdsRef.current
                 )
-              ),
+              );
+
+          if (cancelled) return;
+
+          buildSigRef.current = viewKey;
+          baseEdgesRef.current = built.edges;
+          applySavedLayoutRef.current = false;
+
+          setNodes(
+            patchNodePresentation(
+              positionedNodes,
               searchLower,
-              selected?.id ?? null,
-              highlightIds
+              selectedCanvasNodeId,
+              highlightIds,
+              activeBridgeFocus
             )
           );
-          applySavedLayoutRef.current = false;
           setEdges(
             presentEdges(
               built.edges,
               edgeVisibility,
               highlightIds,
               pathEdges,
-              shouldHighlightEdges
+              shouldHighlightEdges,
+              {
+                isStoryView: false,
+                isOverviewMap,
+                showOverviewEdges,
+                focusClusterId: overviewFocusClusterId,
+                crossAreaLabels,
+                isDenseDomain,
+                hoveredNodeId,
+              }
             )
           );
-        } catch (error) {
-          if (cancelled || error instanceof LayoutCancelledError) return;
-          console.error("Failed to layout graph view", error);
+          setRenderedViewKey(viewKey);
+        } catch (err) {
+          if (cancelled || err instanceof LayoutCancelledError) return;
+          console.error("Failed to layout graph view", err);
         } finally {
           if (!cancelled && buildingGen === buildingGenRef.current) {
             setIsBuilding(false);
@@ -722,15 +1291,46 @@ export default function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [graph, clusteredGraph, viewKey, isLargeGraph, setNodes, setEdges]);
+  }, [
+    graph,
+    canvasBaseGraph,
+    clusteredGraph,
+    viewKey,
+    isStoryView,
+    storyFocusId,
+    storyViaId,
+    storyExpandedGroups,
+    technicalInspectorOpen,
+    isLargeGraph,
+    isOverviewMap,
+    isDenseDomain,
+    activeDomain,
+    entryIds,
+    searchLower,
+    selectedCanvasNodeId,
+    highlightIds,
+    activeBridgeFocus,
+    edgeVisibility,
+    pathEdges,
+    shouldHighlightEdges,
+    showOverviewEdges,
+    overviewFocusClusterId,
+    crossAreaLabels,
+    hoveredNodeId,
+    queueCamera,
+    setNodes,
+    setEdges,
+  ]);
 
   useEffect(() => {
+    if (isStoryView) return;
     setNodes((current) =>
       patchNodePresentation(
         current,
         searchLower,
-        selected?.id ?? null,
-        highlightIds
+        selectedCanvasNodeId,
+        highlightIds,
+        activeBridgeFocus
       )
     );
     setEdges((current) =>
@@ -739,178 +1339,649 @@ export default function App() {
         edgeVisibility,
         highlightIds,
         pathEdges,
-        shouldHighlightEdges
+        shouldHighlightEdges,
+        {
+          isStoryView: false,
+          isOverviewMap,
+          showOverviewEdges,
+          focusClusterId: overviewFocusClusterId,
+          crossAreaLabels,
+          isDenseDomain,
+          hoveredNodeId,
+        }
       )
     );
   }, [
+    isStoryView,
     searchLower,
-    selected?.id,
+    selectedCanvasNodeId,
     highlightIds,
+    activeBridgeFocus,
     pathEdges,
     shouldHighlightEdges,
     edgeVisibility,
+    isOverviewMap,
+    isDenseDomain,
+    showOverviewEdges,
+    overviewFocusClusterId,
+    crossAreaLabels,
+    hoveredNodeId,
+    queueCamera,
     setNodes,
     setEdges,
   ]);
 
-  const expandClusterFolder = useCallback(
-    (folder: string) => {
-      if (!graph) return;
+  const captureCurrentSnapshot = useCallback((): NavigationSnapshot | null => {
+    const inst = rfInstanceRef.current;
+    if (!inst) return null;
 
-      if (isLargeGraph && clusterMode) {
-        const members = groupNodesByFolder(graph.nodes).get(folder) ?? [];
-        setPartialReveals((prev) => {
-          const next = new Map(prev);
-          const already = next.get(folder) ?? new Set<string>();
-          const visible = buildClusteredVisibleIds(
-            viewSelection.graph,
-            clusterMode,
-            fullyExpandedFolders,
-            prev
-          );
-          next.set(
-            folder,
-            nextClusterReveal(folder, members, visible, graph, already)
-          );
-          return next;
-        });
-      } else {
-        setFullyExpandedFolders((prev) => new Set([...prev, folder]));
-      }
+    if (storyFocusId) {
+      const n = nodeById.get(storyFocusId);
+      return {
+        scopeKey: `story:${storyFocusId}`,
+        domain: activeDomain,
+        crumbLabel: n?.name ?? "Feature",
+        activeDomain,
+        storyFocusId,
+        storyViaId,
+        bridgeFocus,
+        expandedSubfolders: [...expandedSubfolders],
+        storyExpandedGroups: [...storyExpandedGroups],
+        viewport: inst.getViewport(),
+      };
+    }
 
-      setCanvasFocusId(null);
-      setFolderExpandFocus(folder);
-      setSelected(null);
-    },
-    [
-      graph,
-      isLargeGraph,
-      clusterMode,
-      viewSelection.graph,
-      fullyExpandedFolders,
-    ]
-  );
+    if (activeDomain) {
+      return {
+        scopeKey: `area:${activeDomain}`,
+        domain: activeDomain,
+        crumbLabel: humanizeAreaIdentity(activeDomain).title,
+        activeDomain,
+        storyFocusId: null,
+        storyViaId: null,
+        bridgeFocus,
+        expandedSubfolders: [...expandedSubfolders],
+        storyExpandedGroups: [],
+        viewport: inst.getViewport(),
+      };
+    }
 
-  const collapseClusterFolder = useCallback(
-    (folder: string) => {
-      const next = collapseClusterFolderState(
-        folder,
-        fullyExpandedFolders,
-        partialReveals
-      );
-      setFullyExpandedFolders(next.fullyExpandedFolders);
-      setPartialReveals(next.partialReveals);
-      setFolderExpandFocus(null);
-      setCanvasFocusId(clusterNodeId(folder));
-      setSelected((current) => {
-        if (!current || current.file === "external") return current;
-        return folderKey(current.file) === folder ? null : current;
-      });
-    },
-    [fullyExpandedFolders, partialReveals]
-  );
+    return {
+      scopeKey: "overview",
+      domain: null,
+      crumbLabel: "Overview",
+      activeDomain: null,
+      storyFocusId: null,
+      storyViaId: null,
+      bridgeFocus: null,
+      expandedSubfolders: [],
+      storyExpandedGroups: [],
+      viewport: inst.getViewport(),
+    };
+  }, [
+    storyFocusId,
+    storyViaId,
+    activeDomain,
+    bridgeFocus,
+    expandedSubfolders,
+    storyExpandedGroups,
+    nodeById,
+  ]);
 
-  const collapseAllClusterFolders = useCallback(() => {
-    const next = collapseAllClusterFoldersState();
-    setFullyExpandedFolders(next.fullyExpandedFolders);
-    setPartialReveals(next.partialReveals);
-    setSelected(null);
-    setSpotlightFolder(null);
-    setSpotlightNodeId(null);
-    setFolderExpandFocus(null);
-    setCanvasFocusId(null);
+  const pushSnapshot = useCallback((snap: NavigationSnapshot | null) => {
+    if (!snap) return;
+    setHistoryStack((prev) => pushViewport(prev, snap, 20));
   }, []);
 
-  const focusGraphNode = useCallback(
-    (node: AtlasGraphNode) => {
-      if (!graph) return;
+  const restoreSnapshot = useCallback(
+    (snap: NavigationSnapshot) => {
+      setActiveDomain(snap.activeDomain);
+      setStoryFocusId(snap.storyFocusId);
+      setStoryViaId(snap.storyViaId);
+      setBridgeFocus(snap.bridgeFocus);
+      setExpandedSubfolders(new Set(snap.expandedSubfolders));
+      setStoryExpandedGroups(new Set(snap.storyExpandedGroups));
+      setSearch("");
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(null);
+      setHoveredNodeId(null);
+      if (!snap.storyFocusId) {
+        setTechnicalInspectorOpen(false);
+      }
+      queueCamera({ kind: "restore", viewport: snap.viewport, duration: 240 });
+    },
+    [queueCamera]
+  );
 
-      if (spotlightNodeId === node.id) {
-        setSpotlightNodeId(null);
-        setSelected(null);
+  const unwindToOverview = useCallback(() => {
+    const { entry: overviewSnap } = popViewport(
+      historyStackRef.current,
+      "overview"
+    );
+    setHistoryStack([]);
+    setActiveDomain(null);
+    setStoryFocusId(null);
+    setStoryViaId(null);
+    setStoryExpandedGroups(new Set());
+    setTechnicalInspectorOpen(false);
+    setSelectedUnclusteredNodeId(null);
+    setBridgeFocus(null);
+    setExpandedSubfolders(new Set());
+    setSearch("");
+    setSelectedDomain(null);
+    setHoveredNodeId(null);
+
+    if (overviewSnap) {
+      queueCamera({
+        kind: "restore",
+        viewport: overviewSnap.viewport,
+        duration: 240,
+      });
+    } else {
+      queueCamera({ kind: "fit-readable", duration: 220 });
+    }
+  }, [queueCamera]);
+
+  const stepBackOne = useCallback(() => {
+    if (searchLower && !activeDomain && !storyFocusId) {
+      setSearch("");
+      return;
+    }
+
+    const { entry: target, nextStack } = popViewport(historyStackRef.current);
+    if (!target) {
+      unwindToOverview();
+      return;
+    }
+
+    setHistoryStack(nextStack);
+    restoreSnapshot(target);
+  }, [searchLower, activeDomain, storyFocusId, unwindToOverview, restoreSnapshot]);
+
+  const selectTrailItem = useCallback(
+    (targetScopeKey: string) => {
+      if (targetScopeKey === "overview") {
+        unwindToOverview();
         return;
       }
 
-      if (isLargeGraph && clusterMode && node.file !== "external") {
-        setPartialReveals((prev) => revealNodeForSpotlight(node, graph, prev));
+      const { entry: snap, nextStack } = popViewport(
+        historyStackRef.current,
+        targetScopeKey
+      );
+      if (snap && snap.scopeKey === targetScopeKey) {
+        setHistoryStack(nextStack);
+        restoreSnapshot(snap);
+        return;
       }
 
-      setSpotlightNodeId(node.id);
-      setSpotlightFolder(null);
-      setSelected(enrichNodeForDetails(node, graph, nodeById));
-      setFocusOnSelect(true);
-      setCanvasFocusId(null);
+      // Synthetic area crumb when user jumped directly from Overview into a Feature Story
+      if (targetScopeKey.startsWith("area:")) {
+        const domain = targetScopeKey.slice("area:".length);
+        setActiveDomain(domain);
+        setStoryFocusId(null);
+        setStoryViaId(null);
+        setStoryExpandedGroups(new Set());
+        setTechnicalInspectorOpen(false);
+        setSelectedDomain(null);
+        setSelectedUnclusteredNodeId(null);
+        queueCamera({ kind: "fit-readable", duration: 220 });
+      }
     },
-    [graph, isLargeGraph, clusterMode, spotlightNodeId, nodeById]
+    [unwindToOverview, restoreSnapshot, queueCamera]
+  );
+
+  /**
+   * Enter Focused Feature Story for `node` (works from Overview, Area Map, Sidebar,
+   * Command Palette, Insights, or when walking parent ↔ child inside Story View).
+   */
+  const focusSymbolStory = useCallback(
+    (node: AtlasGraphNode) => {
+      if (!graph) return;
+      if (storyFocusId === node.id && !searchLower) return;
+
+      if (node.file === "external" && !showExternalHooks) {
+        setShowExternalHooks(true);
+      }
+
+      const targetKey = `story:${node.id}`;
+      const { entry: existingSnap, nextStack } = popViewport(
+        historyStackRef.current,
+        targetKey
+      );
+      if (existingSnap && existingSnap.scopeKey === targetKey) {
+        setHistoryStack(nextStack);
+        restoreSnapshot(existingSnap);
+        return;
+      }
+
+      pushSnapshot(captureCurrentSnapshot());
+
+      const nextDomain =
+        node.file === "external" ? activeDomain : folderKey(node.file);
+      setStoryViaId(storyFocusId);
+      setStoryFocusId(node.id);
+      setStoryExpandedGroups(new Set());
+      setActiveDomain(nextDomain);
+      setBridgeFocus(null);
+      setSearch("");
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(null);
+      setHoveredNodeId(null);
+
+      queueCamera({ kind: "fit-story", duration: 220 });
+    },
+    [
+      graph,
+      storyFocusId,
+      searchLower,
+      showExternalHooks,
+      activeDomain,
+      restoreSnapshot,
+      pushSnapshot,
+      captureCurrentSnapshot,
+      queueCamera,
+    ]
+  );
+
+  const openRootDomain = useCallback(
+    (domain: string) => {
+      if (domain === activeDomain && !storyFocusId && !searchLower) {
+        setSelectedDomain(null);
+        setBridgeFocus(null);
+        return;
+      }
+
+      if (!activeDomain && !storyFocusId) {
+        pushSnapshot(captureCurrentSnapshot());
+      } else {
+        const overviewEntry = historyStackRef.current.find(
+          (item) => item.scopeKey === "overview"
+        );
+        const inst = rfInstanceRef.current;
+        setHistoryStack(
+          overviewEntry
+            ? [overviewEntry]
+            : inst
+              ? [
+                  {
+                    scopeKey: "overview",
+                    domain: null,
+                    crumbLabel: "Overview",
+                    activeDomain: null,
+                    storyFocusId: null,
+                    storyViaId: null,
+                    bridgeFocus: null,
+                    expandedSubfolders: [],
+                    storyExpandedGroups: [],
+                    viewport: inst.getViewport(),
+                  },
+                ]
+              : []
+        );
+      }
+
+      setActiveDomain(domain);
+      setStoryFocusId(null);
+      setStoryViaId(null);
+      setStoryExpandedGroups(new Set());
+      setTechnicalInspectorOpen(false);
+      setSelectedUnclusteredNodeId(null);
+      setBridgeFocus(null);
+      setExpandedSubfolders(new Set());
+      setClusterMode(true);
+      setSearch("");
+      setSelectedDomain(null);
+      setHoveredNodeId(null);
+      queueCamera({ kind: "fit-readable", duration: 220 });
+    },
+    [
+      activeDomain,
+      storyFocusId,
+      searchLower,
+      pushSnapshot,
+      captureCurrentSnapshot,
+      queueCamera,
+    ]
+  );
+
+  const switchDomain = useCallback(
+    (targetDomain: string) => {
+      if (!activeDomain || !canvasBaseGraph) {
+        openRootDomain(targetDomain);
+        return;
+      }
+
+      const existingKey = `area:${targetDomain}`;
+      const existingIdx = historyStackRef.current.findIndex(
+        (s) => s.scopeKey === existingKey
+      );
+      if (existingIdx >= 0) {
+        selectTrailItem(existingKey);
+        return;
+      }
+
+      const fromDomain = activeDomain;
+      const bridge = findDomainBridgeNodes(
+        canvasBaseGraph,
+        fromDomain,
+        targetDomain
+      );
+
+      pushSnapshot(captureCurrentSnapshot());
+
+      setActiveDomain(targetDomain);
+      setStoryFocusId(null);
+      setStoryViaId(null);
+      setStoryExpandedGroups(new Set());
+      setTechnicalInspectorOpen(false);
+      setSelectedUnclusteredNodeId(null);
+      setExpandedSubfolders(new Set(bridge.requiredSubfolders));
+      setClusterMode(true);
+      setSearch("");
+      setSelectedDomain(null);
+      setHoveredNodeId(null);
+
+      if (bridge.targetNodeIds.length > 0) {
+        setBridgeFocus({
+          fromDomain,
+          toDomain: targetDomain,
+          targetNodeIds: bridge.targetNodeIds,
+          originClusterId: bridge.originClusterId,
+        });
+        queueCamera({
+          kind: "fit-nodes",
+          primaryNodeIds: bridge.targetNodeIds,
+          originNodeId: bridge.originClusterId,
+          duration: 240,
+        });
+      } else {
+        setBridgeFocus(null);
+        queueCamera({ kind: "fit-readable", duration: 220 });
+      }
+    },
+    [
+      activeDomain,
+      canvasBaseGraph,
+      openRootDomain,
+      selectTrailItem,
+      pushSnapshot,
+      captureCurrentSnapshot,
+      queueCamera,
+    ]
+  );
+
+  const expandSubcluster = useCallback((subKey: string) => {
+    setExpandedSubfolders((prev) => {
+      const next = new Set(prev);
+      next.add(subKey);
+      return next;
+    });
+    setHoveredNodeId(null);
+  }, []);
+
+  const toggleStoryGroup = useCallback(
+    (groupKey: string) => {
+      setStoryExpandedGroups((prev) => {
+        const next = new Set(prev);
+        if (next.has(groupKey)) {
+          next.delete(groupKey);
+        } else {
+          next.add(groupKey);
+        }
+        return next;
+      });
+      queueCamera({ kind: "fit-story", duration: 200 });
+    },
+    [queueCamera]
+  );
+
+  useEffect(() => {
+    const onOpenCluster = (event: Event) => {
+      const folder = (event as CustomEvent<string>).detail;
+      if (!folder) return;
+      if (activeDomain && !storyFocusId && folder.startsWith(`${activeDomain}/`)) {
+        expandSubcluster(folder);
+        return;
+      }
+      if (activeDomain && !storyFocusId) {
+        switchDomain(folder);
+        return;
+      }
+      openRootDomain(folder);
+    };
+
+    const onStoryGroupToggle = (event: Event) => {
+      const groupKey = (event as CustomEvent<string>).detail;
+      if (groupKey) toggleStoryGroup(groupKey);
+    };
+
+    const onToggleInspector = () => {
+      setTechnicalInspectorOpen((open) => !open);
+    };
+
+    const onOpenStoryAreaMap = (event: Event) => {
+      const domain = (event as CustomEvent<string>).detail;
+      if (!domain) return;
+      pushSnapshot(captureCurrentSnapshot());
+      setActiveDomain(domain);
+      setStoryFocusId(null);
+      setStoryViaId(null);
+      setStoryExpandedGroups(new Set());
+      setTechnicalInspectorOpen(false);
+      queueCamera({ kind: "fit-readable", duration: 220 });
+    };
+
+    window.addEventListener(OPEN_CLUSTER_EVENT, onOpenCluster);
+    window.addEventListener(STORY_GROUP_TOGGLE_EVENT, onStoryGroupToggle);
+    window.addEventListener(STORY_INSPECT_CODE_EVENT, onToggleInspector);
+    window.addEventListener(STORY_OPEN_AREA_MAP_EVENT, onOpenStoryAreaMap);
+
+    return () => {
+      window.removeEventListener(OPEN_CLUSTER_EVENT, onOpenCluster);
+      window.removeEventListener(STORY_GROUP_TOGGLE_EVENT, onStoryGroupToggle);
+      window.removeEventListener(STORY_INSPECT_CODE_EVENT, onToggleInspector);
+      window.removeEventListener(STORY_OPEN_AREA_MAP_EVENT, onOpenStoryAreaMap);
+    };
+  }, [
+    activeDomain,
+    storyFocusId,
+    expandSubcluster,
+    switchDomain,
+    openRootDomain,
+    toggleStoryGroup,
+    pushSnapshot,
+    captureCurrentSnapshot,
+    queueCamera,
+  ]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (document.querySelector('[role="dialog"]')) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        if (search) {
+          setSearch("");
+          target.blur();
+        }
+        return;
+      }
+
+      if (technicalInspectorOpen) {
+        event.preventDefault();
+        setTechnicalInspectorOpen(false);
+        return;
+      }
+
+      if (storyFocusId || activeDomain) {
+        event.preventDefault();
+        stepBackOne();
+        return;
+      }
+
+      if (search) {
+        event.preventDefault();
+        setSearch("");
+        return;
+      }
+
+      if (
+        selectedDomain ||
+        selectedUnclusteredNodeId ||
+        bridgeFocus
+      ) {
+        event.preventDefault();
+        setSelectedDomain(null);
+        setSelectedUnclusteredNodeId(null);
+        setBridgeFocus(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    technicalInspectorOpen,
+    storyFocusId,
+    activeDomain,
+    search,
+    selectedDomain,
+    selectedUnclusteredNodeId,
+    bridgeFocus,
+    stepBackOne,
+  ]);
+
+  const onSelectConnectionById = useCallback(
+    (targetId: string) => {
+      const target = nodeById.get(targetId);
+      if (target) {
+        focusSymbolStory(target);
+      }
+    },
+    [nodeById, focusSymbolStory]
+  );
+
+  const onInsightClick = useCallback(
+    (insight: GraphInsight) => {
+      if (!graph) return;
+      const match = findNodeForInsight(insight, graph.nodes);
+      if (!match) return;
+      setTechnicalInspectorOpen(true);
+      focusSymbolStory(match);
+    },
+    [graph, focusSymbolStory]
   );
 
   const onOverviewFolderClick = useCallback(
     (folder: FolderOverview) => {
-      if (spotlightFolder === folder.folder) {
-        setSpotlightFolder(null);
+      if (activeDomain === folder.folder && !storyFocusId) {
+        unwindToOverview();
         return;
       }
-
-      setSpotlightFolder(folder.folder);
-      setSpotlightNodeId(null);
-      setSelected(null);
-      if (!clusterMode) setClusterMode(true);
-      expandClusterFolder(folder.folder);
-      setCanvasFocusId(null);
-      setFocusOnSelect(true);
+      openRootDomain(folder.folder);
     },
-    [expandClusterFolder, clusterMode, spotlightFolder]
-  );
-
-  const onOverviewEntryClick = useCallback(
-    (node: AtlasGraphNode) => focusGraphNode(node),
-    [focusGraphNode]
-  );
-
-  const onOverviewHubClick = useCallback(
-    (node: AtlasGraphNode) => focusGraphNode(node),
-    [focusGraphNode]
+    [activeDomain, storyFocusId, unwindToOverview, openRootDomain]
   );
 
   const onNodeClick = useCallback(
-    (_event: MouseEvent, node: Node<AtlasNodeData>) => {
+    (_event: MouseEvent, node: FlowNode<AtlasNodeData>) => {
+      if (node.type === "tierHeader" || node.type === "storyHeader") return;
+
+      if (node.type === "storyAnchor") {
+        return;
+      }
+
+      if (node.type === "storyGroup") {
+        const groupData = node.data as unknown as StoryGroupNodeData;
+        toggleStoryGroup(groupData.groupKey);
+        return;
+      }
+
+      if (node.type === "storyCard") {
+        const cardData = node.data as unknown as StoryCardNodeData;
+        const target = nodeById.get(cardData.nodeId);
+        if (target) {
+          focusSymbolStory(target);
+        }
+        return;
+      }
+
       if (isClusterId(node.id)) {
         const folder = folderFromClusterId(node.id);
-        if (_event.shiftKey && expandedFolders.includes(folder)) {
-          collapseClusterFolder(folder);
+        const clusterData = node.data as unknown as ClusterNodeData;
+
+        if (clusterData.isSubcluster) {
+          expandSubcluster(folder);
           return;
         }
-        expandClusterFolder(folder);
+
+        // Single-clicking an Area card previews its plain-language summary in place (0 camera jump)
+        setSelectedUnclusteredNodeId(null);
+        setSelectedDomain((prev) => (prev === folder ? null : folder));
         return;
       }
 
       if (!graph) return;
       const base = nodeById.get(node.data.nodeId ?? node.id);
       if (!base) return;
-      setCanvasFocusId(null);
-      setSpotlightFolder(null);
-      setSpotlightNodeId(null);
-      if (
-        shouldAutoEnableNeighborhoodFocus(
-          isLargeGraph,
-          neighborhoodFocusTouchedRef.current,
-          neighborhoodFocus
-        )
-      ) {
-        setNeighborhoodFocus(true);
+
+      // In clustered / Area exploration, clicking a symbol transitions into its Focused Feature Story!
+      if (clusterMode && !searchLower) {
+        focusSymbolStory(base);
+        return;
       }
-      setSelected(enrichNodeForDetails(base, graph, nodeById));
+
+      // In flat unclustered/search mode, inspect with optional inspector
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(base.id);
+      setTechnicalInspectorOpen(true);
     },
     [
       graph,
       nodeById,
-      expandClusterFolder,
-      collapseClusterFolder,
-      expandedFolders,
-      isLargeGraph,
-      neighborhoodFocus,
+      clusterMode,
+      searchLower,
+      toggleStoryGroup,
+      focusSymbolStory,
+      expandSubcluster,
     ]
   );
+
+  const onNodeDoubleClick = useCallback(
+    (_event: MouseEvent, node: FlowNode<AtlasNodeData>) => {
+      if (!isClusterId(node.id)) return;
+      const folder = folderFromClusterId(node.id);
+      const clusterData = node.data as unknown as ClusterNodeData;
+      if (clusterData.isSubcluster) {
+        expandSubcluster(folder);
+        return;
+      }
+      if (activeDomain && !storyFocusId) {
+        switchDomain(folder);
+        return;
+      }
+      openRootDomain(folder);
+    },
+    [activeDomain, storyFocusId, expandSubcluster, switchDomain, openRootDomain]
+  );
+
+  const onNodeMouseEnter = useCallback(
+    (_event: MouseEvent, node: FlowNode<AtlasNodeData>) => {
+      if (node.type === "tierHeader" || node.type === "storyHeader") return;
+      setHoveredNodeId(node.id);
+    },
+    []
+  );
+
+  const onNodeMouseLeave = useCallback(() => {
+    setHoveredNodeId(null);
+  }, []);
 
   const onNeighborhoodFocusChange = useCallback((enabled: boolean) => {
     neighborhoodFocusTouchedRef.current = true;
@@ -918,31 +1989,29 @@ export default function App() {
   }, []);
 
   const onPaneClick = useCallback(() => {
-    setSelected(null);
-    setSpotlightFolder(null);
-    setSpotlightNodeId(null);
+    if (!isStoryView) {
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(null);
+      setBridgeFocus(null);
+    }
     setHelperLines([]);
-  }, []);
+  }, [isStoryView]);
 
-  const onNodeDrag: OnNodeDrag<Node<AtlasNodeData>> = useCallback(
+  const onNodeDrag: OnNodeDrag<FlowNode<AtlasNodeData>> = useCallback(
     (_event, dragged) => {
-      const { lines } = computeHelperLines(
-        dragged as Node<AtlasNodeData>,
-        nodes
-      );
+      if (dragged.type === "tierHeader" || isStoryView) return;
+      const { lines } = computeHelperLines(dragged, nodes);
       setHelperLines(lines);
     },
-    [nodes]
+    [nodes, isStoryView]
   );
 
-  const onNodeDragStop: OnNodeDrag<Node<AtlasNodeData>> = useCallback(
+  const onNodeDragStop: OnNodeDrag<FlowNode<AtlasNodeData>> = useCallback(
     (_event, dragged) => {
+      if (dragged.type === "tierHeader" || isStoryView) return;
       draggedNodeIdsRef.current.add(dragged.id);
       setNodes((current) => {
-        const { snapX, snapY } = computeHelperLines(
-          dragged as Node<AtlasNodeData>,
-          current
-        );
+        const { snapX, snapY } = computeHelperLines(dragged, current);
         const next =
           snapX === undefined && snapY === undefined
             ? current
@@ -958,45 +2027,38 @@ export default function App() {
                   : node
               );
 
-        if (graphKey) {
-          saveNodePositions(graphKey, nodePositionsFromNodes(next));
+        if (graphKey && !isOverviewMap) {
+          const positions = nodePositionsFromNodes(next);
+          savedNodePositionsRef.current = positions;
+          saveNodePositions(graphKey, positions);
         }
 
         return next;
       });
       setHelperLines([]);
     },
-    [setNodes, graphKey]
+    [setNodes, graphKey, isOverviewMap, isStoryView]
   );
 
   const showFromEntry = useCallback(() => {
     if (!graph) return;
     const entries = findEntryNodes(graph);
     if (entries.length === 0) return;
-
-    const entry = entries[0]!;
-    setSearch("");
-    setSelected(enrichNodeForDetails(entry, graph, nodeById));
-    setSpotlightFolder(null);
-    setSpotlightNodeId(entry.id);
-    setFocusOnSelect(true);
-    setCanvasFocusId(null);
-
-    if (isLargeGraph && !FORCE_FULL_GRAPH) {
-      setClusterMode(true);
-      setFullyExpandedFolders(new Set());
-      setPartialReveals(revealNodeForSpotlight(entry, graph, new Map()));
-    } else {
-      setClusterMode(false);
-      setFullyExpandedFolders(new Set());
-      setPartialReveals(new Map());
-    }
-  }, [graph, nodeById, isLargeGraph]);
+    focusSymbolStory(entries[0]!);
+  }, [graph, focusSymbolStory]);
 
   const applyLayout = useCallback(
     (preset: LayoutPreset) => {
       setLayoutPreset(preset);
       saveLayoutPreset(preset);
+
+      if (isOverviewMap || isStoryView) {
+        queueCamera({
+          kind: isStoryView ? "fit-story" : "fit-readable",
+          duration: 220,
+        });
+        return;
+      }
 
       if (preset === "dagre-tb" && nodes.length > 25) {
         setEdgeVisibility((prev) => {
@@ -1013,7 +2075,7 @@ export default function App() {
         });
       }
 
-      const snapshot = nodes;
+      const snapshot = nodes.filter((n) => n.type !== "tierHeader");
       const edgesSnapshot = baseEdgesRef.current;
       const buildingGen = ++buildingGenRef.current;
       setIsBuilding(true);
@@ -1031,11 +2093,10 @@ export default function App() {
           );
           if (buildingGen !== buildingGenRef.current) return;
           setNodes(layouted);
-          setRelayoutNonce((value) => value + 1);
-          setFocusOnSelect(true);
-        } catch (error) {
-          if (error instanceof LayoutCancelledError) return;
-          console.error("Failed to apply layout", error);
+          queueCamera({ kind: "fit-readable", duration: 220 });
+        } catch (err) {
+          if (err instanceof LayoutCancelledError) return;
+          console.error("Failed to apply layout", err);
         } finally {
           if (buildingGen === buildingGenRef.current) {
             setIsBuilding(false);
@@ -1043,7 +2104,15 @@ export default function App() {
         }
       })();
     },
-    [setNodes, entryIds, graph, nodes]
+    [
+      isOverviewMap,
+      isStoryView,
+      nodes,
+      entryIds,
+      graph,
+      setNodes,
+      queueCamera,
+    ]
   );
 
   const cycleLayout = useCallback(() => {
@@ -1081,8 +2150,8 @@ export default function App() {
       clusterMode,
       neighborhoodFocus,
       layoutPreset,
-      layoutDisabled: nodes.length === 0,
-      selected,
+      layoutDisabled: nodes.length === 0 || isOverviewMap || isStoryView,
+      selected: activeFocusNode,
       hasEntryNodes: graph ? findEntryNodes(graph).length > 0 : false,
       edgeVisibility,
     }),
@@ -1091,7 +2160,9 @@ export default function App() {
       clusterMode,
       neighborhoodFocus,
       nodes.length,
-      selected,
+      isOverviewMap,
+      isStoryView,
+      activeFocusNode,
       layoutPreset,
       edgeVisibility,
     ]
@@ -1099,19 +2170,20 @@ export default function App() {
 
   const commandPaletteActions = useMemo<CommandPaletteActions>(
     () => ({
-      onJumpToNode: focusGraphNode,
+      onJumpToNode: focusSymbolStory,
       onShowFromEntry: showFromEntry,
       onApplyLayout: applyLayout,
       onCycleLayout: cycleLayout,
       onToggleClusterMode: () => {
-        setClusterMode((enabled) => {
-          const next = !enabled;
-          if (!next) {
-            setFullyExpandedFolders(new Set());
-            setPartialReveals(new Map());
-          }
-          return next;
-        });
+        setHistoryStack([]);
+        setActiveDomain(null);
+        setStoryFocusId(null);
+        setStoryViaId(null);
+        setBridgeFocus(null);
+        setSelectedDomain(null);
+        setExpandedSubfolders(new Set());
+        setClusterMode((enabled) => !enabled);
+        queueCamera({ kind: "fit-readable", duration: 220 });
       },
       onToggleNeighborhoodFocus: () => {
         neighborhoodFocusTouchedRef.current = true;
@@ -1125,16 +2197,16 @@ export default function App() {
         void triggerExport("svg");
       },
       onFocusSelected: () => {
-        if (!selected) return;
-        setFocusOnSelect(true);
-        setCanvasFocusId(selected.id);
+        if (!activeFocusNode) return;
+        queueCamera({ kind: "ensure-node", nodeId: activeFocusNode.id });
       },
       onCopySelectedName: () => {
-        if (selected?.name) void copyText(selected.name);
+        if (activeFocusNode?.name) void copyText(activeFocusNode.name);
       },
       onCopySelectedPath: () => {
-        if (selected?.file && selected.file !== "external")
-          void copyText(selected.file);
+        if (activeFocusNode?.file && activeFocusNode.file !== "external") {
+          void copyText(activeFocusNode.file);
+        }
       },
       onHideEdgeType: (type) => {
         onEdgeVisibilityChange(type, false);
@@ -1142,28 +2214,17 @@ export default function App() {
       onShowAllEdges: showAllEdges,
     }),
     [
-      focusGraphNode,
+      focusSymbolStory,
       showFromEntry,
       applyLayout,
       cycleLayout,
-      selected,
+      activeFocusNode,
       copyText,
       onEdgeVisibilityChange,
       showAllEdges,
+      queueCamera,
     ]
   );
-
-  const mainPanelDefault = useMemo(() => defaultMainPanelRect(), []);
-  const detailsPanelDefault = useMemo(() => defaultDetailsPanelRect(), []);
-
-  const canvasMessage = graph
-    ? emptyViewMessage(
-        viewSelection.mode,
-        graph.nodes.length,
-        viewSelection.matchCount,
-        searchLower
-      )
-    : "";
 
   if (error) {
     return (
@@ -1192,263 +2253,281 @@ export default function App() {
     );
   }
 
+  const layoutReady = !isBuilding && renderedViewKey === viewKey;
+  const showTechnicalDetails = Boolean(
+    activeFocusNode && !activeFocusNode.cluster && technicalInspectorOpen
+  );
+  const showAreaSummary = Boolean(
+    !showTechnicalDetails && !isStoryView && selectedDomain
+  );
+  const showRightRail = showTechnicalDetails || showAreaSummary;
+  const canStepBack = Boolean(activeDomain || storyFocusId || searchLower);
+
   return (
-    <div className="graph-shell">
+    <div className="graph-shell graph-shell--docked">
       <MobileBanner />
       <CommandPalette
         state={commandPaletteState}
         actions={commandPaletteActions}
       />
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={flowNodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        onNodeDrag={onNodeDrag}
-        onNodeDragStop={onNodeDragStop}
-        defaultEdgeOptions={COMPACT_EDGE_DEFAULTS}
-        connectionLineType={ConnectionLineType.SmoothStep}
-        nodesDraggable
-        nodesConnectable={false}
-        elementsSelectable
-        selectNodesOnDrag={false}
-        onlyRenderVisibleElements={shouldVirtualize}
-        elevateNodesOnSelect={false}
-        elevateEdgesOnSelect={false}
-        autoPanOnNodeFocus={false}
-        panOnDrag
-        panOnScroll
-        zoomOnScroll
-        zoomOnDoubleClick
-        minZoom={0.25}
-        maxZoom={2}
-        proOptions={PRO_OPTIONS}
-      >
-        <ViewportPersistence graphKey={graphKey} enabled={Boolean(graphKey)} />
-        <ExportBridge
-          projectName={graph.meta?.projectName}
-          graphKey={graphKey}
-        />
-        <FitViewBridge />
-        <FitViewOnce
-          viewKey={fitViewKey}
-          nodeCount={nodes.length}
-          skip={hasSavedViewportRef.current && relayoutNonce === 0}
-        />
-        <FocusOnSelect
-          nodeId={autoFitNodeId}
-          nodeIds={autoFitNodeIds}
-          enabled={focusOnSelect}
-          layoutReady={!isBuilding}
-          onFocused={
-            folderExpandFocus ? () => setFolderExpandFocus(null) : undefined
-          }
-        />
-        {selected && !selected.cluster && (
-          <NodeToolbarActions
-            node={selected}
-            onFocus={() => setFocusOnSelect(true)}
-          />
-        )}
 
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={16}
-          size={1}
-          color="var(--atlas-canvas-grid)"
-        />
-        <ZoomControls />
-        <HelperLinesOverlay lines={helperLines} />
+      <ViewerHeader
+        projectName={graph.meta?.projectName}
+        totalNodes={canvasBaseGraph?.nodes.length ?? graph.nodes.length}
+        totalEdges={canvasBaseGraph?.edges.length ?? graph.edges.length}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((open) => !open)}
+        isBuilding={isBuilding}
+        canStepBack={canStepBack}
+        trailItems={trailItems}
+        hasFocusedStory={Boolean(activeFocusNode && !activeFocusNode.cluster)}
+        inspectorOpen={technicalInspectorOpen}
+        onToggleInspector={() => setTechnicalInspectorOpen((open) => !open)}
+        bridgeInfo={
+          activeBridgeFocus
+            ? {
+                fromDomain: activeBridgeFocus.fromDomain,
+                count: activeBridgeFocus.targetNodeIds.length,
+              }
+            : null
+        }
+        onClearBridge={() => setBridgeFocus(null)}
+        searchLower={searchLower}
+        matchCount={viewSelection.matchCount}
+        primaryEntry={primaryEntry}
+        insights={graph.meta?.insights}
+        allNodes={graph.nodes}
+        onInsightClick={onInsightClick}
+        onTraceFromEntry={showFromEntry}
+        onStepBack={stepBackOne}
+        onSelectTrailItem={selectTrailItem}
+      />
 
-        <MiniMap
-          nodeColor={(node) =>
-            typeColors[node.data.type as keyof typeof typeColors] ?? "#64748b"
-          }
-          maskColor="rgba(17, 17, 17, 0.85)"
-          style={{
-            background: "var(--atlas-surface)",
-            border: "1px solid var(--atlas-border)",
-            borderRadius: "var(--atlas-radius-xl)",
-          }}
-          pannable
-          zoomable
-        />
-
-        {(canvasMessage || isBuilding) && (
-          <Panel position="top-center" className="graph-canvas-notice">
-            {isBuilding ? "Building view…" : canvasMessage}
-          </Panel>
-        )}
-      </ReactFlow>
-
-      {graph.meta?.insights && graph.meta.insights.length > 0 && (
-        <InsightsBadge insights={graph.meta.insights} />
-      )}
-
-      <FloatingPanel
-        id="main"
-        defaultRect={mainPanelDefault}
-        minimizedLabel={graph.meta?.projectName ?? "Explorer"}
-      >
-        <div className="graph-sidebar graph-sidebar--main">
-          <div className="graph-sidebar__sticky">
-            <div className="graph-sidebar__header graph-sidebar__header--compact">
-              <div className="graph-sidebar__title-row">
-                <div>
-                  {graph.meta?.projectName && (
-                    <p className="graph-sidebar__project">
-                      {graph.meta.projectName}
-                    </p>
-                  )}
-                  <p className="graph-sidebar__stats graph-sidebar__stats--inline">
-                    {graph.nodes.length} nodes · {graph.edges.length} edges
-                  </p>
+      <div className="viewer-workspace">
+        {sidebarOpen && (
+          <aside className="viewer-rail viewer-rail--left">
+            <div className="graph-sidebar graph-sidebar--main">
+              <div className="graph-sidebar__sticky">
+                <div className="graph-sidebar__search-wrap">
+                  <input
+                    className="graph-search graph-search--sticky"
+                    type="search"
+                    placeholder="Find a feature, screen, or component…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
                 </div>
               </div>
-              <div className="graph-sidebar__header-actions">
-                <PanelMinimizeButton />
+
+              <div className="graph-sidebar__scroll atlas-scroll">
+                <OverviewShortcuts
+                  entries={overviewEntries}
+                  projectRoot={graph.meta?.targetDir}
+                  folders={overviewFolders}
+                  hubs={overviewHubs}
+                  spotlightFolder={activeDomain ?? selectedDomain}
+                  spotlightNodeId={activeFocusNode?.id ?? null}
+                  onEntryClick={focusSymbolStory}
+                  onFolderClick={onOverviewFolderClick}
+                  onHubClick={focusSymbolStory}
+                />
+
+                <GraphActions
+                  clusterMode={clusterMode}
+                  onClusterModeChange={(enabled) => {
+                    setHistoryStack([]);
+                    setActiveDomain(null);
+                    setStoryFocusId(null);
+                    setStoryViaId(null);
+                    setBridgeFocus(null);
+                    setSelectedDomain(null);
+                    setExpandedSubfolders(new Set());
+                    setClusterMode(enabled);
+                    queueCamera({ kind: "fit-readable", duration: 220 });
+                  }}
+                  neighborhoodFocus={neighborhoodFocus}
+                  onNeighborhoodFocusChange={onNeighborhoodFocusChange}
+                  neighborhoodHops={neighborhoodHops}
+                  onNeighborhoodHopsChange={setNeighborhoodHops}
+                  showOverviewEdges={showOverviewEdges}
+                  onShowOverviewEdgesChange={setShowOverviewEdges}
+                  edgeVisibility={edgeVisibility}
+                  onEdgeVisibilityChange={onEdgeVisibilityChange}
+                  showExternalHooks={showExternalHooks}
+                  onShowExternalHooksChange={(enabled) => {
+                    setShowExternalHooks(enabled);
+                  }}
+                  activeDomain={activeDomain}
+                  onBackToOverview={unwindToOverview}
+                  expandedSubfolderCount={expandedSubfolders.size}
+                  onCollapseSubfolders={() => {
+                    setExpandedSubfolders(new Set());
+                    queueCamera({ kind: "fit-readable", duration: 220 });
+                  }}
+                  onShowFromEntry={showFromEntry}
+                  onLayoutPresetChange={applyLayout}
+                  layoutPreset={layoutPreset}
+                  layoutDisabled={
+                    nodes.length === 0 || isOverviewMap || isStoryView
+                  }
+                />
+
+                {graph.meta?.notice && (
+                  <p className="graph-notice">{graph.meta.notice}</p>
+                )}
+
+                <GraphLegend types={legendTypes} typeColors={typeColors} />
+
+                {activeFocusNode && pathIds.length > 0 && (
+                  <p className="graph-sidebar__hint">
+                    <span className="graph-sidebar__hint-label">
+                      <span className="field-label">
+                        <span className="field-label__text">
+                          Path from startup
+                        </span>
+                        <InfoTip text="Shortest analyzed chain from an app startup file to the focused item." />
+                      </span>
+                    </span>
+                    {pathIds
+                      .map((id) => nodeById.get(id)?.name ?? id)
+                      .join(" → ")}
+                  </p>
+                )}
               </div>
             </div>
-            <div className="graph-sidebar__search-wrap">
-              <input
-                className="graph-search graph-search--sticky"
-                type="search"
-                placeholder="Search nodes…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+          </aside>
+        )}
+
+        <main className="viewer-canvas viewer-canvas--column">
+          {isAreaMapView && activeDomain && canvasBaseGraph && (
+            <AreaContextBanner
+              domain={activeDomain}
+              graph={canvasBaseGraph}
+              onStartStory={focusSymbolStory}
+            />
+          )}
+
+          <div className="viewer-canvas__flow">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={flowNodeTypes}
+              onInit={(inst) => {
+                rfInstanceRef.current = inst;
+              }}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={onNodeClick}
+              onNodeDoubleClick={onNodeDoubleClick}
+              onNodeMouseEnter={onNodeMouseEnter}
+              onNodeMouseLeave={onNodeMouseLeave}
+              onPaneClick={onPaneClick}
+              onNodeDrag={onNodeDrag}
+              onNodeDragStop={onNodeDragStop}
+              defaultEdgeOptions={COMPACT_EDGE_DEFAULTS}
+              connectionLineType={ConnectionLineType.SmoothStep}
+              nodesDraggable={!isStoryView}
+              nodesConnectable={false}
+              elementsSelectable
+              selectNodesOnDrag={false}
+              onlyRenderVisibleElements={shouldVirtualize}
+              elevateNodesOnSelect={false}
+              elevateEdgesOnSelect={false}
+              autoPanOnNodeFocus={false}
+              panOnDrag
+              panOnScroll
+              zoomOnScroll
+              zoomOnDoubleClick={false}
+              minZoom={0.15}
+              maxZoom={2}
+              proOptions={PRO_OPTIONS}
+            >
+              <ViewportPersistence
+                graphKey={persistenceKey}
+                enabled={Boolean(persistenceKey) && layoutReady && !cameraCommand}
+                restoreOnKeyChange={false}
               />
-            </div>
-          </div>
+              <ExportBridge
+                projectName={graph.meta?.projectName}
+                graphKey={graphKey}
+              />
+              <FitViewBridge />
+              <CameraController
+                command={cameraCommand}
+                layoutReady={layoutReady}
+                nodeCount={nodes.length}
+                onHandled={handleCameraHandled}
+              />
+              {!isStoryView &&
+                activeFocusNode &&
+                !activeFocusNode.cluster && (
+                  <NodeToolbarActions
+                    node={activeFocusNode}
+                    onFocus={() =>
+                      queueCamera({
+                        kind: "ensure-node",
+                        nodeId: activeFocusNode.id,
+                      })
+                    }
+                  />
+                )}
 
-          <div className="graph-sidebar__scroll atlas-scroll">
-            <OverviewShortcuts
-              entries={overviewEntries}
-              projectRoot={graph.meta?.targetDir}
-              folders={overviewFolders}
-              hubs={overviewHubs}
-              spotlightFolder={spotlightFolder}
-              spotlightNodeId={spotlightNodeId}
-              onEntryClick={onOverviewEntryClick}
-              onFolderClick={onOverviewFolderClick}
-              onHubClick={onOverviewHubClick}
-            />
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={16}
+                size={1}
+                color="var(--atlas-canvas-grid)"
+              />
+              <ZoomControls />
+              <HelperLinesOverlay lines={helperLines} />
 
-            <GraphActions
-              clusterMode={clusterMode}
-              onClusterModeChange={(enabled) => {
-                setClusterMode(enabled);
-                if (!enabled) {
-                  setFullyExpandedFolders(new Set());
-                  setPartialReveals(new Map());
+              <MiniMap
+                nodeColor={(node) =>
+                  node.type === "tierHeader" || node.type === "storyHeader"
+                    ? "transparent"
+                    : (typeColors[node.data.type as keyof typeof typeColors] ??
+                      "#64748b")
                 }
-              }}
-              neighborhoodFocus={neighborhoodFocus}
-              onNeighborhoodFocusChange={onNeighborhoodFocusChange}
-              neighborhoodHops={neighborhoodHops}
-              onNeighborhoodHopsChange={setNeighborhoodHops}
-              focusOnSelect={focusOnSelect}
-              onFocusOnSelectChange={setFocusOnSelect}
-              edgeVisibility={edgeVisibility}
-              onEdgeVisibilityChange={onEdgeVisibilityChange}
-              expandedFolders={expandedFolders}
-              onShowFromEntry={showFromEntry}
-              onCollapseFolders={() => {
-                if (expandedFolders.length === 1) {
-                  collapseClusterFolder(expandedFolders[0]!);
-                } else {
-                  collapseAllClusterFolders();
-                }
-              }}
-              onLayoutPresetChange={applyLayout}
-              layoutPreset={layoutPreset}
-              layoutDisabled={nodes.length === 0}
-            />
-
-            {isLargeGraph && (
-              <p className="graph-notice">
-                {FORCE_FULL_GRAPH
-                  ? "Large graph — full render mode. Use cluster folders if slow."
-                  : viewSelection.mode === "overview"
-                    ? "Large graph — folder overview loaded. Expand folders or search to drill in."
-                    : "Large graph — search or click folders to expand nearby nodes gradually."}
-              </p>
-            )}
-            {graph.meta?.notice && (
-              <p className="graph-notice">{graph.meta.notice}</p>
-            )}
-
-            <GraphLegend types={legendTypes} typeColors={typeColors} />
-
-            {spotlightNodeId && !selected && (
-              <p className="graph-sidebar__hint">
-                <span className="graph-sidebar__hint-label">
-                  <span className="field-label">
-                    <span className="field-label__text">Node spotlight</span>
-                    <InfoTip text="This node and its nearby connections stay fully visible; everything else is dimmed. Click the canvas or the same shortcut again to clear." />
-                  </span>
-                </span>
-                {nodeById.get(spotlightNodeId)?.name ?? spotlightNodeId} ·{" "}
-                {highlightIds?.size ?? 0} node
-                {(highlightIds?.size ?? 0) === 1 ? "" : "s"} highlighted
-              </p>
-            )}
-            {spotlightFolder && !selected && (
-              <p className="graph-sidebar__hint">
-                <span className="graph-sidebar__hint-label">
-                  <span className="field-label">
-                    <span className="field-label__text">Folder spotlight</span>
-                    <InfoTip text="Nodes in this folder stay fully visible; everything else is dimmed. Click the canvas or the same folder again to clear." />
-                  </span>
-                </span>
-                {spotlightFolder} · {highlightIds?.size ?? 0} node
-                {(highlightIds?.size ?? 0) === 1 ? "" : "s"} highlighted
-              </p>
-            )}
-            {selected && pathIds.length > 0 && (
-              <p className="graph-sidebar__hint">
-                <span className="graph-sidebar__hint-label">
-                  <span className="field-label">
-                    <span className="field-label__text">Boot path</span>
-                    <InfoTip text="Shortest chain from an app entry file to the selected node." />
-                  </span>
-                </span>
-                {pathIds.map((id) => nodeById.get(id)?.name ?? id).join(" → ")}
-              </p>
-            )}
-            {selected && neighborhoodFocus && pathIds.length === 0 && (
-              <p className="graph-sidebar__hint">
-                <span className="graph-sidebar__hint-label">
-                  <span className="field-label">
-                    <span className="field-label__text">Nearby focus</span>
-                    <InfoTip text="Only the selected node and its connections within the chosen depth stay fully visible." />
-                  </span>
-                </span>
-                Showing {highlightIds?.size ?? 0} nodes within{" "}
-                {neighborhoodHops} hop
-                {neighborhoodHops === 1 ? "" : "s"} — everything else is dimmed.
-              </p>
-            )}
+                nodeStrokeColor={() => "transparent"}
+                maskColor="rgba(17, 17, 17, 0.85)"
+                style={{
+                  background: "var(--atlas-surface)",
+                  border: "1px solid var(--atlas-border)",
+                  borderRadius: "var(--atlas-radius-xl)",
+                }}
+                pannable
+                zoomable
+              />
+            </ReactFlow>
           </div>
-        </div>
-      </FloatingPanel>
+        </main>
 
-      {selected && !selected.cluster && (
-        <FloatingPanel
-          id="details"
-          className="floating-panel--details"
-          defaultRect={detailsPanelDefault}
-          minimizedLabel={selected.name}
-        >
-          <NodeDetails
-            node={selected}
-            projectRoot={graph.meta?.targetDir}
-            onClose={() => setSelected(null)}
-          />
-        </FloatingPanel>
-      )}
+        {showRightRail && (
+          <aside className="viewer-rail viewer-rail--right">
+            {showTechnicalDetails && activeFocusNode ? (
+              <NodeDetails
+                node={activeFocusNode}
+                projectRoot={graph.meta?.targetDir}
+                onSelectConnection={onSelectConnectionById}
+                onClose={() => setTechnicalInspectorOpen(false)}
+              />
+            ) : showAreaSummary && selectedDomain ? (
+              <DomainSummaryPanel
+                domain={selectedDomain}
+                graph={canvasBaseGraph ?? graph}
+                onOpenDomain={
+                  activeDomain && !storyFocusId ? switchDomain : openRootDomain
+                }
+                onSelectSymbol={focusSymbolStory}
+                onSelectNeighborDomain={(neighbor) =>
+                  setSelectedDomain(neighbor)
+                }
+                onClose={() => setSelectedDomain(null)}
+              />
+            ) : null}
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

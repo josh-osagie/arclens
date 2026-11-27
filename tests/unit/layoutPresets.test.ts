@@ -124,6 +124,42 @@ describe("layoutPresets", () => {
     expect(filtered[0]?.id).toBe("e2");
   });
 
+  it("keeps all edges when laying out cluster nodes", () => {
+    const nodes: TestNode[] = [
+      flowNode("cluster::a", "cluster"),
+      flowNode("cluster::b", "cluster"),
+      flowNode("cluster::c", "cluster"),
+    ];
+    const edges: TestEdge[] = [
+      { id: "e1", source: "cluster::a", target: "cluster::b", data: { edgeType: "imports" } },
+      { id: "e2", source: "cluster::a", target: "cluster::c", data: { edgeType: "renders" } },
+    ];
+    const filtered = filterEdgesForDagreLayout(edges, nodes);
+    expect(filtered).toHaveLength(2);
+  });
+
+  it("packs isolated nodes in a multi-row grid below connected components", () => {
+    const nodes: TestNode[] = [
+      flowNode("entry"),
+      flowNode("child"),
+      flowNode("iso1"),
+      flowNode("iso2"),
+      flowNode("iso3"),
+      flowNode("iso4"),
+    ];
+    const edges: TestEdge[] = [{ id: "e1", source: "entry", target: "child" }];
+
+    const laidOut = getDagreLayoutedNodes(nodes, edges, "TB", ["entry"]);
+    const child = laidOut.find((n) => n.id === "child")!;
+    const isolated = laidOut.filter((n) => n.id.startsWith("iso"));
+
+    for (const iso of isolated) {
+      expect(iso.position.y).toBeGreaterThan(child.position.y);
+    }
+    const distinctRows = new Set(isolated.map((n) => n.position.y));
+    expect(distinctRows.size).toBeGreaterThan(1);
+  });
+
   it("async layout falls back to sync when workers are unavailable", async () => {
     const nodes: TestNode[] = [flowNode("entry"), flowNode("child")];
     const edges: TestEdge[] = [{ id: "e1", source: "entry", target: "child" }];

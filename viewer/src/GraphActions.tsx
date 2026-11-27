@@ -21,16 +21,20 @@ type Props = {
   onNeighborhoodFocusChange: (enabled: boolean) => void;
   neighborhoodHops: number;
   onNeighborhoodHopsChange: (hops: number) => void;
-  focusOnSelect: boolean;
-  onFocusOnSelectChange: (enabled: boolean) => void;
+  showOverviewEdges: boolean;
+  onShowOverviewEdgesChange: (enabled: boolean) => void;
   edgeVisibility: EdgeVisibilityPrefs;
   onEdgeVisibilityChange: (
     type: keyof EdgeVisibilityPrefs,
     visible: boolean
   ) => void;
-  expandedFolders: string[];
+  showExternalHooks: boolean;
+  onShowExternalHooksChange: (enabled: boolean) => void;
+  activeDomain: string | null;
+  onBackToOverview: () => void;
+  expandedSubfolderCount: number;
+  onCollapseSubfolders: () => void;
   onShowFromEntry: () => void;
-  onCollapseFolders: () => void;
   layoutPreset: LayoutPreset;
   onLayoutPresetChange: (preset: LayoutPreset) => void;
   layoutDisabled: boolean;
@@ -43,13 +47,17 @@ export function GraphActions({
   onNeighborhoodFocusChange,
   neighborhoodHops,
   onNeighborhoodHopsChange,
-  focusOnSelect,
-  onFocusOnSelectChange,
+  showOverviewEdges,
+  onShowOverviewEdgesChange,
   edgeVisibility,
   onEdgeVisibilityChange,
-  expandedFolders,
+  showExternalHooks,
+  onShowExternalHooksChange,
+  activeDomain,
+  onBackToOverview,
+  expandedSubfolderCount,
+  onCollapseSubfolders,
   onShowFromEntry,
-  onCollapseFolders,
   layoutPreset,
   onLayoutPresetChange,
   layoutDisabled,
@@ -66,11 +74,6 @@ export function GraphActions({
     });
   }, []);
 
-  const collapseLabel =
-    expandedFolders.length === 1
-      ? `Collapse ${expandedFolders[0]!.split("/").pop() ?? expandedFolders[0]}`
-      : `Collapse ${expandedFolders.length} folders`;
-
   return (
     <section className="graph-actions overview-shortcuts__section">
       <div className="overview-shortcuts__heading">
@@ -85,10 +88,10 @@ export function GraphActions({
           </span>
           <span className="field-label">
             <span className="overview-shortcuts__heading-label">
-              Graph controls
+              Advanced graph options
             </span>
             <InfoTip
-              text="Layout, entry navigation, view options, and edge visibility."
+              text="Technical layout direction, folder clustering, focus depth, and edge-type filters."
               nested
             />
           </span>
@@ -104,7 +107,7 @@ export function GraphActions({
             >
               <span className="field-label">
                 <span className="field-label__text">Layout</span>
-                <InfoTip text="Ranked dagre layout (React Flow guide). Uses render edges for positioning — on large graphs, imports and uses are hidden automatically for a clean tree. Re-enable them under Edge visibility." />
+                <InfoTip text="Tree direction used when viewing inside a domain or unclustered graph." />
               </span>
             </label>
             <select
@@ -132,13 +135,22 @@ export function GraphActions({
             >
               From entry
             </button>
-            {expandedFolders.length > 0 && (
+            {activeDomain && (
               <button
                 type="button"
                 className="graph-actions__btn"
-                onClick={onCollapseFolders}
+                onClick={onBackToOverview}
               >
-                {collapseLabel}
+                Back to overview
+              </button>
+            )}
+            {activeDomain && expandedSubfolderCount > 0 && (
+              <button
+                type="button"
+                className="graph-actions__btn"
+                onClick={onCollapseSubfolders}
+              >
+                Collapse sub-groups
               </button>
             )}
           </div>
@@ -148,13 +160,27 @@ export function GraphActions({
               <span className="graph-toggle__label">
                 <span className="field-label">
                   <span className="field-label__text">Cluster folders</span>
-                  <InfoTip text="Group nodes by file folder into collapsible clusters. Useful on large graphs." />
+                  <InfoTip text="Group symbols into architectural domains on the system overview." />
                 </span>
               </span>
               <ToggleSwitch
                 checked={clusterMode}
                 onChange={onClusterModeChange}
                 ariaLabel="Cluster folders"
+              />
+            </div>
+
+            <div className="graph-toggle">
+              <span className="graph-toggle__label">
+                <span className="field-label">
+                  <span className="field-label__text">Overview lines</span>
+                  <InfoTip text="Always show all cross-domain lines on the overview map. When off, lines appear cleanly as you hover or select a domain." />
+                </span>
+              </span>
+              <ToggleSwitch
+                checked={showOverviewEdges}
+                onChange={onShowOverviewEdgesChange}
+                ariaLabel="Overview lines"
               />
             </div>
 
@@ -165,7 +191,7 @@ export function GraphActions({
                 <span className="graph-toggle__label">
                   <span className="field-label">
                     <span className="field-label__text">Dim distant nodes</span>
-                    <InfoTip text="When a node is selected, keep it and nearby connections in focus. Everything outside that range is dimmed." />
+                    <InfoTip text="When a symbol is selected, keep it and nearby connections in focus while dimming unrelated nodes." />
                   </span>
                 </span>
                 <ToggleSwitch
@@ -203,14 +229,14 @@ export function GraphActions({
             <div className="graph-toggle">
               <span className="graph-toggle__label">
                 <span className="field-label">
-                  <span className="field-label__text">Pan to selection</span>
-                  <InfoTip text="Automatically pan and zoom the canvas when you select a node." />
+                  <span className="field-label__text">External hooks</span>
+                  <InfoTip text="Show external library hooks (e.g. useState, useEffect) on the canvas. Hooks are always visible in Node Details." />
                 </span>
               </span>
               <ToggleSwitch
-                checked={focusOnSelect}
-                onChange={onFocusOnSelectChange}
-                ariaLabel="Pan to selection"
+                checked={showExternalHooks}
+                onChange={onShowExternalHooksChange}
+                ariaLabel="External hooks"
               />
             </div>
 

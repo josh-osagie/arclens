@@ -1,11 +1,10 @@
 import path from "node:path";
-import type { ExportRecord } from "./extractors/exports";
+import type { ExportRecord, ReExportRecord } from "./extractors/exports";
 import type { ImportEdge } from "./extractFileAnalysis";
 import {
-  findDefaultExportInFile,
   findExportByName,
-  findExportInFile,
   nodeId,
+  resolveImportedExport,
 } from "./extractors/find";
 import type { AnalysisResult } from "./analyzeProject";
 import type { HookRuleViolation } from "./extractors/hookRules";
@@ -32,16 +31,35 @@ export type Insight = {
   eslintRule?: string;
 };
 
-function relFile(filePath: string): string {
+function relFile(filePath: string, targetDir?: string): string {
+  if (targetDir) {
+    const relToTarget = path.relative(targetDir, filePath);
+    if (
+      relToTarget &&
+      !relToTarget.startsWith("..") &&
+      !path.isAbsolute(relToTarget)
+    ) {
+      return relToTarget.replace(/\\/g, "/");
+    }
+  }
   return path.relative(process.cwd(), filePath) || filePath;
 }
+
+const NON_RUNTIME_NODE_KINDS = new Set([
+  "InterfaceDeclaration",
+  "TypeAliasDeclaration",
+  "TypeParameter",
+  "ModuleDeclaration",
+  "SourceFile",
+]);
 
 const HOOK_RULES_DETAIL =
   "Hooks must run in the same order on every render - never inside conditions, loops, nested functions, or after early returns.";
 
 /** Group identical hook violations (same file, hook, context) into one insight with a count. */
 export function hookRuleViolationsToInsights(
-  violations: HookRuleViolation[]
+  violations: HookRuleViolation[],
+  targetDir?: string
 ): Insight[] {
   const groups = new Map<string, HookRuleViolation[]>();
 
@@ -67,7 +85,7 @@ export function hookRuleViolationsToInsights(
         count > 1
           ? `At lines ${lines.join(", ")}. ${HOOK_RULES_DETAIL}`
           : HOOK_RULES_DETAIL,
-      file: relFile(first.file),
+      file: relFile(first.file, targetDir),
       line: first.line,
       eslintRule: first.eslintRule,
     };
@@ -81,26 +99,36 @@ function nodeNameFromId(id: string): string {
 
 function buildImportReferenceCounts(
   importEdges: ImportEdge[],
-  exports: ExportRecord[]
+  exports: ExportRecord[],
+  reExports: ReExportRecord[] = []
 ): Map<string, number> {
   const counts = new Map<string, number>();
 
   for (const imp of importEdges) {
+    if (imp.isTypeOnly) continue;
     if (!imp.resolvedTo || imp.resolvedTo.includes("node_modules")) continue;
 
     const resolvedTargets: ExportRecord[] = [];
 
     if (imp.defaultImport) {
-      const match =
-        findDefaultExportInFile(exports, imp.resolvedTo) ??
-        findExportInFile(exports, imp.resolvedTo, imp.defaultImport);
+      const match = resolveImportedExport(
+        exports,
+        imp.resolvedTo,
+        imp.defaultImport,
+        true,
+        reExports
+      );
       if (match) resolvedTargets.push(match);
     }
 
     for (const symbol of imp.namedImports) {
-      const match =
-        findExportInFile(exports, imp.resolvedTo, symbol) ??
-        findExportByName(exports, symbol);
+      const match = resolveImportedExport(
+        exports,
+        imp.resolvedTo,
+        symbol,
+        false,
+        reExports
+      );
       if (match) resolvedTargets.push(match);
     }
 
@@ -166,10 +194,13 @@ function shouldFlagOrphanExport(
   node: GraphNode,
   edges: GraphEdge[],
   importRefs: Map<string, number>,
-  exports: ExportRecord[]
+  exports: ExportRecord[],
+  sameFileRefIds?: Set<string>
 ): boolean {
   if (node.file === "external" || isConfigFile(node.file)) return false;
   if (node.type === "entry" || node.type === "config") return false;
+  if (node.kind && NON_RUNTIME_NODE_KINDS.has(node.kind)) return false;
+  if (sameFileRefIds?.has(node.id)) return false;
   if (isLikelyStateExport(node.name, node.file)) return false;
   if (isTestOrHocUtility(node.name, node.file)) return false;
 
@@ -233,10 +264,18 @@ function shouldFlagImportWithoutRender(
 
 export function buildInsights(result: AnalysisResult): Insight[] {
   const insights: Insight[] = [];
-  const { graph, exports, importEdges, fileCount, tsConfigPath, targetDir } =
-    result;
+  const {
+    graph,
+    exports,
+    reExports,
+    sameFileRefIds,
+    importEdges,
+    fileCount,
+    tsConfigPath,
+    targetDir,
+  } = result;
 
-  const importRefs = buildImportReferenceCounts(importEdges, exports);
+  const importRefs = buildImportReferenceCounts(importEdges, exports, reExports);
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
   if (!tsConfigPath) {
@@ -245,7 +284,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       title: "No tsconfig.json found",
       detail:
         "Module resolution may be incomplete. Add a tsconfig near your source root.",
-      file: relFile(targetDir),
+      file: relFile(targetDir, targetDir),
     });
   }
 
@@ -254,7 +293,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       severity: "tip",
       title: "Large codebase detected",
       detail: `Scanned ${fileCount} files. Prefer analyzing a subfolder (e.g. ./src) instead of the repo root.`,
-      file: relFile(targetDir),
+      file: relFile(targetDir, targetDir),
     });
   } else if (fileCount >= 300) {
     insights.push({
@@ -262,19 +301,27 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       title: "Medium-sized codebase",
       detail:
         "Consider `--report-file report.txt` for a saved copy and `--max-files` as a safety guard.",
-      file: relFile(targetDir),
+      file: relFile(targetDir, targetDir),
     });
   }
 
   for (const node of graph.nodes) {
-    if (!shouldFlagOrphanExport(node, graph.edges, importRefs, exports))
+    if (
+      !shouldFlagOrphanExport(
+        node,
+        graph.edges,
+        importRefs,
+        exports,
+        sameFileRefIds
+      )
+    )
       continue;
 
     insights.push({
       severity: "info",
       title: `Orphan export: ${node.name}`,
       detail: `${node.type} is exported but nothing in the graph imports or uses it.`,
-      file: relFile(node.file),
+      file: relFile(node.file, targetDir),
       eslintRule: "import/no-unused-modules",
     });
   }
@@ -297,7 +344,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
           severity: "info",
           title: `${nodeNameFromId(node.id)} imports but may not render ${targetName}`,
           detail: `PascalCase component ${targetName} imported but no JSX render detected (may be dynamic/conditional). camelCase imports such as column defs, config, and hooks are ignored.`,
-          file: relFile(node.file),
+          file: relFile(node.file, targetDir),
         });
       }
     }
@@ -311,7 +358,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       title: `Component naming: ${exp.name}`,
       detail:
         "React components should use PascalCase (e.g. Counter) so JSX can distinguish them from HTML elements.",
-      file: relFile(exp.file),
+      file: relFile(exp.file, targetDir),
       eslintRule: "@eslint-react/no-missing-component-display-name",
     });
   }
@@ -324,7 +371,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       title: `Hook naming: ${hook.name}`,
       detail:
         'Custom hooks should start with "use" so callers know Hook rules apply.',
-      file: relFile(hook.file),
+      file: relFile(hook.file, targetDir),
       eslintRule: "@eslint-react/rules-of-hooks",
     });
   }
@@ -341,14 +388,16 @@ export function buildInsights(result: AnalysisResult): Insight[] {
         title: "Type-only React import",
         detail:
           "No runtime React import needed for types - good for bundle size.",
-        file: relFile(edge.from),
+        file: relFile(edge.from, targetDir),
         line: edge.line,
         eslintRule: "@typescript-eslint/consistent-type-imports",
       });
     }
   }
 
-  insights.push(...hookRuleViolationsToInsights(result.hookRuleViolations));
+  insights.push(
+    ...hookRuleViolationsToInsights(result.hookRuleViolations, targetDir)
+  );
 
   if (targetDir.endsWith("node_modules")) {
     insights.push({
@@ -356,7 +405,7 @@ export function buildInsights(result: AnalysisResult): Insight[] {
       title: "Analyzing node_modules",
       detail:
         "Never analyze dependency folders. Point at your app source instead.",
-      file: relFile(targetDir),
+      file: relFile(targetDir, targetDir),
     });
   }
 

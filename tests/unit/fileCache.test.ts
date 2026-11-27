@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { analyzeProject } from "../../src/analyzeProject";
 import {
   buildCacheFile,
+  CACHE_VERSION,
   getCachePath,
   isCacheEntryValid,
   partitionFilesByCache,
@@ -136,7 +137,7 @@ describe("fileCache", () => {
     const cachePath = getCachePath(dir);
 
     writeFileCache(cachePath, {
-      version: 1,
+      version: CACHE_VERSION,
       files: {
         [toRelativeKey(dir, filePath)]: {
           mtimeMs: readFileStat(filePath).mtimeMs,

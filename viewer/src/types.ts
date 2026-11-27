@@ -52,6 +52,12 @@ export type AtlasGraphNode = {
   cluster?: {
     folder: string;
     count: number;
+    breakdown?: Partial<Record<GraphNodeType, number>>;
+    humanTitle?: string;
+    humanSubtitle?: string;
+    isNeutralFallback?: boolean;
+    isSubcluster?: boolean;
+    isExternalNeighbor?: boolean;
   };
   connections?: {
     incoming: GraphConnection[];

@@ -28,7 +28,7 @@ export function MobileBanner() {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 top-0 z-[60] border-b border-border bg-card/95 px-4 py-3 shadow-md backdrop-blur-sm"
+      className="fixed inset-x-0 bottom-0 z-[60] border-t border-border bg-card/95 px-4 py-3 shadow-md backdrop-blur-sm"
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
