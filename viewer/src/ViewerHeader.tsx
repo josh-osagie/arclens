@@ -1,4 +1,4 @@
-import { openCommandPalette } from "./CanvasGuideBar";
+import { openCommandPalette } from "./features/command-palette/CommandPalette";
 import { humanizeAreaIdentity } from "./humanSemantics";
 import { InsightsBadge } from "./InsightsBadge";
 import type { AtlasGraphNode, GraphInsight } from "./types";

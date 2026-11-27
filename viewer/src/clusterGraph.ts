@@ -5,7 +5,6 @@ import {
   humanizeAreaIdentity,
 } from "./humanSemantics";
 import type { AtlasGraph, AtlasGraphNode, GraphNodeType } from "./types";
-import { INCREMENTAL_CLUSTER_BATCH } from "./viewerConfig";
 
 export const CLUSTER_ID_PREFIX = "cluster::";
 
@@ -114,68 +113,6 @@ export function findSearchMatchingNodeIds(
     }
   }
   return ids;
-}
-
-export function nextClusterReveal(
-  folder: string,
-  members: AtlasGraphNode[],
-  visibleIds: Set<string>,
-  graph: AtlasGraph,
-  alreadyRevealed: Set<string>,
-  batchSize = INCREMENTAL_CLUSTER_BATCH
-): Set<string> {
-  const memberIds = new Set(members.map((member) => member.id));
-  const next = new Set(alreadyRevealed);
-  const picks: string[] = [];
-
-  for (const edge of graph.edges) {
-    if (picks.length >= batchSize) break;
-
-    if (
-      visibleIds.has(edge.from) &&
-      memberIds.has(edge.to) &&
-      !next.has(edge.to)
-    ) {
-      picks.push(edge.to);
-      next.add(edge.to);
-    }
-    if (picks.length >= batchSize) break;
-
-    if (
-      visibleIds.has(edge.to) &&
-      memberIds.has(edge.from) &&
-      !next.has(edge.from)
-    ) {
-      picks.push(edge.from);
-      next.add(edge.from);
-    }
-  }
-
-  if (picks.length < batchSize) {
-    const incoming = new Map<string, number>();
-    for (const edge of graph.edges) {
-      if (memberIds.has(edge.to)) {
-        incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1);
-      }
-    }
-
-    const ranked = members
-      .filter((member) => !next.has(member.id))
-      .sort(
-        (a, b) =>
-          (incoming.get(b.id) ?? b.stats?.incoming ?? 0) -
-          (incoming.get(a.id) ?? a.stats?.incoming ?? 0)
-      );
-
-    for (const member of ranked) {
-      if (picks.length >= batchSize) break;
-      next.add(member.id);
-      picks.push(member.id);
-    }
-  }
-
-  void folder;
-  return next;
 }
 
 /** Map each graph node id to the id shown on the clustered canvas. */
@@ -594,58 +531,6 @@ export function findDomainBridgeNodes(
 
 export function findEntryNodes(graph: AtlasGraph): AtlasGraphNode[] {
   return filterEntryNodes(graph.nodes, graph.meta?.entryNodeIds, graph.edges);
-}
-
-export function buildClusteredVisibleIds(
-  graph: AtlasGraph,
-  clusterMode: boolean,
-  fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>> = new Map()
-): Set<string> {
-  return new Set(
-    applyClusterView(
-      graph,
-      clusterMode,
-      fullyExpandedFolders,
-      partialReveals
-    ).nodes.map((node) => node.id)
-  );
-}
-
-/** Folders that are fully expanded or have partial reveals. */
-export function listExpandedFolders(
-  fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>>
-): string[] {
-  const folders = new Set(fullyExpandedFolders);
-  for (const [folder, revealed] of partialReveals) {
-    if (revealed.size > 0) folders.add(folder);
-  }
-  return [...folders].sort();
-}
-
-export function collapseClusterFolderState(
-  folder: string,
-  fullyExpandedFolders: Set<string>,
-  partialReveals: Map<string, Set<string>>
-): {
-  fullyExpandedFolders: Set<string>;
-  partialReveals: Map<string, Set<string>>;
-} {
-  const nextFully = new Set(fullyExpandedFolders);
-  nextFully.delete(folder);
-
-  const nextPartial = new Map(partialReveals);
-  nextPartial.delete(folder);
-
-  return { fullyExpandedFolders: nextFully, partialReveals: nextPartial };
-}
-
-export function collapseAllClusterFoldersState(): {
-  fullyExpandedFolders: Set<string>;
-  partialReveals: Map<string, Set<string>>;
-} {
-  return { fullyExpandedFolders: new Set(), partialReveals: new Map() };
 }
 
 /** Ensure a target node (and its in-folder neighbors) appear when a folder is clustered. */

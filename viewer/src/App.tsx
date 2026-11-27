@@ -47,6 +47,11 @@ import {
   typeColors,
 } from "./buildFlowGraph";
 import {
+  popViewport,
+  pushViewport,
+  type CameraHistoryEntry,
+} from "./cameraHistory";
+import {
   applyClusterView,
   buildDomainDrilldownGraph,
   clusterNodeId,
@@ -133,7 +138,6 @@ import {
   nodePositionsFromNodes,
   saveNodePositions,
 } from "./nodePositionStorage";
-import { computeNodeSpotlightIds } from "./nodeSpotlight";
 import { NodeToolbarActions } from "./NodeToolbarActions";
 import { OverviewShortcuts } from "./OverviewShortcuts";
 import { findPathFromEntries, pathEdgeKeys } from "./pathHighlight";
@@ -180,6 +184,8 @@ const COMPACT_EDGE_DEFAULTS = {
 } as const;
 
 const DENSE_DOMAIN_EDGE_LABEL_THRESHOLD = 20;
+const EMPTY_FOLDER_SET = new Set<string>();
+const EMPTY_PARTIAL_REVEALS = new Map<string, Set<string>>();
 
 type BridgeFocusState = {
   fromDomain: string;
@@ -188,8 +194,7 @@ type BridgeFocusState = {
   originClusterId: string;
 };
 
-type NavigationSnapshot = {
-  scopeKey: string;
+type NavigationSnapshot = CameraHistoryEntry & {
   crumbLabel: string;
   crumbSublabel?: string;
   activeDomain: string | null;
@@ -198,7 +203,6 @@ type NavigationSnapshot = {
   bridgeFocus: BridgeFocusState | null;
   expandedSubfolders: string[];
   storyExpandedGroups: string[];
-  viewport: Viewport;
 };
 
 type CameraCommand =
@@ -631,18 +635,11 @@ export default function App() {
   );
   const [showOverviewEdges, setShowOverviewEdges] = useState(false);
   const [showExternalHooks, setShowExternalHooks] = useState(false);
-  const [fullyExpandedFolders, setFullyExpandedFolders] = useState<Set<string>>(
-    () => new Set()
-  );
-  const [partialReveals, setPartialReveals] = useState<
-    Map<string, Set<string>>
-  >(() => new Map());
   const [helperLines, setHelperLines] = useState<HelperLine[]>([]);
   const [neighborhoodFocus, setNeighborhoodFocus] = useState(false);
   const [neighborhoodHops, setNeighborhoodHops] = useState(
     DEFAULT_NEIGHBORHOOD_HOPS
   );
-  const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
   const [layoutPreset, setLayoutPreset] = useState<LayoutPreset>(() =>
     loadLayoutPreset()
   );
@@ -726,11 +723,7 @@ export default function App() {
 
   const isStoryView = Boolean(storyFocusId && !searchLower && canvasBaseGraph);
   const isOverviewMap =
-    clusterMode &&
-    !activeDomain &&
-    !storyFocusId &&
-    !searchLower &&
-    fullyExpandedFolders.size === 0;
+    clusterMode && !activeDomain && !storyFocusId && !searchLower;
   const isAreaMapView = Boolean(
     activeDomain && !storyFocusId && !searchLower && canvasBaseGraph
   );
@@ -755,9 +748,6 @@ export default function App() {
     setSelectedDomain(null);
     setHoveredNodeId(null);
     setExpandedSubfolders(new Set());
-    setFullyExpandedFolders(new Set());
-    setPartialReveals(new Map());
-    setSpotlightNodeId(null);
     setNeighborhoodFocus(defaultNeighborhoodFocusEnabled(large));
 
     const overviewKey = scopeStorageKey(graphKey, null, null);
@@ -782,14 +772,14 @@ export default function App() {
 
   const effectivePartialReveals = useMemo(() => {
     if (!canvasBaseGraph || !searchLower || !isLargeGraph || !clusterMode) {
-      return partialReveals;
+      return EMPTY_PARTIAL_REVEALS;
     }
     return mergeSearchPartialReveals(
       canvasBaseGraph,
       searchLower,
-      partialReveals
+      EMPTY_PARTIAL_REVEALS
     );
-  }, [canvasBaseGraph, searchLower, isLargeGraph, clusterMode, partialReveals]);
+  }, [canvasBaseGraph, searchLower, isLargeGraph, clusterMode]);
 
   const clusteredGraph = useMemo(() => {
     if (!canvasBaseGraph) return viewSelection.graph;
@@ -803,7 +793,7 @@ export default function App() {
     return applyClusterView(
       viewSelection.graph,
       clusterMode,
-      fullyExpandedFolders,
+      EMPTY_FOLDER_SET,
       effectivePartialReveals
     );
   }, [
@@ -814,7 +804,6 @@ export default function App() {
     expandedSubfolders,
     searchLower,
     clusterMode,
-    fullyExpandedFolders,
     effectivePartialReveals,
   ]);
 
@@ -852,7 +841,7 @@ export default function App() {
 
   const viewKey = isStoryView
     ? `story:${storyFocusId}:${storyViaId ?? ""}:${storyExpandedKey}:${technicalInspectorOpen ? "insp" : ""}:${showExternalHooks}`
-    : `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${activeDomain ?? ""}:${expandedSubKey}:${showExternalHooks}:${[...fullyExpandedFolders].sort().join(",")}:${partialRevealKey}`;
+    : `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${activeDomain ?? ""}:${expandedSubKey}:${showExternalHooks}:${partialRevealKey}`;
 
   const entryIds = useMemo(
     () => (graph ? findEntryNodes(graph).map((node) => node.id) : []),
@@ -877,16 +866,6 @@ export default function App() {
     [graph, pathIds]
   );
 
-  const nodeSpotlightIds = useMemo(() => {
-    if (!spotlightNodeId || !graph || isStoryView) return null;
-    return computeNodeSpotlightIds(
-      spotlightNodeId,
-      graph.nodes,
-      clusteredGraph.nodes,
-      graph.edges
-    );
-  }, [spotlightNodeId, graph, isStoryView, clusteredGraph.nodes]);
-
   const searchHighlightIds = useMemo(() => {
     if (!searchLower || !graph) return null;
     return computeSearchHighlightIds(
@@ -894,15 +873,9 @@ export default function App() {
       viewSelection.graph,
       searchLower,
       clusterMode,
-      fullyExpandedFolders
+      EMPTY_FOLDER_SET
     );
-  }, [
-    searchLower,
-    graph,
-    viewSelection.graph,
-    clusterMode,
-    fullyExpandedFolders,
-  ]);
+  }, [searchLower, graph, viewSelection.graph, clusterMode]);
 
   const selectionHighlightIds = useMemo(() => {
     if (isStoryView) return null;
@@ -964,9 +937,6 @@ export default function App() {
     if (selectionHighlightIds && selectionHighlightIds.size > 0) {
       return selectionHighlightIds;
     }
-    if (nodeSpotlightIds && nodeSpotlightIds.size > 0) {
-      return nodeSpotlightIds;
-    }
     if (bridgeHighlightIds && bridgeHighlightIds.size > 0) {
       return bridgeHighlightIds;
     }
@@ -980,7 +950,6 @@ export default function App() {
   }, [
     isStoryView,
     selectionHighlightIds,
-    nodeSpotlightIds,
     bridgeHighlightIds,
     overviewFocusHighlightIds,
     searchHighlightIds,
@@ -989,7 +958,6 @@ export default function App() {
   const shouldHighlightEdges =
     !isStoryView &&
     (Boolean(selectedUnclusteredNodeId) ||
-      Boolean(spotlightNodeId) ||
       Boolean(bridgeHighlightIds) ||
       Boolean(overviewFocusHighlightIds) ||
       Boolean(searchLower && searchHighlightIds && searchHighlightIds.size > 0));
@@ -1381,6 +1349,7 @@ export default function App() {
       const n = nodeById.get(storyFocusId);
       return {
         scopeKey: `story:${storyFocusId}`,
+        domain: activeDomain,
         crumbLabel: n?.name ?? "Feature",
         activeDomain,
         storyFocusId,
@@ -1395,6 +1364,7 @@ export default function App() {
     if (activeDomain) {
       return {
         scopeKey: `area:${activeDomain}`,
+        domain: activeDomain,
         crumbLabel: humanizeAreaIdentity(activeDomain).title,
         activeDomain,
         storyFocusId: null,
@@ -1408,6 +1378,7 @@ export default function App() {
 
     return {
       scopeKey: "overview",
+      domain: null,
       crumbLabel: "Overview",
       activeDomain: null,
       storyFocusId: null,
@@ -1427,22 +1398,10 @@ export default function App() {
     nodeById,
   ]);
 
-  const pushSnapshot = useCallback(
-    (snap: NavigationSnapshot | null) => {
-      if (!snap) return;
-      setHistoryStack((prev) => {
-        const copy = [...prev];
-        const top = copy[copy.length - 1];
-        if (top && top.scopeKey === snap.scopeKey) {
-          copy[copy.length - 1] = snap;
-          return copy;
-        }
-        copy.push(snap);
-        return copy.length > 20 ? copy.slice(copy.length - 20) : copy;
-      });
-    },
-    []
-  );
+  const pushSnapshot = useCallback((snap: NavigationSnapshot | null) => {
+    if (!snap) return;
+    setHistoryStack((prev) => pushViewport(prev, snap, 20));
+  }, []);
 
   const restoreSnapshot = useCallback(
     (snap: NavigationSnapshot) => {
@@ -1456,7 +1415,6 @@ export default function App() {
       setSelectedDomain(null);
       setSelectedUnclusteredNodeId(null);
       setHoveredNodeId(null);
-      setSpotlightNodeId(null);
       if (!snap.storyFocusId) {
         setTechnicalInspectorOpen(false);
       }
@@ -1466,8 +1424,10 @@ export default function App() {
   );
 
   const unwindToOverview = useCallback(() => {
-    const stack = historyStackRef.current;
-    const overviewSnap = stack.find((s) => s.scopeKey === "overview") ?? null;
+    const { entry: overviewSnap } = popViewport(
+      historyStackRef.current,
+      "overview"
+    );
     setHistoryStack([]);
     setActiveDomain(null);
     setStoryFocusId(null);
@@ -1480,9 +1440,6 @@ export default function App() {
     setSearch("");
     setSelectedDomain(null);
     setHoveredNodeId(null);
-    setSpotlightNodeId(null);
-    setFullyExpandedFolders(new Set());
-    setPartialReveals(new Map());
 
     if (overviewSnap) {
       queueCamera({
@@ -1501,14 +1458,13 @@ export default function App() {
       return;
     }
 
-    const stack = historyStackRef.current;
-    if (stack.length === 0) {
+    const { entry: target, nextStack } = popViewport(historyStackRef.current);
+    if (!target) {
       unwindToOverview();
       return;
     }
 
-    const target = stack[stack.length - 1]!;
-    setHistoryStack(stack.slice(0, -1));
+    setHistoryStack(nextStack);
     restoreSnapshot(target);
   }, [searchLower, activeDomain, storyFocusId, unwindToOverview, restoreSnapshot]);
 
@@ -1519,14 +1475,14 @@ export default function App() {
         return;
       }
 
-      const stack = historyStackRef.current;
-      for (let i = stack.length - 1; i >= 0; i--) {
-        if (stack[i]!.scopeKey === targetScopeKey) {
-          const snap = stack[i]!;
-          setHistoryStack(stack.slice(0, i));
-          restoreSnapshot(snap);
-          return;
-        }
+      const { entry: snap, nextStack } = popViewport(
+        historyStackRef.current,
+        targetScopeKey
+      );
+      if (snap && snap.scopeKey === targetScopeKey) {
+        setHistoryStack(nextStack);
+        restoreSnapshot(snap);
+        return;
       }
 
       // Synthetic area crumb when user jumped directly from Overview into a Feature Story
@@ -1558,13 +1514,14 @@ export default function App() {
         setShowExternalHooks(true);
       }
 
-      const existingIdx = historyStackRef.current.findIndex(
-        (s) => s.scopeKey === `story:${node.id}`
+      const targetKey = `story:${node.id}`;
+      const { entry: existingSnap, nextStack } = popViewport(
+        historyStackRef.current,
+        targetKey
       );
-      if (existingIdx >= 0) {
-        const snap = historyStackRef.current[existingIdx]!;
-        setHistoryStack(historyStackRef.current.slice(0, existingIdx));
-        restoreSnapshot(snap);
+      if (existingSnap && existingSnap.scopeKey === targetKey) {
+        setHistoryStack(nextStack);
+        restoreSnapshot(existingSnap);
         return;
       }
 
@@ -1581,7 +1538,6 @@ export default function App() {
       setSelectedDomain(null);
       setSelectedUnclusteredNodeId(null);
       setHoveredNodeId(null);
-      setSpotlightNodeId(null);
 
       queueCamera({ kind: "fit-story", duration: 220 });
     },
@@ -1620,6 +1576,7 @@ export default function App() {
               ? [
                   {
                     scopeKey: "overview",
+                    domain: null,
                     crumbLabel: "Overview",
                     activeDomain: null,
                     storyFocusId: null,
@@ -1646,7 +1603,6 @@ export default function App() {
       setSearch("");
       setSelectedDomain(null);
       setHoveredNodeId(null);
-      setSpotlightNodeId(null);
       queueCamera({ kind: "fit-readable", duration: 220 });
     },
     [
@@ -1695,7 +1651,6 @@ export default function App() {
       setSearch("");
       setSelectedDomain(null);
       setHoveredNodeId(null);
-      setSpotlightNodeId(null);
 
       if (bridge.targetNodeIds.length > 0) {
         setBridgeFocus({
@@ -1850,13 +1805,11 @@ export default function App() {
       if (
         selectedDomain ||
         selectedUnclusteredNodeId ||
-        spotlightNodeId ||
         bridgeFocus
       ) {
         event.preventDefault();
         setSelectedDomain(null);
         setSelectedUnclusteredNodeId(null);
-        setSpotlightNodeId(null);
         setBridgeFocus(null);
       }
     };
@@ -1870,7 +1823,6 @@ export default function App() {
     search,
     selectedDomain,
     selectedUnclusteredNodeId,
-    spotlightNodeId,
     bridgeFocus,
     stepBackOne,
   ]);
@@ -1941,7 +1893,6 @@ export default function App() {
 
         // Single-clicking an Area card previews its plain-language summary in place (0 camera jump)
         setSelectedUnclusteredNodeId(null);
-        setSpotlightNodeId(null);
         setSelectedDomain((prev) => (prev === folder ? null : folder));
         return;
       }
@@ -2011,7 +1962,6 @@ export default function App() {
     if (!isStoryView) {
       setSelectedDomain(null);
       setSelectedUnclusteredNodeId(null);
-      setSpotlightNodeId(null);
       setBridgeFocus(null);
     }
     setHelperLines([]);
@@ -2200,14 +2150,7 @@ export default function App() {
         setBridgeFocus(null);
         setSelectedDomain(null);
         setExpandedSubfolders(new Set());
-        setClusterMode((enabled) => {
-          const next = !enabled;
-          if (!next) {
-            setFullyExpandedFolders(new Set());
-            setPartialReveals(new Map());
-          }
-          return next;
-        });
+        setClusterMode((enabled) => !enabled);
         queueCamera({ kind: "fit-readable", duration: 220 });
       },
       onToggleNeighborhoodFocus: () => {
@@ -2351,7 +2294,7 @@ export default function App() {
                   folders={overviewFolders}
                   hubs={overviewHubs}
                   spotlightFolder={activeDomain ?? selectedDomain}
-                  spotlightNodeId={activeFocusNode?.id ?? spotlightNodeId}
+                  spotlightNodeId={activeFocusNode?.id ?? null}
                   onEntryClick={focusSymbolStory}
                   onFolderClick={onOverviewFolderClick}
                   onHubClick={focusSymbolStory}
@@ -2368,10 +2311,6 @@ export default function App() {
                     setSelectedDomain(null);
                     setExpandedSubfolders(new Set());
                     setClusterMode(enabled);
-                    if (!enabled) {
-                      setFullyExpandedFolders(new Set());
-                      setPartialReveals(new Map());
-                    }
                     queueCamera({ kind: "fit-readable", duration: 220 });
                   }}
                   neighborhoodFocus={neighborhoodFocus}

@@ -1,7 +1,7 @@
 import { Position, type Edge, type Node } from "@xyflow/react";
 import type { AtlasNodeData } from "./buildFlowGraph";
 import { folderKey } from "./clusterGraph";
-import { edgeColors, typeColors } from "./design/tokens";
+import { edgeColors } from "./design/tokens";
 import {
   classifyHumanRole,
   computeRenderConsumerDomainCounts,
@@ -810,9 +810,6 @@ export function buildFeatureStoryView(
       inspectorOpen: Boolean(options.inspectorOpen),
     } as unknown as AtlasNodeData,
   });
-
-  // Unused import guard for typeColors if needed by consumers
-  void typeColors;
 
   return {
     nodes: flowNodes,

@@ -11,11 +11,11 @@ export type CameraHistoryEntry = {
  * Push a viewport snapshot onto the navigation stack before drilling deeper.
  * Replaces the top entry if it shares the same `scopeKey`.
  */
-export function pushViewport(
-  stack: readonly CameraHistoryEntry[],
-  entry: CameraHistoryEntry,
-  maxDepth = 16
-): CameraHistoryEntry[] {
+export function pushViewport<T extends CameraHistoryEntry>(
+  stack: readonly T[],
+  entry: T,
+  maxDepth = 20
+): T[] {
   const copy = [...stack];
   const top = copy[copy.length - 1];
 
@@ -33,14 +33,14 @@ export function pushViewport(
 
 /**
  * Pop the most recent viewport (or unwind back to a specific `targetScopeKey`,
- * such as `"overview"` or `"domain:src/app"`).
+ * such as `"overview"` or `"area:src/app"`).
  */
-export function popViewport(
-  stack: readonly CameraHistoryEntry[],
+export function popViewport<T extends CameraHistoryEntry>(
+  stack: readonly T[],
   targetScopeKey?: string
 ): {
-  entry: CameraHistoryEntry | null;
-  nextStack: CameraHistoryEntry[];
+  entry: T | null;
+  nextStack: T[];
 } {
   if (stack.length === 0) {
     return { entry: null, nextStack: [] };
