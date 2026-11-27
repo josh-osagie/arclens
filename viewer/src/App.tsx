@@ -23,12 +23,19 @@ import {
   type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { AreaContextBanner } from "./AreaContextBanner";
 import {
   AtlasClusterNode,
   OPEN_CLUSTER_EVENT,
   type ClusterNodeData,
 } from "./AtlasClusterNode";
 import { AtlasNode } from "./AtlasNode";
+import {
+  AtlasStoryAnchorNode,
+  AtlasStoryCardNode,
+  AtlasStoryGroupNode,
+  AtlasStoryHeaderNode,
+} from "./AtlasStoryNodes";
 import { AtlasTierHeaderNode } from "./AtlasTierHeaderNode";
 import {
   buildFlowGraph,
@@ -39,11 +46,6 @@ import {
   type AtlasNodeData,
   typeColors,
 } from "./buildFlowGraph";
-import {
-  popViewport,
-  pushViewport,
-  type CameraHistoryEntry,
-} from "./cameraHistory";
 import {
   applyClusterView,
   buildDomainDrilldownGraph,
@@ -57,7 +59,6 @@ import {
   groupNodesByFolder,
   isClusterId,
   mergeSearchPartialReveals,
-  subclusterKeyWithinDomain,
 } from "./clusterGraph";
 import { DomainSummaryPanel } from "./DomainSummaryPanel";
 import { filterEdgesByVisibility } from "./edgeVisibility";
@@ -104,6 +105,10 @@ import {
   HelperLinesOverlay,
   type HelperLine,
 } from "./HelperLines";
+import {
+  explainCrossAreaRelationship,
+  humanizeAreaIdentity,
+} from "./humanSemantics";
 import { InfoTip } from "./InfoTip";
 import { findNodeForInsight } from "./insightHelpers";
 import {
@@ -120,7 +125,6 @@ import {
   DEFAULT_NEIGHBORHOOD_HOPS,
   defaultNeighborhoodFocusEnabled,
   resolveHighlightIds,
-  shouldAutoEnableNeighborhoodFocus,
 } from "./neighborhoodFocus";
 import { NodeDetails } from "./NodeDetails";
 import {
@@ -133,6 +137,14 @@ import { computeNodeSpotlightIds } from "./nodeSpotlight";
 import { NodeToolbarActions } from "./NodeToolbarActions";
 import { OverviewShortcuts } from "./OverviewShortcuts";
 import { findPathFromEntries, pathEdgeKeys } from "./pathHighlight";
+import {
+  buildFeatureStoryView,
+  STORY_GROUP_TOGGLE_EVENT,
+  STORY_INSPECT_CODE_EVENT,
+  STORY_OPEN_AREA_MAP_EVENT,
+  type StoryCardNodeData,
+  type StoryGroupNodeData,
+} from "./storyGraph";
 import type { AtlasGraph, AtlasGraphNode, GraphInsight } from "./types";
 import { selectVisibleGraph, type ViewGraphMode } from "./viewGraph";
 import {
@@ -144,7 +156,7 @@ import {
   OVERVIEW_TOP_FOLDERS,
   VIRTUALIZE_THRESHOLD,
 } from "./viewerConfig";
-import { ViewerHeader } from "./ViewerHeader";
+import { ViewerHeader, type BreadcrumbTrailItem } from "./ViewerHeader";
 import { ViewportPersistence } from "./ViewportPersistence";
 import { loadViewport } from "./viewportStorage";
 import { ZoomControls } from "./ZoomControls";
@@ -154,6 +166,10 @@ const flowNodeTypes = {
   atlas: AtlasNode,
   cluster: AtlasClusterNode,
   tierHeader: AtlasTierHeaderNode,
+  storyHeader: AtlasStoryHeaderNode,
+  storyAnchor: AtlasStoryAnchorNode,
+  storyCard: AtlasStoryCardNode,
+  storyGroup: AtlasStoryGroupNode,
 };
 
 const PRO_OPTIONS = { hideAttribution: true } as const;
@@ -172,10 +188,28 @@ type BridgeFocusState = {
   originClusterId: string;
 };
 
+type NavigationSnapshot = {
+  scopeKey: string;
+  crumbLabel: string;
+  crumbSublabel?: string;
+  activeDomain: string | null;
+  storyFocusId: string | null;
+  storyViaId: string | null;
+  bridgeFocus: BridgeFocusState | null;
+  expandedSubfolders: string[];
+  storyExpandedGroups: string[];
+  viewport: Viewport;
+};
+
 type CameraCommand =
   | {
       id: number;
       kind: "fit-readable";
+      duration?: number;
+    }
+  | {
+      id: number;
+      kind: "fit-story";
       duration?: number;
     }
   | {
@@ -197,13 +231,14 @@ type CameraCommand =
       nodeId: string;
     };
 
-function scopeStorageKey(graphKey: string, activeDomain: string | null): string {
+function scopeStorageKey(
+  graphKey: string,
+  activeDomain: string | null,
+  storyFocusId: string | null
+): string {
   if (!graphKey) return "";
-  return `${graphKey}::v3::${activeDomain ?? "overview"}`;
-}
-
-function shortDomainName(domain: string): string {
-  return domain.split("/").pop() ?? domain;
+  if (storyFocusId) return `${graphKey}::v4::story::${storyFocusId}`;
+  return `${graphKey}::v4::${activeDomain ?? "overview"}`;
 }
 
 function nodeOpacity(
@@ -211,8 +246,16 @@ function nodeOpacity(
   searchLower: string,
   highlightIds: Set<string> | null
 ): number {
-  if (node.type === "tierHeader") {
-    return highlightIds && highlightIds.size > 0 ? 0.72 : 1;
+  if (
+    node.type === "tierHeader" ||
+    node.type === "storyHeader" ||
+    node.type === "storyAnchor" ||
+    node.type === "storyCard" ||
+    node.type === "storyGroup"
+  ) {
+    return node.type === "tierHeader" && highlightIds && highlightIds.size > 0
+      ? 0.72
+      : 1;
   }
 
   const label = String(node.data.label ?? "");
@@ -235,12 +278,21 @@ function patchNodePresentation(
   bridgeFocus: BridgeFocusState | null
 ): FlowNode<AtlasNodeData>[] {
   const bridgeTargets = bridgeFocus ? new Set(bridgeFocus.targetNodeIds) : null;
-  const bridgeFromShort = bridgeFocus
-    ? shortDomainName(bridgeFocus.fromDomain)
+  const bridgeFromTitle = bridgeFocus
+    ? humanizeAreaIdentity(bridgeFocus.fromDomain).title
     : undefined;
   let changed = false;
 
   const next = nodes.map((node) => {
+    if (
+      node.type === "storyHeader" ||
+      node.type === "storyAnchor" ||
+      node.type === "storyCard" ||
+      node.type === "storyGroup"
+    ) {
+      return node;
+    }
+
     if (node.type === "tierHeader") {
       const opacity = nodeOpacity(node, searchLower, highlightIds);
       const prevOpacity = node.style?.opacity ?? 1;
@@ -287,7 +339,7 @@ function patchNodePresentation(
     }
 
     const linkedFrom =
-      bridgeTargets && bridgeTargets.has(node.id) ? bridgeFromShort : undefined;
+      bridgeTargets && bridgeTargets.has(node.id) ? bridgeFromTitle : undefined;
 
     if (
       node.selected === isSelected &&
@@ -323,14 +375,19 @@ function presentEdges(
   pathEdges: Set<string>,
   highlight: boolean,
   options: {
+    isStoryView: boolean;
     isOverviewMap: boolean;
     showOverviewEdges: boolean;
     focusClusterId: string | null;
-    clusterLinkCounts: ReadonlyMap<string, number>;
+    crossAreaLabels: ReadonlyMap<string, string>;
     isDenseDomain: boolean;
     hoveredNodeId: string | null;
   }
 ): Edge[] {
+  if (options.isStoryView) {
+    return edges;
+  }
+
   const visible = filterEdgesByVisibility(edges, visibility);
 
   if (options.isOverviewMap && !options.showOverviewEdges) {
@@ -340,12 +397,13 @@ function presentEdges(
     return visible
       .filter((edge) => edge.source === focusId || edge.target === focusId)
       .map((edge) => {
-        const count =
-          options.clusterLinkCounts.get(`${edge.source}|${edge.target}`) ?? 1;
+        const label =
+          options.crossAreaLabels.get(`${edge.source}|${edge.target}`) ??
+          "connected";
         return {
           ...edge,
           animated: false,
-          label: `${count} link${count === 1 ? "" : "s"}`,
+          label,
           labelStyle: {
             fill: "#e2e8f0",
             fontSize: 11,
@@ -453,9 +511,20 @@ function CameraController({
           return;
         }
 
+        if (command.kind === "fit-story") {
+          void fitViewportInSafeArea(rf, {
+            padding: 0.08,
+            minZoom: 0.68,
+            maxZoom: 0.94,
+            duration: command.duration ?? 220,
+            enforceReadableFloor: true,
+          }).finally(() => {
+            if (!cancelled) onHandled(command.id);
+          });
+          return;
+        }
+
         if (command.kind === "fit-nodes") {
-          // Prefer framing both the bridge targets and the origin stub if they sit
-          // close enough to stay >= 68% zoom; otherwise frame the bridge targets directly.
           const combinedIds = command.originNodeId
             ? [...command.primaryNodeIds, command.originNodeId]
             : command.primaryNodeIds;
@@ -538,14 +607,25 @@ export default function App() {
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<AtlasGraphNode | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [clusterMode, setClusterMode] = useState(false);
+
+  // Canonical progressive exploration state (Overview → Area → Story)
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
-  const [domainTrail, setDomainTrail] = useState<string[]>([]);
+  const [storyFocusId, setStoryFocusId] = useState<string | null>(null);
+  const [storyViaId, setStoryViaId] = useState<string | null>(null);
+  const [storyExpandedGroups, setStoryExpandedGroups] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [technicalInspectorOpen, setTechnicalInspectorOpen] = useState(false);
+  const [selectedUnclusteredNodeId, setSelectedUnclusteredNodeId] = useState<
+    string | null
+  >(null);
+  const [historyStack, setHistoryStack] = useState<NavigationSnapshot[]>([]);
   const [bridgeFocus, setBridgeFocus] = useState<BridgeFocusState | null>(null);
+
   const [expandedSubfolders, setExpandedSubfolders] = useState<Set<string>>(
     () => new Set()
   );
@@ -581,7 +661,9 @@ export default function App() {
   const rfInstanceRef = useRef<ReactFlowInstance<
     FlowNode<AtlasNodeData>
   > | null>(null);
-  const cameraStackRef = useRef<CameraHistoryEntry[]>([]);
+  const historyStackRef = useRef<NavigationSnapshot[]>([]);
+  historyStackRef.current = historyStack;
+
   const cameraSeqRef = useRef(0);
   const buildSigRef = useRef<string>("");
   const buildingGenRef = useRef(0);
@@ -596,6 +678,7 @@ export default function App() {
     (
       spec:
         | { kind: "fit-readable"; duration?: number }
+        | { kind: "fit-story"; duration?: number }
         | {
             kind: "fit-nodes";
             primaryNodeIds: string[];
@@ -623,22 +706,39 @@ export default function App() {
     [graph, showExternalHooks]
   );
 
+  const nodeById = useMemo(
+    () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
+    [graph]
+  );
+
+  const activeFocusNode = useMemo(() => {
+    const id = storyFocusId ?? selectedUnclusteredNodeId;
+    if (!id || !graph) return null;
+    const base = nodeById.get(id);
+    return base ? enrichNodeForDetails(base, graph, nodeById) : null;
+  }, [storyFocusId, selectedUnclusteredNodeId, graph, nodeById]);
+
   const isLargeGraph =
     (canvasBaseGraph?.nodes.length ?? 0) > LARGE_GRAPH_THRESHOLD;
   const shouldVirtualize = nodes.length > VIRTUALIZE_THRESHOLD;
   const graphKey = graph ? graphSignature(graph) : "";
-  const persistenceKey = scopeStorageKey(graphKey, activeDomain);
+  const persistenceKey = scopeStorageKey(graphKey, activeDomain, storyFocusId);
 
+  const isStoryView = Boolean(storyFocusId && !searchLower && canvasBaseGraph);
   const isOverviewMap =
     clusterMode &&
     !activeDomain &&
+    !storyFocusId &&
     !searchLower &&
     fullyExpandedFolders.size === 0;
+  const isAreaMapView = Boolean(
+    activeDomain && !storyFocusId && !searchLower && canvasBaseGraph
+  );
 
   useEffect(() => {
     if (!graph) return;
     neighborhoodFocusTouchedRef.current = false;
-    cameraStackRef.current = [];
+    setHistoryStack([]);
     const nonExternal = graph.nodes.filter((node) => node.file !== "external");
     const large = nonExternal.length > LARGE_GRAPH_THRESHOLD;
     const shouldCluster =
@@ -646,9 +746,12 @@ export default function App() {
       groupNodesByFolder(nonExternal).size >= 2;
     setClusterMode(shouldCluster);
     setActiveDomain(null);
-    setDomainTrail([]);
+    setStoryFocusId(null);
+    setStoryViaId(null);
+    setStoryExpandedGroups(new Set());
+    setTechnicalInspectorOpen(false);
+    setSelectedUnclusteredNodeId(null);
     setBridgeFocus(null);
-    setSelected(null);
     setSelectedDomain(null);
     setHoveredNodeId(null);
     setExpandedSubfolders(new Set());
@@ -657,7 +760,7 @@ export default function App() {
     setSpotlightNodeId(null);
     setNeighborhoodFocus(defaultNeighborhoodFocusEnabled(large));
 
-    const overviewKey = scopeStorageKey(graphKey, null);
+    const overviewKey = scopeStorageKey(graphKey, null, null);
     const saved = overviewKey ? loadViewport(overviewKey) : null;
     if (saved && saved.zoom >= 0.5) {
       queueCamera({ kind: "restore", viewport: saved, duration: 0 });
@@ -690,7 +793,7 @@ export default function App() {
 
   const clusteredGraph = useMemo(() => {
     if (!canvasBaseGraph) return viewSelection.graph;
-    if (activeDomain && !searchLower) {
+    if (activeDomain && !storyFocusId && !searchLower) {
       return buildDomainDrilldownGraph(
         canvasBaseGraph,
         activeDomain,
@@ -707,6 +810,7 @@ export default function App() {
     canvasBaseGraph,
     viewSelection.graph,
     activeDomain,
+    storyFocusId,
     expandedSubfolders,
     searchLower,
     clusterMode,
@@ -716,46 +820,39 @@ export default function App() {
 
   const isDenseDomain =
     !isOverviewMap &&
+    !isStoryView &&
     clusteredGraph.nodes.length > DENSE_DOMAIN_EDGE_LABEL_THRESHOLD;
 
-  const clusterLinkCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    if (!canvasBaseGraph || !clusterMode) return counts;
-    const byId = new Map(
-      canvasBaseGraph.nodes.map((node) => [node.id, node] as const)
-    );
-    for (const edge of canvasBaseGraph.edges) {
-      const fromNode = byId.get(edge.from);
-      const toNode = byId.get(edge.to);
-      if (
-        !fromNode ||
-        !toNode ||
-        fromNode.file === "external" ||
-        toNode.file === "external"
-      ) {
-        continue;
-      }
-      const fromC = clusterNodeId(folderKey(fromNode.file));
-      const toC = clusterNodeId(folderKey(toNode.file));
-      if (fromC === toC) continue;
-      const key = `${fromC}|${toC}`;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+  const crossAreaLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    if (!canvasBaseGraph || !isOverviewMap) return labels;
+    for (const edge of clusteredGraph.edges) {
+      if (!isClusterId(edge.from) || !isClusterId(edge.to)) continue;
+      const key = `${edge.from}|${edge.to}`;
+      if (labels.has(key)) continue;
+      const fromDomain = folderFromClusterId(edge.from);
+      const toDomain = folderFromClusterId(edge.to);
+      const exp = explainCrossAreaRelationship(
+        fromDomain,
+        toDomain,
+        canvasBaseGraph,
+        edgeVisibility
+      );
+      labels.set(key, exp.shortLabel);
     }
-    return counts;
-  }, [canvasBaseGraph, clusterMode]);
+    return labels;
+  }, [canvasBaseGraph, isOverviewMap, clusteredGraph.edges, edgeVisibility]);
 
   const partialRevealKey = [...effectivePartialReveals.entries()]
     .map(([folder, ids]) => `${folder}:${[...ids].sort().join(",")}`)
     .sort()
     .join("|");
   const expandedSubKey = [...expandedSubfolders].sort().join(",");
+  const storyExpandedKey = [...storyExpandedGroups].sort().join(",");
 
-  const viewKey = `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${activeDomain ?? ""}:${expandedSubKey}:${showExternalHooks}:${[...fullyExpandedFolders].sort().join(",")}:${partialRevealKey}`;
-
-  const nodeById = useMemo(
-    () => (graph ? buildNodeById(graph) : new Map<string, AtlasGraphNode>()),
-    [graph]
-  );
+  const viewKey = isStoryView
+    ? `story:${storyFocusId}:${storyViaId ?? ""}:${storyExpandedKey}:${technicalInspectorOpen ? "insp" : ""}:${showExternalHooks}`
+    : `${graphSignature(clusteredGraph)}:${searchLower}:${clusterMode}:${activeDomain ?? ""}:${expandedSubKey}:${showExternalHooks}:${[...fullyExpandedFolders].sort().join(",")}:${partialRevealKey}`;
 
   const entryIds = useMemo(
     () => (graph ? findEntryNodes(graph).map((node) => node.id) : []),
@@ -763,14 +860,14 @@ export default function App() {
   );
 
   const pathIds = useMemo(() => {
-    if (!selected || !graph) return [] as string[];
-    return findPathFromEntries(graph, selected.id, entryIds);
-  }, [selected, graph, entryIds]);
+    if (!activeFocusNode || !graph) return [] as string[];
+    return findPathFromEntries(graph, activeFocusNode.id, entryIds);
+  }, [activeFocusNode, graph, entryIds]);
 
   const connectedIds = useMemo(() => {
-    if (!selected || !graph) return null;
-    return getConnectedNodeIdsFromEdges(selected.id, graph.edges);
-  }, [selected, graph]);
+    if (!activeFocusNode || !graph) return null;
+    return getConnectedNodeIdsFromEdges(activeFocusNode.id, graph.edges);
+  }, [activeFocusNode, graph]);
 
   const pathEdges = useMemo(
     () =>
@@ -781,14 +878,14 @@ export default function App() {
   );
 
   const nodeSpotlightIds = useMemo(() => {
-    if (!spotlightNodeId || !graph) return null;
+    if (!spotlightNodeId || !graph || isStoryView) return null;
     return computeNodeSpotlightIds(
       spotlightNodeId,
       graph.nodes,
       clusteredGraph.nodes,
       graph.edges
     );
-  }, [spotlightNodeId, graph, clusteredGraph.nodes]);
+  }, [spotlightNodeId, graph, isStoryView, clusteredGraph.nodes]);
 
   const searchHighlightIds = useMemo(() => {
     if (!searchLower || !graph) return null;
@@ -807,29 +904,31 @@ export default function App() {
     fullyExpandedFolders,
   ]);
 
-  const selectionHighlightIds = useMemo(
-    () =>
-      resolveHighlightIds(
-        pathIds,
-        selected?.id ?? null,
-        graph?.edges ?? [],
-        connectedIds,
-        { neighborhoodFocus, neighborhoodHops }
-      ),
-    [
+  const selectionHighlightIds = useMemo(() => {
+    if (isStoryView) return null;
+    return resolveHighlightIds(
       pathIds,
+      selectedUnclusteredNodeId,
+      graph?.edges ?? [],
       connectedIds,
-      selected?.id,
-      graph?.edges,
-      neighborhoodFocus,
-      neighborhoodHops,
-    ]
-  );
+      { neighborhoodFocus, neighborhoodHops }
+    );
+  }, [
+    isStoryView,
+    pathIds,
+    selectedUnclusteredNodeId,
+    graph?.edges,
+    connectedIds,
+    neighborhoodFocus,
+    neighborhoodHops,
+  ]);
 
   const activeBridgeFocus = useMemo(
     () =>
-      bridgeFocus && bridgeFocus.toDomain === activeDomain ? bridgeFocus : null,
-    [bridgeFocus, activeDomain]
+      !isStoryView && bridgeFocus && bridgeFocus.toDomain === activeDomain
+        ? bridgeFocus
+        : null,
+    [isStoryView, bridgeFocus, activeDomain]
   );
 
   const bridgeHighlightIds = useMemo(() => {
@@ -861,6 +960,7 @@ export default function App() {
   }, [overviewFocusClusterId, clusteredGraph.edges, edgeVisibility]);
 
   const highlightIds = useMemo(() => {
+    if (isStoryView) return null;
     if (selectionHighlightIds && selectionHighlightIds.size > 0) {
       return selectionHighlightIds;
     }
@@ -878,6 +978,7 @@ export default function App() {
     }
     return selectionHighlightIds;
   }, [
+    isStoryView,
     selectionHighlightIds,
     nodeSpotlightIds,
     bridgeHighlightIds,
@@ -886,17 +987,136 @@ export default function App() {
   ]);
 
   const shouldHighlightEdges =
-    Boolean(selected) ||
-    Boolean(spotlightNodeId) ||
-    Boolean(bridgeHighlightIds) ||
-    Boolean(overviewFocusHighlightIds) ||
-    Boolean(searchLower && searchHighlightIds && searchHighlightIds.size > 0);
+    !isStoryView &&
+    (Boolean(selectedUnclusteredNodeId) ||
+      Boolean(spotlightNodeId) ||
+      Boolean(bridgeHighlightIds) ||
+      Boolean(overviewFocusHighlightIds) ||
+      Boolean(searchLower && searchHighlightIds && searchHighlightIds.size > 0));
 
   const selectedCanvasNodeId = useMemo(() => {
-    if (selected) return selected.id;
+    if (storyFocusId) return storyFocusId;
+    if (selectedUnclusteredNodeId) return selectedUnclusteredNodeId;
     if (selectedDomain) return clusterNodeId(selectedDomain);
     return null;
-  }, [selected, selectedDomain]);
+  }, [storyFocusId, selectedUnclusteredNodeId, selectedDomain]);
+
+  // Single-source-of-truth Breadcrumb Trail derived from historyStack + current state
+  const trailItems = useMemo<BreadcrumbTrailItem[]>(() => {
+    const items: BreadcrumbTrailItem[] = [];
+    const seenKeys = new Set<string>();
+
+    const pushItem = (item: BreadcrumbTrailItem) => {
+      if (seenKeys.has(item.scopeKey)) return;
+      seenKeys.add(item.scopeKey);
+      items.push(item);
+    };
+
+    const isAtOverviewRoot =
+      !activeDomain &&
+      !storyFocusId &&
+      !selectedDomain &&
+      !selectedUnclusteredNodeId;
+
+    pushItem({
+      scopeKey: "overview",
+      label: "Overview",
+      isCurrent: isAtOverviewRoot,
+    });
+
+    for (const snap of historyStack) {
+      if (snap.scopeKey === "overview") continue;
+      pushItem({
+        scopeKey: snap.scopeKey,
+        label: snap.crumbLabel,
+        sublabel: snap.crumbSublabel,
+        isCurrent: false,
+      });
+    }
+
+    if (storyFocusId) {
+      const focusNode = nodeById.get(storyFocusId);
+      const focusDom =
+        focusNode && focusNode.file !== "external"
+          ? folderKey(focusNode.file)
+          : activeDomain;
+      if (focusDom) {
+        const areaKey = `area:${focusDom}`;
+        if (!seenKeys.has(areaKey)) {
+          // Ensure home area appears in trail when jumping directly from Overview into a Story
+          const prevWasDifferentArea = historyStack.some(
+            (s) => s.activeDomain && s.activeDomain !== focusDom
+          );
+          if (!prevWasDifferentArea) {
+            pushItem({
+              scopeKey: areaKey,
+              label: humanizeAreaIdentity(focusDom).title,
+              isCurrent: false,
+            });
+          }
+        }
+      }
+      if (focusNode) {
+        const prevSnap = historyStack[historyStack.length - 1];
+        const crossedArea =
+          prevSnap?.activeDomain &&
+          focusDom &&
+          prevSnap.activeDomain !== focusDom;
+        pushItem({
+          scopeKey: `story:${focusNode.id}`,
+          label: focusNode.name,
+          sublabel: crossedArea
+            ? humanizeAreaIdentity(focusDom).title
+            : undefined,
+          isCurrent: true,
+        });
+      }
+    } else if (activeDomain) {
+      pushItem({
+        scopeKey: `area:${activeDomain}`,
+        label: humanizeAreaIdentity(activeDomain).title,
+        isCurrent: !selectedUnclusteredNodeId,
+      });
+      if (selectedUnclusteredNodeId) {
+        const n = nodeById.get(selectedUnclusteredNodeId);
+        if (n) {
+          pushItem({
+            scopeKey: `node:${n.id}`,
+            label: n.name,
+            isCurrent: true,
+          });
+        }
+      }
+    } else if (selectedDomain) {
+      pushItem({
+        scopeKey: `preview:${selectedDomain}`,
+        label: humanizeAreaIdentity(selectedDomain).title,
+        isCurrent: true,
+      });
+    } else if (selectedUnclusteredNodeId) {
+      const n = nodeById.get(selectedUnclusteredNodeId);
+      if (n) {
+        pushItem({
+          scopeKey: `node:${n.id}`,
+          label: n.name,
+          isCurrent: true,
+        });
+      }
+    }
+
+    // Keep last 5 crumbs if a user walks 10+ steps deep so header stays compact
+    if (items.length > 6) {
+      return [items[0]!, ...items.slice(items.length - 4)];
+    }
+    return items;
+  }, [
+    historyStack,
+    activeDomain,
+    storyFocusId,
+    selectedDomain,
+    selectedUnclusteredNodeId,
+    nodeById,
+  ]);
 
   const overviewEntries = useMemo(
     () => (graph ? computeEntryPoints(graph) : []),
@@ -970,8 +1190,9 @@ export default function App() {
     return () => window.clearInterval(interval);
   }, [loadGraph, isLargeGraph]);
 
+  // Build & layout effect (Story View, Overview 4-Tier Map, or Domain/Full Dagre)
   useEffect(() => {
-    if (!graph) return;
+    if (!graph || !canvasBaseGraph) return;
     if (buildSigRef.current === viewKey) return;
 
     let cancelled = false;
@@ -981,6 +1202,26 @@ export default function App() {
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
+          if (isStoryView && storyFocusId) {
+            const storyBuilt = buildFeatureStoryView(
+              canvasBaseGraph,
+              storyFocusId,
+              storyExpandedGroups,
+              {
+                viaNodeId: storyViaId,
+                inspectorOpen: technicalInspectorOpen,
+              }
+            );
+            if (cancelled || !storyBuilt) return;
+
+            buildSigRef.current = viewKey;
+            baseEdgesRef.current = storyBuilt.edges;
+            setNodes(storyBuilt.nodes);
+            setEdges(storyBuilt.edges);
+            setRenderedViewKey(viewKey);
+            return;
+          }
+
           const built = buildFlowGraph(clusteredGraph, {
             compact: isLargeGraph && !activeDomain && !isOverviewMap,
             entryIds,
@@ -1028,10 +1269,11 @@ export default function App() {
               pathEdges,
               shouldHighlightEdges,
               {
+                isStoryView: false,
                 isOverviewMap,
                 showOverviewEdges,
                 focusClusterId: overviewFocusClusterId,
-                clusterLinkCounts,
+                crossAreaLabels,
                 isDenseDomain,
                 hoveredNodeId,
               }
@@ -1055,8 +1297,14 @@ export default function App() {
     };
   }, [
     graph,
+    canvasBaseGraph,
     clusteredGraph,
     viewKey,
+    isStoryView,
+    storyFocusId,
+    storyViaId,
+    storyExpandedGroups,
+    technicalInspectorOpen,
     isLargeGraph,
     isOverviewMap,
     isDenseDomain,
@@ -1071,13 +1319,14 @@ export default function App() {
     shouldHighlightEdges,
     showOverviewEdges,
     overviewFocusClusterId,
-    clusterLinkCounts,
+    crossAreaLabels,
     hoveredNodeId,
     setNodes,
     setEdges,
   ]);
 
   useEffect(() => {
+    if (isStoryView) return;
     setNodes((current) =>
       patchNodePresentation(
         current,
@@ -1095,16 +1344,18 @@ export default function App() {
         pathEdges,
         shouldHighlightEdges,
         {
+          isStoryView: false,
           isOverviewMap,
           showOverviewEdges,
           focusClusterId: overviewFocusClusterId,
-          clusterLinkCounts,
+          crossAreaLabels,
           isDenseDomain,
           hoveredNodeId,
         }
       )
     );
   }, [
+    isStoryView,
     searchLower,
     selectedCanvasNodeId,
     highlightIds,
@@ -1116,167 +1367,298 @@ export default function App() {
     isDenseDomain,
     showOverviewEdges,
     overviewFocusClusterId,
-    clusterLinkCounts,
+    crossAreaLabels,
     hoveredNodeId,
     setNodes,
     setEdges,
   ]);
 
-  const pushCurrentCamera = useCallback(() => {
+  const captureCurrentSnapshot = useCallback((): NavigationSnapshot | null => {
     const inst = rfInstanceRef.current;
-    if (!inst) return;
-    const scopeKey = activeDomain ? `domain:${activeDomain}` : "overview";
-    cameraStackRef.current = pushViewport(cameraStackRef.current, {
-      scopeKey,
-      domain: activeDomain,
-      trail: domainTrail,
+    if (!inst) return null;
+
+    if (storyFocusId) {
+      const n = nodeById.get(storyFocusId);
+      return {
+        scopeKey: `story:${storyFocusId}`,
+        crumbLabel: n?.name ?? "Feature",
+        activeDomain,
+        storyFocusId,
+        storyViaId,
+        bridgeFocus,
+        expandedSubfolders: [...expandedSubfolders],
+        storyExpandedGroups: [...storyExpandedGroups],
+        viewport: inst.getViewport(),
+      };
+    }
+
+    if (activeDomain) {
+      return {
+        scopeKey: `area:${activeDomain}`,
+        crumbLabel: humanizeAreaIdentity(activeDomain).title,
+        activeDomain,
+        storyFocusId: null,
+        storyViaId: null,
+        bridgeFocus,
+        expandedSubfolders: [...expandedSubfolders],
+        storyExpandedGroups: [],
+        viewport: inst.getViewport(),
+      };
+    }
+
+    return {
+      scopeKey: "overview",
+      crumbLabel: "Overview",
+      activeDomain: null,
+      storyFocusId: null,
+      storyViaId: null,
+      bridgeFocus: null,
+      expandedSubfolders: [],
+      storyExpandedGroups: [],
       viewport: inst.getViewport(),
-    });
-  }, [activeDomain, domainTrail]);
+    };
+  }, [
+    storyFocusId,
+    storyViaId,
+    activeDomain,
+    bridgeFocus,
+    expandedSubfolders,
+    storyExpandedGroups,
+    nodeById,
+  ]);
+
+  const pushSnapshot = useCallback(
+    (snap: NavigationSnapshot | null) => {
+      if (!snap) return;
+      setHistoryStack((prev) => {
+        const copy = [...prev];
+        const top = copy[copy.length - 1];
+        if (top && top.scopeKey === snap.scopeKey) {
+          copy[copy.length - 1] = snap;
+          return copy;
+        }
+        copy.push(snap);
+        return copy.length > 20 ? copy.slice(copy.length - 20) : copy;
+      });
+    },
+    []
+  );
+
+  const restoreSnapshot = useCallback(
+    (snap: NavigationSnapshot) => {
+      setActiveDomain(snap.activeDomain);
+      setStoryFocusId(snap.storyFocusId);
+      setStoryViaId(snap.storyViaId);
+      setBridgeFocus(snap.bridgeFocus);
+      setExpandedSubfolders(new Set(snap.expandedSubfolders));
+      setStoryExpandedGroups(new Set(snap.storyExpandedGroups));
+      setSearch("");
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(null);
+      setHoveredNodeId(null);
+      setSpotlightNodeId(null);
+      if (!snap.storyFocusId) {
+        setTechnicalInspectorOpen(false);
+      }
+      queueCamera({ kind: "restore", viewport: snap.viewport, duration: 240 });
+    },
+    [queueCamera]
+  );
 
   const unwindToOverview = useCallback(() => {
-    const { entry, nextStack } = popViewport(
-      cameraStackRef.current,
-      "overview"
-    );
-    cameraStackRef.current = nextStack;
+    const stack = historyStackRef.current;
+    const overviewSnap = stack.find((s) => s.scopeKey === "overview") ?? null;
+    setHistoryStack([]);
     setActiveDomain(null);
-    setDomainTrail([]);
+    setStoryFocusId(null);
+    setStoryViaId(null);
+    setStoryExpandedGroups(new Set());
+    setTechnicalInspectorOpen(false);
+    setSelectedUnclusteredNodeId(null);
     setBridgeFocus(null);
     setExpandedSubfolders(new Set());
     setSearch("");
-    setSelected(null);
     setSelectedDomain(null);
     setHoveredNodeId(null);
     setSpotlightNodeId(null);
     setFullyExpandedFolders(new Set());
     setPartialReveals(new Map());
 
-    if (entry) {
-      queueCamera({ kind: "restore", viewport: entry.viewport, duration: 240 });
+    if (overviewSnap) {
+      queueCamera({
+        kind: "restore",
+        viewport: overviewSnap.viewport,
+        duration: 240,
+      });
     } else {
       queueCamera({ kind: "fit-readable", duration: 220 });
     }
   }, [queueCamera]);
 
   const stepBackOne = useCallback(() => {
-    if (searchLower && !activeDomain) {
+    if (searchLower && !activeDomain && !storyFocusId) {
       setSearch("");
       return;
     }
 
-    const { entry, nextStack } = popViewport(cameraStackRef.current);
-    cameraStackRef.current = nextStack;
-
-    const restoredDomain = entry?.domain ?? null;
-    const restoredTrail = entry?.trail
-      ? [...entry.trail]
-      : restoredDomain
-        ? [restoredDomain]
-        : [];
-
-    setActiveDomain(restoredDomain);
-    setDomainTrail(restoredTrail);
-    setBridgeFocus(null);
-    setExpandedSubfolders(new Set());
-    setSearch("");
-    setSelected(null);
-    setSelectedDomain(null);
-    setHoveredNodeId(null);
-    setSpotlightNodeId(null);
-    setFullyExpandedFolders(new Set());
-    setPartialReveals(new Map());
-
-    if (entry) {
-      queueCamera({ kind: "restore", viewport: entry.viewport, duration: 240 });
-    } else {
-      queueCamera({ kind: "fit-readable", duration: 220 });
+    const stack = historyStackRef.current;
+    if (stack.length === 0) {
+      unwindToOverview();
+      return;
     }
-  }, [searchLower, activeDomain, queueCamera]);
 
-  const unwindToTrailDomain = useCallback(
-    (targetDomain: string, trailIndex: number) => {
-      if (targetDomain === activeDomain) {
-        setSelected(null);
-        setSelectedDomain(null);
+    const target = stack[stack.length - 1]!;
+    setHistoryStack(stack.slice(0, -1));
+    restoreSnapshot(target);
+  }, [searchLower, activeDomain, storyFocusId, unwindToOverview, restoreSnapshot]);
+
+  const selectTrailItem = useCallback(
+    (targetScopeKey: string) => {
+      if (targetScopeKey === "overview") {
+        unwindToOverview();
         return;
       }
 
-      const targetKey = `domain:${targetDomain}`;
-      const { entry, nextStack } = popViewport(
-        cameraStackRef.current,
-        targetKey
-      );
-      cameraStackRef.current = nextStack;
+      const stack = historyStackRef.current;
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i]!.scopeKey === targetScopeKey) {
+          const snap = stack[i]!;
+          setHistoryStack(stack.slice(0, i));
+          restoreSnapshot(snap);
+          return;
+        }
+      }
 
-      setActiveDomain(targetDomain);
-      setDomainTrail(
-        entry?.trail
-          ? [...entry.trail]
-          : domainTrail.slice(0, trailIndex + 1)
-      );
-      setBridgeFocus(null);
-      setExpandedSubfolders(new Set());
-      setSearch("");
-      setSelected(null);
-      setSelectedDomain(null);
-      setHoveredNodeId(null);
-      setSpotlightNodeId(null);
-
-      if (entry) {
-        queueCamera({
-          kind: "restore",
-          viewport: entry.viewport,
-          duration: 240,
-        });
-      } else {
+      // Synthetic area crumb when user jumped directly from Overview into a Feature Story
+      if (targetScopeKey.startsWith("area:")) {
+        const domain = targetScopeKey.slice("area:".length);
+        setActiveDomain(domain);
+        setStoryFocusId(null);
+        setStoryViaId(null);
+        setStoryExpandedGroups(new Set());
+        setTechnicalInspectorOpen(false);
+        setSelectedDomain(null);
+        setSelectedUnclusteredNodeId(null);
         queueCamera({ kind: "fit-readable", duration: 220 });
       }
     },
-    [activeDomain, domainTrail, queueCamera]
+    [unwindToOverview, restoreSnapshot, queueCamera]
   );
 
   /**
-   * Open a domain as a fresh root drill-down (from Overview or Left Sidebar).
+   * Enter Focused Feature Story for `node` (works from Overview, Area Map, Sidebar,
+   * Command Palette, Insights, or when walking parent ↔ child inside Story View).
    */
+  const focusSymbolStory = useCallback(
+    (node: AtlasGraphNode) => {
+      if (!graph) return;
+      if (storyFocusId === node.id && !searchLower) return;
+
+      if (node.file === "external" && !showExternalHooks) {
+        setShowExternalHooks(true);
+      }
+
+      const existingIdx = historyStackRef.current.findIndex(
+        (s) => s.scopeKey === `story:${node.id}`
+      );
+      if (existingIdx >= 0) {
+        const snap = historyStackRef.current[existingIdx]!;
+        setHistoryStack(historyStackRef.current.slice(0, existingIdx));
+        restoreSnapshot(snap);
+        return;
+      }
+
+      pushSnapshot(captureCurrentSnapshot());
+
+      const nextDomain =
+        node.file === "external" ? activeDomain : folderKey(node.file);
+      setStoryViaId(storyFocusId);
+      setStoryFocusId(node.id);
+      setStoryExpandedGroups(new Set());
+      setActiveDomain(nextDomain);
+      setBridgeFocus(null);
+      setSearch("");
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(null);
+      setHoveredNodeId(null);
+      setSpotlightNodeId(null);
+
+      queueCamera({ kind: "fit-story", duration: 220 });
+    },
+    [
+      graph,
+      storyFocusId,
+      searchLower,
+      showExternalHooks,
+      activeDomain,
+      restoreSnapshot,
+      pushSnapshot,
+      captureCurrentSnapshot,
+      queueCamera,
+    ]
+  );
+
   const openRootDomain = useCallback(
     (domain: string) => {
-      if (domain === activeDomain && !searchLower) {
-        setSelected(null);
+      if (domain === activeDomain && !storyFocusId && !searchLower) {
         setSelectedDomain(null);
         setBridgeFocus(null);
         return;
       }
 
-      if (!activeDomain) {
-        pushCurrentCamera();
+      if (!activeDomain && !storyFocusId) {
+        pushSnapshot(captureCurrentSnapshot());
       } else {
-        // Keep overview at the bottom of the stack when switching root domains from sidebar
-        const overviewEntry = cameraStackRef.current.find(
+        const overviewEntry = historyStackRef.current.find(
           (item) => item.scopeKey === "overview"
         );
-        cameraStackRef.current = overviewEntry ? [overviewEntry] : [];
+        const inst = rfInstanceRef.current;
+        setHistoryStack(
+          overviewEntry
+            ? [overviewEntry]
+            : inst
+              ? [
+                  {
+                    scopeKey: "overview",
+                    crumbLabel: "Overview",
+                    activeDomain: null,
+                    storyFocusId: null,
+                    storyViaId: null,
+                    bridgeFocus: null,
+                    expandedSubfolders: [],
+                    storyExpandedGroups: [],
+                    viewport: inst.getViewport(),
+                  },
+                ]
+              : []
+        );
       }
 
       setActiveDomain(domain);
-      setDomainTrail([domain]);
+      setStoryFocusId(null);
+      setStoryViaId(null);
+      setStoryExpandedGroups(new Set());
+      setTechnicalInspectorOpen(false);
+      setSelectedUnclusteredNodeId(null);
       setBridgeFocus(null);
       setExpandedSubfolders(new Set());
       setClusterMode(true);
       setSearch("");
-      setSelected(null);
       setSelectedDomain(null);
       setHoveredNodeId(null);
       setSpotlightNodeId(null);
       queueCamera({ kind: "fit-readable", duration: 220 });
     },
-    [activeDomain, searchLower, pushCurrentCamera, queueCamera]
+    [
+      activeDomain,
+      storyFocusId,
+      searchLower,
+      pushSnapshot,
+      captureCurrentSnapshot,
+      queueCamera,
+    ]
   );
 
-  /**
-   * Directed hop (`switch →`) from `activeDomain` into connected neighbor `targetDomain`:
-   * appends to traversal trail, spotlights exact bridge symbols, and frames them in view.
-   */
   const switchDomain = useCallback(
     (targetDomain: string) => {
       if (!activeDomain || !canvasBaseGraph) {
@@ -1284,10 +1666,12 @@ export default function App() {
         return;
       }
 
-      // If targetDomain is already an ancestor in our trail, unwind back to it cleanly
-      const existingIdx = domainTrail.indexOf(targetDomain);
+      const existingKey = `area:${targetDomain}`;
+      const existingIdx = historyStackRef.current.findIndex(
+        (s) => s.scopeKey === existingKey
+      );
       if (existingIdx >= 0) {
-        unwindToTrailDomain(targetDomain, existingIdx);
+        selectTrailItem(existingKey);
         return;
       }
 
@@ -1298,18 +1682,17 @@ export default function App() {
         targetDomain
       );
 
-      pushCurrentCamera();
-      const nextTrail =
-        domainTrail.length > 0
-          ? [...domainTrail, targetDomain]
-          : [fromDomain, targetDomain];
+      pushSnapshot(captureCurrentSnapshot());
 
       setActiveDomain(targetDomain);
-      setDomainTrail(nextTrail);
+      setStoryFocusId(null);
+      setStoryViaId(null);
+      setStoryExpandedGroups(new Set());
+      setTechnicalInspectorOpen(false);
+      setSelectedUnclusteredNodeId(null);
       setExpandedSubfolders(new Set(bridge.requiredSubfolders));
       setClusterMode(true);
       setSearch("");
-      setSelected(null);
       setSelectedDomain(null);
       setHoveredNodeId(null);
       setSpotlightNodeId(null);
@@ -1335,10 +1718,10 @@ export default function App() {
     [
       activeDomain,
       canvasBaseGraph,
-      domainTrail,
       openRootDomain,
-      unwindToTrailDomain,
-      pushCurrentCamera,
+      selectTrailItem,
+      pushSnapshot,
+      captureCurrentSnapshot,
       queueCamera,
     ]
   );
@@ -1352,24 +1735,80 @@ export default function App() {
     setHoveredNodeId(null);
   }, []);
 
+  const toggleStoryGroup = useCallback(
+    (groupKey: string) => {
+      setStoryExpandedGroups((prev) => {
+        const next = new Set(prev);
+        if (next.has(groupKey)) {
+          next.delete(groupKey);
+        } else {
+          next.add(groupKey);
+        }
+        return next;
+      });
+      queueCamera({ kind: "fit-story", duration: 200 });
+    },
+    [queueCamera]
+  );
+
   useEffect(() => {
     const onOpenCluster = (event: Event) => {
       const folder = (event as CustomEvent<string>).detail;
       if (!folder) return;
-      if (activeDomain && folder.startsWith(`${activeDomain}/`)) {
+      if (activeDomain && !storyFocusId && folder.startsWith(`${activeDomain}/`)) {
         expandSubcluster(folder);
         return;
       }
-      if (activeDomain) {
+      if (activeDomain && !storyFocusId) {
         switchDomain(folder);
         return;
       }
       openRootDomain(folder);
     };
 
+    const onStoryGroupToggle = (event: Event) => {
+      const groupKey = (event as CustomEvent<string>).detail;
+      if (groupKey) toggleStoryGroup(groupKey);
+    };
+
+    const onToggleInspector = () => {
+      setTechnicalInspectorOpen((open) => !open);
+    };
+
+    const onOpenStoryAreaMap = (event: Event) => {
+      const domain = (event as CustomEvent<string>).detail;
+      if (!domain) return;
+      pushSnapshot(captureCurrentSnapshot());
+      setActiveDomain(domain);
+      setStoryFocusId(null);
+      setStoryViaId(null);
+      setStoryExpandedGroups(new Set());
+      setTechnicalInspectorOpen(false);
+      queueCamera({ kind: "fit-readable", duration: 220 });
+    };
+
     window.addEventListener(OPEN_CLUSTER_EVENT, onOpenCluster);
-    return () => window.removeEventListener(OPEN_CLUSTER_EVENT, onOpenCluster);
-  }, [activeDomain, expandSubcluster, switchDomain, openRootDomain]);
+    window.addEventListener(STORY_GROUP_TOGGLE_EVENT, onStoryGroupToggle);
+    window.addEventListener(STORY_INSPECT_CODE_EVENT, onToggleInspector);
+    window.addEventListener(STORY_OPEN_AREA_MAP_EVENT, onOpenStoryAreaMap);
+
+    return () => {
+      window.removeEventListener(OPEN_CLUSTER_EVENT, onOpenCluster);
+      window.removeEventListener(STORY_GROUP_TOGGLE_EVENT, onStoryGroupToggle);
+      window.removeEventListener(STORY_INSPECT_CODE_EVENT, onToggleInspector);
+      window.removeEventListener(STORY_OPEN_AREA_MAP_EVENT, onOpenStoryAreaMap);
+    };
+  }, [
+    activeDomain,
+    storyFocusId,
+    expandSubcluster,
+    switchDomain,
+    openRootDomain,
+    toggleStoryGroup,
+    pushSnapshot,
+    captureCurrentSnapshot,
+    queueCamera,
+  ]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1390,7 +1829,13 @@ export default function App() {
         return;
       }
 
-      if (activeDomain) {
+      if (technicalInspectorOpen) {
+        event.preventDefault();
+        setTechnicalInspectorOpen(false);
+        return;
+      }
+
+      if (storyFocusId || activeDomain) {
         event.preventDefault();
         stepBackOne();
         return;
@@ -1402,10 +1847,15 @@ export default function App() {
         return;
       }
 
-      if (selected || selectedDomain || spotlightNodeId || bridgeFocus) {
+      if (
+        selectedDomain ||
+        selectedUnclusteredNodeId ||
+        spotlightNodeId ||
+        bridgeFocus
+      ) {
         event.preventDefault();
-        setSelected(null);
         setSelectedDomain(null);
+        setSelectedUnclusteredNodeId(null);
         setSpotlightNodeId(null);
         setBridgeFocus(null);
       }
@@ -1414,70 +1864,25 @@ export default function App() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    technicalInspectorOpen,
+    storyFocusId,
     activeDomain,
     search,
-    selected,
     selectedDomain,
+    selectedUnclusteredNodeId,
     spotlightNodeId,
     bridgeFocus,
     stepBackOne,
   ]);
 
-  const jumpToSymbol = useCallback(
-    (node: AtlasGraphNode) => {
-      if (!graph) return;
-
-      if (node.file === "external" && !showExternalHooks) {
-        setShowExternalHooks(true);
-      }
-
-      if (clusterMode && node.file !== "external") {
-        const targetDomain = folderKey(node.file);
-        const subKey = subclusterKeyWithinDomain(node.file, targetDomain);
-
-        if (targetDomain !== activeDomain) {
-          pushCurrentCamera();
-          setActiveDomain(targetDomain);
-          setDomainTrail((prev) => {
-            if (!activeDomain) return [targetDomain];
-            const idx = prev.indexOf(targetDomain);
-            return idx >= 0
-              ? prev.slice(0, idx + 1)
-              : [...prev, targetDomain];
-          });
-          setBridgeFocus(null);
-          setExpandedSubfolders(subKey ? new Set([subKey]) : new Set());
-        } else if (subKey && !expandedSubfolders.has(subKey)) {
-          setExpandedSubfolders((prev) => new Set([...prev, subKey]));
-        }
-      }
-
-      setSearch("");
-      setSelectedDomain(null);
-      setSpotlightNodeId(node.id);
-      setSelected(enrichNodeForDetails(node, graph, nodeById));
-      queueCamera({ kind: "ensure-node", nodeId: node.id });
-    },
-    [
-      graph,
-      showExternalHooks,
-      clusterMode,
-      activeDomain,
-      expandedSubfolders,
-      pushCurrentCamera,
-      nodeById,
-      queueCamera,
-    ]
-  );
-
   const onSelectConnectionById = useCallback(
     (targetId: string) => {
       const target = nodeById.get(targetId);
       if (target) {
-        jumpToSymbol(target);
+        focusSymbolStory(target);
       }
     },
-    [nodeById, jumpToSymbol]
+    [nodeById, focusSymbolStory]
   );
 
   const onInsightClick = useCallback(
@@ -1485,25 +1890,45 @@ export default function App() {
       if (!graph) return;
       const match = findNodeForInsight(insight, graph.nodes);
       if (!match) return;
-      jumpToSymbol(match);
+      setTechnicalInspectorOpen(true);
+      focusSymbolStory(match);
     },
-    [graph, jumpToSymbol]
+    [graph, focusSymbolStory]
   );
 
   const onOverviewFolderClick = useCallback(
     (folder: FolderOverview) => {
-      if (activeDomain === folder.folder) {
+      if (activeDomain === folder.folder && !storyFocusId) {
         unwindToOverview();
         return;
       }
       openRootDomain(folder.folder);
     },
-    [activeDomain, unwindToOverview, openRootDomain]
+    [activeDomain, storyFocusId, unwindToOverview, openRootDomain]
   );
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: FlowNode<AtlasNodeData>) => {
-      if (node.type === "tierHeader") return;
+      if (node.type === "tierHeader" || node.type === "storyHeader") return;
+
+      if (node.type === "storyAnchor") {
+        return;
+      }
+
+      if (node.type === "storyGroup") {
+        const groupData = node.data as unknown as StoryGroupNodeData;
+        toggleStoryGroup(groupData.groupKey);
+        return;
+      }
+
+      if (node.type === "storyCard") {
+        const cardData = node.data as unknown as StoryCardNodeData;
+        const target = nodeById.get(cardData.nodeId);
+        if (target) {
+          focusSymbolStory(target);
+        }
+        return;
+      }
 
       if (isClusterId(node.id)) {
         const folder = folderFromClusterId(node.id);
@@ -1514,8 +1939,8 @@ export default function App() {
           return;
         }
 
-        // Single-click previews domain connections & summary in place with 0 camera jump
-        setSelected(null);
+        // Single-clicking an Area card previews its plain-language summary in place (0 camera jump)
+        setSelectedUnclusteredNodeId(null);
         setSpotlightNodeId(null);
         setSelectedDomain((prev) => (prev === folder ? null : folder));
         return;
@@ -1525,21 +1950,26 @@ export default function App() {
       const base = nodeById.get(node.data.nodeId ?? node.id);
       if (!base) return;
 
-      setSelectedDomain(null);
-      setSpotlightNodeId(null);
-      if (
-        shouldAutoEnableNeighborhoodFocus(
-          isLargeGraph,
-          neighborhoodFocusTouchedRef.current,
-          neighborhoodFocus
-        )
-      ) {
-        setNeighborhoodFocus(true);
+      // In clustered / Area exploration, clicking a symbol transitions into its Focused Feature Story!
+      if (clusterMode && !searchLower) {
+        focusSymbolStory(base);
+        return;
       }
-      // Single-clicking a symbol inspects in place with 0 camera jump
-      setSelected(enrichNodeForDetails(base, graph, nodeById));
+
+      // In flat unclustered/search mode, inspect with optional inspector
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(base.id);
+      setTechnicalInspectorOpen(true);
     },
-    [graph, nodeById, expandSubcluster, isLargeGraph, neighborhoodFocus]
+    [
+      graph,
+      nodeById,
+      clusterMode,
+      searchLower,
+      toggleStoryGroup,
+      focusSymbolStory,
+      expandSubcluster,
+    ]
   );
 
   const onNodeDoubleClick = useCallback(
@@ -1551,18 +1981,18 @@ export default function App() {
         expandSubcluster(folder);
         return;
       }
-      if (activeDomain) {
+      if (activeDomain && !storyFocusId) {
         switchDomain(folder);
         return;
       }
       openRootDomain(folder);
     },
-    [activeDomain, expandSubcluster, switchDomain, openRootDomain]
+    [activeDomain, storyFocusId, expandSubcluster, switchDomain, openRootDomain]
   );
 
   const onNodeMouseEnter = useCallback(
     (_event: MouseEvent, node: FlowNode<AtlasNodeData>) => {
-      if (node.type === "tierHeader") return;
+      if (node.type === "tierHeader" || node.type === "storyHeader") return;
       setHoveredNodeId(node.id);
     },
     []
@@ -1578,25 +2008,27 @@ export default function App() {
   }, []);
 
   const onPaneClick = useCallback(() => {
-    setSelected(null);
-    setSelectedDomain(null);
-    setSpotlightNodeId(null);
-    setBridgeFocus(null);
+    if (!isStoryView) {
+      setSelectedDomain(null);
+      setSelectedUnclusteredNodeId(null);
+      setSpotlightNodeId(null);
+      setBridgeFocus(null);
+    }
     setHelperLines([]);
-  }, []);
+  }, [isStoryView]);
 
   const onNodeDrag: OnNodeDrag<FlowNode<AtlasNodeData>> = useCallback(
     (_event, dragged) => {
-      if (dragged.type === "tierHeader") return;
+      if (dragged.type === "tierHeader" || isStoryView) return;
       const { lines } = computeHelperLines(dragged, nodes);
       setHelperLines(lines);
     },
-    [nodes]
+    [nodes, isStoryView]
   );
 
   const onNodeDragStop: OnNodeDrag<FlowNode<AtlasNodeData>> = useCallback(
     (_event, dragged) => {
-      if (dragged.type === "tierHeader") return;
+      if (dragged.type === "tierHeader" || isStoryView) return;
       draggedNodeIdsRef.current.add(dragged.id);
       setNodes((current) => {
         const { snapX, snapY } = computeHelperLines(dragged, current);
@@ -1623,23 +2055,26 @@ export default function App() {
       });
       setHelperLines([]);
     },
-    [setNodes, graphKey, isOverviewMap]
+    [setNodes, graphKey, isOverviewMap, isStoryView]
   );
 
   const showFromEntry = useCallback(() => {
     if (!graph) return;
     const entries = findEntryNodes(graph);
     if (entries.length === 0) return;
-    jumpToSymbol(entries[0]!);
-  }, [graph, jumpToSymbol]);
+    focusSymbolStory(entries[0]!);
+  }, [graph, focusSymbolStory]);
 
   const applyLayout = useCallback(
     (preset: LayoutPreset) => {
       setLayoutPreset(preset);
       saveLayoutPreset(preset);
 
-      if (isOverviewMap) {
-        queueCamera({ kind: "fit-readable", duration: 220 });
+      if (isOverviewMap || isStoryView) {
+        queueCamera({
+          kind: isStoryView ? "fit-story" : "fit-readable",
+          duration: 220,
+        });
         return;
       }
 
@@ -1687,7 +2122,15 @@ export default function App() {
         }
       })();
     },
-    [isOverviewMap, nodes, entryIds, graph, setNodes, queueCamera]
+    [
+      isOverviewMap,
+      isStoryView,
+      nodes,
+      entryIds,
+      graph,
+      setNodes,
+      queueCamera,
+    ]
   );
 
   const cycleLayout = useCallback(() => {
@@ -1725,8 +2168,8 @@ export default function App() {
       clusterMode,
       neighborhoodFocus,
       layoutPreset,
-      layoutDisabled: nodes.length === 0,
-      selected,
+      layoutDisabled: nodes.length === 0 || isOverviewMap || isStoryView,
+      selected: activeFocusNode,
       hasEntryNodes: graph ? findEntryNodes(graph).length > 0 : false,
       edgeVisibility,
     }),
@@ -1735,7 +2178,9 @@ export default function App() {
       clusterMode,
       neighborhoodFocus,
       nodes.length,
-      selected,
+      isOverviewMap,
+      isStoryView,
+      activeFocusNode,
       layoutPreset,
       edgeVisibility,
     ]
@@ -1743,13 +2188,15 @@ export default function App() {
 
   const commandPaletteActions = useMemo<CommandPaletteActions>(
     () => ({
-      onJumpToNode: jumpToSymbol,
+      onJumpToNode: focusSymbolStory,
       onShowFromEntry: showFromEntry,
       onApplyLayout: applyLayout,
       onCycleLayout: cycleLayout,
       onToggleClusterMode: () => {
+        setHistoryStack([]);
         setActiveDomain(null);
-        setDomainTrail([]);
+        setStoryFocusId(null);
+        setStoryViaId(null);
         setBridgeFocus(null);
         setSelectedDomain(null);
         setExpandedSubfolders(new Set());
@@ -1775,15 +2222,15 @@ export default function App() {
         void triggerExport("svg");
       },
       onFocusSelected: () => {
-        if (!selected) return;
-        queueCamera({ kind: "ensure-node", nodeId: selected.id });
+        if (!activeFocusNode) return;
+        queueCamera({ kind: "ensure-node", nodeId: activeFocusNode.id });
       },
       onCopySelectedName: () => {
-        if (selected?.name) void copyText(selected.name);
+        if (activeFocusNode?.name) void copyText(activeFocusNode.name);
       },
       onCopySelectedPath: () => {
-        if (selected?.file && selected.file !== "external") {
-          void copyText(selected.file);
+        if (activeFocusNode?.file && activeFocusNode.file !== "external") {
+          void copyText(activeFocusNode.file);
         }
       },
       onHideEdgeType: (type) => {
@@ -1792,11 +2239,11 @@ export default function App() {
       onShowAllEdges: showAllEdges,
     }),
     [
-      jumpToSymbol,
+      focusSymbolStory,
       showFromEntry,
       applyLayout,
       cycleLayout,
-      selected,
+      activeFocusNode,
       copyText,
       onEdgeVisibilityChange,
       showAllEdges,
@@ -1832,9 +2279,14 @@ export default function App() {
   }
 
   const layoutReady = !isBuilding && renderedViewKey === viewKey;
-  const showRightRail = Boolean(
-    (selected && !selected.cluster) || selectedDomain
+  const showTechnicalDetails = Boolean(
+    activeFocusNode && !activeFocusNode.cluster && technicalInspectorOpen
   );
+  const showAreaSummary = Boolean(
+    !showTechnicalDetails && !isStoryView && selectedDomain
+  );
+  const showRightRail = showTechnicalDetails || showAreaSummary;
+  const canStepBack = Boolean(activeDomain || storyFocusId || searchLower);
 
   return (
     <div className="graph-shell graph-shell--docked">
@@ -1851,12 +2303,13 @@ export default function App() {
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((open) => !open)}
         isBuilding={isBuilding}
-        activeDomain={activeDomain}
-        domainTrail={domainTrail}
-        selectedDomain={selectedDomain}
-        selectedNode={selected}
+        canStepBack={canStepBack}
+        trailItems={trailItems}
+        hasFocusedStory={Boolean(activeFocusNode && !activeFocusNode.cluster)}
+        inspectorOpen={technicalInspectorOpen}
+        onToggleInspector={() => setTechnicalInspectorOpen((open) => !open)}
         bridgeInfo={
-          activeBridgeFocus && !selected
+          activeBridgeFocus
             ? {
                 fromDomain: activeBridgeFocus.fromDomain,
                 count: activeBridgeFocus.targetNodeIds.length,
@@ -1872,8 +2325,7 @@ export default function App() {
         onInsightClick={onInsightClick}
         onTraceFromEntry={showFromEntry}
         onStepBack={stepBackOne}
-        onBackToOverview={unwindToOverview}
-        onSelectTrailDomain={unwindToTrailDomain}
+        onSelectTrailItem={selectTrailItem}
       />
 
       <div className="viewer-workspace">
@@ -1885,7 +2337,7 @@ export default function App() {
                   <input
                     className="graph-search graph-search--sticky"
                     type="search"
-                    placeholder="Filter symbols or folders…"
+                    placeholder="Find a feature, screen, or component…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -1899,17 +2351,19 @@ export default function App() {
                   folders={overviewFolders}
                   hubs={overviewHubs}
                   spotlightFolder={activeDomain ?? selectedDomain}
-                  spotlightNodeId={selected?.id ?? spotlightNodeId}
-                  onEntryClick={jumpToSymbol}
+                  spotlightNodeId={activeFocusNode?.id ?? spotlightNodeId}
+                  onEntryClick={focusSymbolStory}
                   onFolderClick={onOverviewFolderClick}
-                  onHubClick={jumpToSymbol}
+                  onHubClick={focusSymbolStory}
                 />
 
                 <GraphActions
                   clusterMode={clusterMode}
                   onClusterModeChange={(enabled) => {
+                    setHistoryStack([]);
                     setActiveDomain(null);
-                    setDomainTrail([]);
+                    setStoryFocusId(null);
+                    setStoryViaId(null);
                     setBridgeFocus(null);
                     setSelectedDomain(null);
                     setExpandedSubfolders(new Set());
@@ -1942,7 +2396,9 @@ export default function App() {
                   onShowFromEntry={showFromEntry}
                   onLayoutPresetChange={applyLayout}
                   layoutPreset={layoutPreset}
-                  layoutDisabled={nodes.length === 0 || isOverviewMap}
+                  layoutDisabled={
+                    nodes.length === 0 || isOverviewMap || isStoryView
+                  }
                 />
 
                 {graph.meta?.notice && (
@@ -1951,12 +2407,14 @@ export default function App() {
 
                 <GraphLegend types={legendTypes} typeColors={typeColors} />
 
-                {selected && pathIds.length > 0 && (
+                {activeFocusNode && pathIds.length > 0 && (
                   <p className="graph-sidebar__hint">
                     <span className="graph-sidebar__hint-label">
                       <span className="field-label">
-                        <span className="field-label__text">Boot path</span>
-                        <InfoTip text="Shortest chain from an app entry file to the selected symbol." />
+                        <span className="field-label__text">
+                          Path from startup
+                        </span>
+                        <InfoTip text="Shortest analyzed chain from an app startup file to the focused item." />
                       </span>
                     </span>
                     {pathIds
@@ -1969,110 +2427,127 @@ export default function App() {
           </aside>
         )}
 
-        <main className="viewer-canvas">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={flowNodeTypes}
-            onInit={(inst) => {
-              rfInstanceRef.current = inst;
-            }}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={onNodeClick}
-            onNodeDoubleClick={onNodeDoubleClick}
-            onNodeMouseEnter={onNodeMouseEnter}
-            onNodeMouseLeave={onNodeMouseLeave}
-            onPaneClick={onPaneClick}
-            onNodeDrag={onNodeDrag}
-            onNodeDragStop={onNodeDragStop}
-            defaultEdgeOptions={COMPACT_EDGE_DEFAULTS}
-            connectionLineType={ConnectionLineType.SmoothStep}
-            nodesDraggable
-            nodesConnectable={false}
-            elementsSelectable
-            selectNodesOnDrag={false}
-            onlyRenderVisibleElements={shouldVirtualize}
-            elevateNodesOnSelect={false}
-            elevateEdgesOnSelect={false}
-            autoPanOnNodeFocus={false}
-            panOnDrag
-            panOnScroll
-            zoomOnScroll
-            zoomOnDoubleClick={false}
-            minZoom={0.15}
-            maxZoom={2}
-            proOptions={PRO_OPTIONS}
-          >
-            <ViewportPersistence
-              graphKey={persistenceKey}
-              enabled={Boolean(persistenceKey) && layoutReady && !cameraCommand}
-              restoreOnKeyChange={false}
+        <main className="viewer-canvas viewer-canvas--column">
+          {isAreaMapView && activeDomain && canvasBaseGraph && (
+            <AreaContextBanner
+              domain={activeDomain}
+              graph={canvasBaseGraph}
+              onStartStory={focusSymbolStory}
             />
-            <ExportBridge
-              projectName={graph.meta?.projectName}
-              graphKey={graphKey}
-            />
-            <FitViewBridge />
-            <CameraController
-              command={cameraCommand}
-              layoutReady={layoutReady}
-              nodeCount={nodes.length}
-              onHandled={handleCameraHandled}
-            />
-            {selected && !selected.cluster && (
-              <NodeToolbarActions
-                node={selected}
-                onFocus={() =>
-                  queueCamera({ kind: "ensure-node", nodeId: selected.id })
-                }
-              />
-            )}
+          )}
 
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={16}
-              size={1}
-              color="var(--atlas-canvas-grid)"
-            />
-            <ZoomControls />
-            <HelperLinesOverlay lines={helperLines} />
-
-            <MiniMap
-              nodeColor={(node) =>
-                node.type === "tierHeader"
-                  ? "transparent"
-                  : (typeColors[node.data.type as keyof typeof typeColors] ??
-                    "#64748b")
-              }
-              nodeStrokeColor={() => "transparent"}
-              maskColor="rgba(17, 17, 17, 0.85)"
-              style={{
-                background: "var(--atlas-surface)",
-                border: "1px solid var(--atlas-border)",
-                borderRadius: "var(--atlas-radius-xl)",
+          <div className="viewer-canvas__flow">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={flowNodeTypes}
+              onInit={(inst) => {
+                rfInstanceRef.current = inst;
               }}
-              pannable
-              zoomable
-            />
-          </ReactFlow>
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={onNodeClick}
+              onNodeDoubleClick={onNodeDoubleClick}
+              onNodeMouseEnter={onNodeMouseEnter}
+              onNodeMouseLeave={onNodeMouseLeave}
+              onPaneClick={onPaneClick}
+              onNodeDrag={onNodeDrag}
+              onNodeDragStop={onNodeDragStop}
+              defaultEdgeOptions={COMPACT_EDGE_DEFAULTS}
+              connectionLineType={ConnectionLineType.SmoothStep}
+              nodesDraggable={!isStoryView}
+              nodesConnectable={false}
+              elementsSelectable
+              selectNodesOnDrag={false}
+              onlyRenderVisibleElements={shouldVirtualize}
+              elevateNodesOnSelect={false}
+              elevateEdgesOnSelect={false}
+              autoPanOnNodeFocus={false}
+              panOnDrag
+              panOnScroll
+              zoomOnScroll
+              zoomOnDoubleClick={false}
+              minZoom={0.15}
+              maxZoom={2}
+              proOptions={PRO_OPTIONS}
+            >
+              <ViewportPersistence
+                graphKey={persistenceKey}
+                enabled={Boolean(persistenceKey) && layoutReady && !cameraCommand}
+                restoreOnKeyChange={false}
+              />
+              <ExportBridge
+                projectName={graph.meta?.projectName}
+                graphKey={graphKey}
+              />
+              <FitViewBridge />
+              <CameraController
+                command={cameraCommand}
+                layoutReady={layoutReady}
+                nodeCount={nodes.length}
+                onHandled={handleCameraHandled}
+              />
+              {!isStoryView &&
+                activeFocusNode &&
+                !activeFocusNode.cluster && (
+                  <NodeToolbarActions
+                    node={activeFocusNode}
+                    onFocus={() =>
+                      queueCamera({
+                        kind: "ensure-node",
+                        nodeId: activeFocusNode.id,
+                      })
+                    }
+                  />
+                )}
+
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={16}
+                size={1}
+                color="var(--atlas-canvas-grid)"
+              />
+              <ZoomControls />
+              <HelperLinesOverlay lines={helperLines} />
+
+              <MiniMap
+                nodeColor={(node) =>
+                  node.type === "tierHeader" || node.type === "storyHeader"
+                    ? "transparent"
+                    : (typeColors[node.data.type as keyof typeof typeColors] ??
+                      "#64748b")
+                }
+                nodeStrokeColor={() => "transparent"}
+                maskColor="rgba(17, 17, 17, 0.85)"
+                style={{
+                  background: "var(--atlas-surface)",
+                  border: "1px solid var(--atlas-border)",
+                  borderRadius: "var(--atlas-radius-xl)",
+                }}
+                pannable
+                zoomable
+              />
+            </ReactFlow>
+          </div>
         </main>
 
         {showRightRail && (
           <aside className="viewer-rail viewer-rail--right">
-            {selected && !selected.cluster ? (
+            {showTechnicalDetails && activeFocusNode ? (
               <NodeDetails
-                node={selected}
+                node={activeFocusNode}
                 projectRoot={graph.meta?.targetDir}
                 onSelectConnection={onSelectConnectionById}
-                onClose={() => setSelected(null)}
+                onClose={() => setTechnicalInspectorOpen(false)}
               />
-            ) : selectedDomain ? (
+            ) : showAreaSummary && selectedDomain ? (
               <DomainSummaryPanel
                 domain={selectedDomain}
                 graph={canvasBaseGraph ?? graph}
-                onOpenDomain={activeDomain ? switchDomain : openRootDomain}
-                onSelectSymbol={jumpToSymbol}
+                onOpenDomain={
+                  activeDomain && !storyFocusId ? switchDomain : openRootDomain
+                }
+                onSelectSymbol={focusSymbolStory}
                 onSelectNeighborDomain={(neighbor) =>
                   setSelectedDomain(neighbor)
                 }

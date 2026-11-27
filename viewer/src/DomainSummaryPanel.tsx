@@ -1,7 +1,14 @@
 import { useMemo } from "react";
+import { typeColors } from "./buildFlowGraph";
 import { folderKey } from "./clusterGraph";
-import { relFile, typeColors } from "./buildFlowGraph";
-import type { AtlasGraph, AtlasGraphNode, GraphNodeType } from "./types";
+import {
+  classifyHumanRole,
+  computeRenderConsumerDomainCounts,
+  describeAreaForHumans,
+  explainCrossAreaRelationship,
+  humanizeAreaIdentity,
+} from "./humanSemantics";
+import type { AtlasGraph, AtlasGraphNode } from "./types";
 
 type Props = {
   domain: string;
@@ -12,18 +19,12 @@ type Props = {
   onClose: () => void;
 };
 
-type DomainLinkSummary = {
+type ConnectedAreaSummary = {
   domain: string;
-  count: number;
-};
-
-const TYPE_PLURAL_LABELS: Record<GraphNodeType, string> = {
-  entry: "entries",
-  component: "components",
-  hook: "hooks",
-  context: "contexts",
-  utility: "utilities",
-  config: "configs",
+  title: string;
+  explanationLabel: string;
+  explanationSentence: string;
+  totalEdges: number;
 };
 
 export function DomainSummaryPanel({
@@ -35,75 +36,65 @@ export function DomainSummaryPanel({
   onClose,
 }: Props) {
   const summary = useMemo(() => {
-    const members: AtlasGraphNode[] = [];
-    const memberIds = new Set<string>();
-    const byType: Partial<Record<GraphNodeType, number>> = {};
+    const renderCounts = computeRenderConsumerDomainCounts(graph);
+    const areaDesc = describeAreaForHumans(domain, graph, renderCounts);
 
-    for (const node of graph.nodes) {
-      if (node.file === "external") continue;
-      if (folderKey(node.file) !== domain) continue;
-      members.push(node);
-      memberIds.add(node.id);
-      byType[node.type] = (byType[node.type] ?? 0) + 1;
-    }
-
-    const degreeById = new Map<string, number>();
-    const outgoingDomains = new Map<string, number>();
-    const incomingDomains = new Map<string, number>();
+    const outgoingSet = new Set<string>();
+    const incomingSet = new Set<string>();
     const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
     for (const edge of graph.edges) {
-      const fromIn = memberIds.has(edge.from);
-      const toIn = memberIds.has(edge.to);
-      if (fromIn) {
-        degreeById.set(edge.from, (degreeById.get(edge.from) ?? 0) + 1);
+      const src = nodeById.get(edge.from);
+      const dst = nodeById.get(edge.to);
+      if (!src || !dst || src.file === "external" || dst.file === "external") {
+        continue;
       }
-      if (toIn) {
-        degreeById.set(edge.to, (degreeById.get(edge.to) ?? 0) + 1);
-      }
-
-      if (fromIn && !toIn) {
-        const target = nodeById.get(edge.to);
-        if (target && target.file !== "external") {
-          const other = folderKey(target.file);
-          outgoingDomains.set(other, (outgoingDomains.get(other) ?? 0) + 1);
-        }
-      } else if (!fromIn && toIn) {
-        const source = nodeById.get(edge.from);
-        if (source && source.file !== "external") {
-          const other = folderKey(source.file);
-          incomingDomains.set(other, (incomingDomains.get(other) ?? 0) + 1);
-        }
+      const srcDomain = folderKey(src.file);
+      const dstDomain = folderKey(dst.file);
+      if (srcDomain === domain && dstDomain !== domain) {
+        outgoingSet.add(dstDomain);
+      } else if (dstDomain === domain && srcDomain !== domain) {
+        incomingSet.add(srcDomain);
       }
     }
 
-    const topSymbols = [...members]
-      .sort(
-        (a, b) =>
-          (degreeById.get(b.id) ?? 0) - (degreeById.get(a.id) ?? 0) ||
-          a.name.localeCompare(b.name)
-      )
-      .slice(0, 8)
-      .map((node) => ({
-        node,
-        degree: degreeById.get(node.id) ?? 0,
-      }));
+    const buildAreaLinks = (
+      domains: Set<string>,
+      direction: "outgoing" | "incoming"
+    ): ConnectedAreaSummary[] =>
+      [...domains]
+        .map((otherDomain) => {
+          const exp =
+            direction === "outgoing"
+              ? explainCrossAreaRelationship(domain, otherDomain, graph)
+              : explainCrossAreaRelationship(otherDomain, domain, graph);
+          return {
+            domain: otherDomain,
+            title: humanizeAreaIdentity(otherDomain).title,
+            explanationLabel: exp.shortLabel,
+            explanationSentence: exp.sentence,
+            totalEdges: exp.totalEdges,
+          };
+        })
+        .sort(
+          (a, b) =>
+            b.totalEdges - a.totalEdges || a.title.localeCompare(b.title)
+        );
 
-    const toSortedLinks = (map: Map<string, number>): DomainLinkSummary[] =>
-      [...map.entries()]
-        .map(([d, count]) => ({ domain: d, count }))
-        .sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain));
+    const startingItems = areaDesc.startingScreens.map((node) => ({
+      node,
+      roleInfo: classifyHumanRole(node, renderCounts.get(node.id) ?? 0),
+    }));
 
     return {
-      total: members.length,
-      byType,
-      topSymbols,
-      dependsOn: toSortedLinks(outgoingDomains),
-      usedBy: toSortedLinks(incomingDomains),
+      areaDesc,
+      startingItems,
+      dependsOn: buildAreaLinks(outgoingSet, "outgoing"),
+      usedBy: buildAreaLinks(incomingSet, "incoming"),
     };
   }, [domain, graph]);
 
-  const title = domain.split("/").pop() ?? domain;
+  const { areaDesc } = summary;
 
   return (
     <div className="graph-sidebar graph-sidebar--details domain-summary">
@@ -115,8 +106,10 @@ export function DomainSummaryPanel({
             aria-hidden="true"
           />
           <div>
-            <h2>{title}</h2>
-            <p className="domain-summary__path">{domain}</p>
+            <h2>{areaDesc.title}</h2>
+            <p className="domain-summary__path">
+              {areaDesc.categoryLabel} · {domain}
+            </p>
           </div>
         </div>
         <div className="graph-sidebar__header-actions">
@@ -124,7 +117,7 @@ export function DomainSummaryPanel({
             type="button"
             className="graph-sidebar__close"
             onClick={onClose}
-            aria-label="Close domain summary"
+            aria-label="Close area summary"
           >
             ×
           </button>
@@ -132,37 +125,28 @@ export function DomainSummaryPanel({
       </div>
 
       <div className="graph-sidebar__scroll atlas-scroll">
+        <p className="domain-summary__purpose">{areaDesc.purposeSummary}</p>
+
         <button
           type="button"
           className="domain-summary__open-cta"
           onClick={() => onOpenDomain(domain)}
         >
-          <span>Open {domain}</span>
+          <span>
+            Explore {areaDesc.title} ({areaDesc.counts.total})
+          </span>
           <span aria-hidden="true">→</span>
         </button>
 
-        <dl className="details-meta">
-          <div>
-            <dt>Symbols</dt>
-            <dd>{summary.total}</dd>
-          </div>
-          {Object.entries(summary.byType).map(([type, count]) =>
-            count ? (
-              <div key={type}>
-                <dt>
-                  {TYPE_PLURAL_LABELS[type as GraphNodeType] ?? `${type}s`}
-                </dt>
-                <dd>{count}</dd>
-              </div>
-            ) : null
-          )}
-        </dl>
-
-        {summary.topSymbols.length > 0 && (
+        {summary.startingItems.length > 0 && (
           <div className="details-section">
-            <h3>Key symbols</h3>
+            <h3>
+              {areaDesc.counts.screens > 0
+                ? "Features & screens to explore"
+                : "Key elements to explore"}
+            </h3>
             <ul className="details-list">
-              {summary.topSymbols.map(({ node, degree }) => (
+              {summary.startingItems.map(({ node, roleInfo }) => (
                 <li key={node.id}>
                   <button
                     type="button"
@@ -178,10 +162,11 @@ export function DomainSummaryPanel({
                         }}
                       />
                       <span className="details-list__name">{node.name}</span>
+                      <span className="details-list__count">Story →</span>
                     </span>
                     <span className="details-list__meta">
-                      {node.type} · {degree} link{degree === 1 ? "" : "s"} ·{" "}
-                      {relFile(node.file)}
+                      {roleInfo.label}
+                      {roleInfo.certainty === "inferred" ? " (inferred)" : ""}
                     </span>
                   </button>
                 </li>
@@ -191,9 +176,11 @@ export function DomainSummaryPanel({
         )}
 
         <div className="details-section">
-          <h3>Used by domains ({summary.usedBy.length})</h3>
+          <h3>Used by other areas ({summary.usedBy.length})</h3>
           {summary.usedBy.length === 0 ? (
-            <p className="details-empty">none</p>
+            <p className="details-empty">
+              No other areas reference {areaDesc.title} directly.
+            </p>
           ) : (
             <ul className="details-list">
               {summary.usedBy.map((item) => (
@@ -202,10 +189,16 @@ export function DomainSummaryPanel({
                     type="button"
                     className="details-list__jump"
                     onClick={() => onSelectNeighborDomain(item.domain)}
+                    title={item.explanationSentence}
                   >
-                    <span className="details-list__name">{item.domain}</span>
+                    <span className="details-list__head">
+                      <span className="details-list__name">{item.title}</span>
+                      <span className="details-list__count">
+                        {item.explanationLabel}
+                      </span>
+                    </span>
                     <span className="details-list__meta">
-                      {item.count} incoming edge{item.count === 1 ? "" : "s"}
+                      {item.explanationSentence}
                     </span>
                   </button>
                 </li>
@@ -215,9 +208,9 @@ export function DomainSummaryPanel({
         </div>
 
         <div className="details-section">
-          <h3>Depends on domains ({summary.dependsOn.length})</h3>
+          <h3>Depends on other areas ({summary.dependsOn.length})</h3>
           {summary.dependsOn.length === 0 ? (
-            <p className="details-empty">none</p>
+            <p className="details-empty">Self-contained area.</p>
           ) : (
             <ul className="details-list">
               {summary.dependsOn.map((item) => (
@@ -226,10 +219,16 @@ export function DomainSummaryPanel({
                     type="button"
                     className="details-list__jump"
                     onClick={() => onSelectNeighborDomain(item.domain)}
+                    title={item.explanationSentence}
                   >
-                    <span className="details-list__name">{item.domain}</span>
+                    <span className="details-list__head">
+                      <span className="details-list__name">{item.title}</span>
+                      <span className="details-list__count">
+                        {item.explanationLabel}
+                      </span>
+                    </span>
                     <span className="details-list__meta">
-                      {item.count} outgoing edge{item.count === 1 ? "" : "s"}
+                      {item.explanationSentence}
                     </span>
                   </button>
                 </li>

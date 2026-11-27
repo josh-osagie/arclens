@@ -1,4 +1,9 @@
 import { filterEntryNodes } from "../../src/entryPoints";
+import {
+  computeRenderConsumerDomainCounts,
+  describeAreaForHumans,
+  humanizeAreaIdentity,
+} from "./humanSemantics";
 import type { AtlasGraph, AtlasGraphNode, GraphNodeType } from "./types";
 import { INCREMENTAL_CLUSTER_BATCH } from "./viewerConfig";
 
@@ -262,6 +267,7 @@ export function applyClusterView(
   if (!clusterMode) return graph;
 
   const groups = groupNodesByFolder(graph.nodes);
+  const renderCounts = computeRenderConsumerDomainCounts(graph);
   const visibleIds = new Set<string>();
   const displayNodes: AtlasGraphNode[] = [];
 
@@ -288,6 +294,7 @@ export function applyClusterView(
       const clusterId = clusterNodeId(folder);
       visibleIds.add(clusterId);
       const baseName = folder.split("/").pop() ?? folder;
+      const areaDesc = describeAreaForHumans(folder, graph, renderCounts);
       displayNodes.push({
         id: clusterId,
         name:
@@ -298,6 +305,12 @@ export function applyClusterView(
           folder,
           count: hiddenCount,
           breakdown: summarizeClusterBreakdown(hiddenMembers),
+          humanTitle:
+            revealedMembers.length > 0
+              ? `${areaDesc.title} +${hiddenCount}`
+              : areaDesc.title,
+          humanSubtitle: areaDesc.cardSubtitle,
+          isNeutralFallback: areaDesc.isNeutralFallback,
         },
         stats: { incoming: 0, outgoing: 0 },
       });
@@ -416,6 +429,7 @@ export function buildDomainDrilldownGraph(
     for (const m of members) {
       collapsedSubMemberToClusterId.set(m.id, cid);
     }
+    const subIdentity = humanizeAreaIdentity(`src/${leaf}`);
     subclusterNodes.push({
       id: cid,
       name: leaf,
@@ -425,6 +439,8 @@ export function buildDomainDrilldownGraph(
         folder: subKey,
         count: members.length,
         breakdown: summarizeClusterBreakdown(members),
+        humanTitle: subIdentity.isNeutralFallback ? `${leaf} group` : subIdentity.title,
+        humanSubtitle: `${members.length} grouped modules`,
         isSubcluster: true,
       },
       stats: { incoming: 0, outgoing: 0 },
@@ -479,6 +495,7 @@ export function buildDomainDrilldownGraph(
   )) {
     const cid = clusterNodeId(extFolder);
     const baseName = extFolder.split("/").pop() ?? extFolder;
+    const extIdentity = humanizeAreaIdentity(extFolder);
     displayNodes.push({
       id: cid,
       name: baseName,
@@ -488,6 +505,9 @@ export function buildDomainDrilldownGraph(
         folder: extFolder,
         count: members.length,
         breakdown: summarizeClusterBreakdown(members),
+        humanTitle: extIdentity.title,
+        humanSubtitle: `${members.length} connected ${members.length === 1 ? "item" : "items"}`,
+        isNeutralFallback: extIdentity.isNeutralFallback,
         isExternalNeighbor: true,
       },
       stats: { incoming: 0, outgoing: 0 },

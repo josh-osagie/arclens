@@ -88,10 +88,10 @@ export function GraphActions({
           </span>
           <span className="field-label">
             <span className="overview-shortcuts__heading-label">
-              Graph controls
+              Advanced graph options
             </span>
             <InfoTip
-              text="Layout direction, domain grouping, focus depth, and edge visibility."
+              text="Technical layout direction, folder clustering, focus depth, and edge-type filters."
               nested
             />
           </span>

@@ -17,6 +17,9 @@ export type ClusterNodeData = {
   folder: string;
   count: number;
   breakdown?: Partial<Record<GraphNodeType, number>>;
+  humanTitle?: string;
+  humanSubtitle?: string;
+  isNeutralFallback?: boolean;
   isSubcluster?: boolean;
   isExternalNeighbor?: boolean;
   isBridgeOrigin?: boolean;
@@ -25,11 +28,11 @@ export type ClusterNodeData = {
 };
 
 const BREAKDOWN_ORDER: Array<{ type: GraphNodeType; short: string }> = [
-  { type: "entry", short: "entry" },
-  { type: "component", short: "comp" },
+  { type: "entry", short: "startup" },
+  { type: "component", short: "UI" },
   { type: "hook", short: "hooks" },
-  { type: "context", short: "ctx" },
-  { type: "utility", short: "utils" },
+  { type: "context", short: "state" },
+  { type: "utility", short: "helpers" },
 ];
 
 function formatBreakdown(
@@ -55,8 +58,9 @@ function ClusterNodeComponent({
 }: NodeProps) {
   const nodeData = data as ClusterNodeData;
   const isSelected = selected || nodeData.selected;
-  const showFolderPath = nodeData.folder !== nodeData.label;
-  const breakdownText = formatBreakdown(nodeData.breakdown);
+  const displayTitle = nodeData.humanTitle ?? nodeData.label;
+  const subtitleText =
+    nodeData.humanSubtitle ?? formatBreakdown(nodeData.breakdown);
   const targetPos = targetPosition ?? Position.Top;
   const sourcePos = sourcePosition ?? Position.Bottom;
 
@@ -64,9 +68,7 @@ function ClusterNodeComponent({
     ? "expand +"
     : nodeData.isBridgeOrigin
       ? "← back"
-      : nodeData.isExternalNeighbor
-        ? "switch →"
-        : "open →";
+      : "explore →";
 
   const onOpenClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -84,7 +86,7 @@ function ClusterNodeComponent({
       ]
         .filter(Boolean)
         .join(" ")}
-      title={`Click to preview connections · Double-click or click "${actionLabel}" for ${nodeData.folder}`}
+      title={`Click to preview ${displayTitle} (${nodeData.folder}) · Double-click or click "${actionLabel}" to explore`}
     >
       <Handle
         type="target"
@@ -98,18 +100,22 @@ function ClusterNodeComponent({
           type="button"
           className="atlas-cluster__open-btn"
           onClick={onOpenClick}
-          aria-label={`Open ${nodeData.folder}`}
+          aria-label={`Explore ${displayTitle}`}
         >
           {actionLabel}
         </button>
       </div>
-      <div className="atlas-cluster__label">{nodeData.label}</div>
-      {showFolderPath && (
-        <div className="atlas-cluster__folder">{nodeData.folder}</div>
+      <div className="atlas-cluster__label atlas-cluster__label--human">
+        {displayTitle}
+      </div>
+      {subtitleText && (
+        <div className="atlas-cluster__breakdown">{subtitleText}</div>
       )}
-      {breakdownText && (
-        <div className="atlas-cluster__breakdown">{breakdownText}</div>
-      )}
+      <div className="atlas-cluster__folder">
+        {nodeData.isNeutralFallback
+          ? `folder · ${nodeData.folder}`
+          : nodeData.folder}
+      </div>
       <Handle
         type="source"
         position={sourcePos}

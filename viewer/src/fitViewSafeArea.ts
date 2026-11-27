@@ -43,6 +43,17 @@ function measureCanvasSize(): { width: number; height: number } {
   return { width, height };
 }
 
+function storyOrLayoutDimensions(node: Node<AtlasNodeData>): {
+  width: number;
+  height: number;
+} {
+  if (node.type === "storyAnchor") return { width: 296, height: 188 };
+  if (node.type === "storyCard") return { width: 248, height: 98 };
+  if (node.type === "storyGroup") return { width: 248, height: 104 };
+  if (node.type === "storyHeader") return { width: 248, height: 36 };
+  return nodeLayoutDimensions(node);
+}
+
 function fallbackNodesBounds(nodes: Node<AtlasNodeData>[]): Rect {
   let minX = Infinity;
   let minY = Infinity;
@@ -57,7 +68,7 @@ function fallbackNodesBounds(nodes: Node<AtlasNodeData>[]): Rect {
       maxY = Math.max(maxY, node.position.y + (node.measured?.height ?? 20));
       continue;
     }
-    const { width, height } = nodeLayoutDimensions(node);
+    const { width, height } = storyOrLayoutDimensions(node);
     const w = node.measured?.width ?? width;
     const h = node.measured?.height ?? height;
     minX = Math.min(minX, node.position.x);

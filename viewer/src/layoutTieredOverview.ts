@@ -14,10 +14,10 @@ export const OVERVIEW_TIER_META: ReadonlyArray<{
   id: OverviewTierId;
   title: string;
 }> = [
-  { id: "entry", title: "01 · Entry & App Shell" },
-  { id: "feature", title: "02 · Features & Routes" },
-  { id: "ui", title: "03 · Shared UI" },
-  { id: "core", title: "04 · Core, Hooks & Utilities" },
+  { id: "entry", title: "01 · App Startup & Routing" },
+  { id: "feature", title: "02 · User-Facing Features & Screens" },
+  { id: "ui", title: "03 · Shared Interface Components" },
+  { id: "core", title: "04 · Data, State & Shared Helpers" },
 ];
 
 export const OVERVIEW_MAX_COLS = 5;

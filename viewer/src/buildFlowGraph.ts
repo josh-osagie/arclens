@@ -35,6 +35,9 @@ export type ClusterNodeData = {
   folder: string;
   count: number;
   breakdown?: Partial<Record<GraphNodeType, number>>;
+  humanTitle?: string;
+  humanSubtitle?: string;
+  isNeutralFallback?: boolean;
   isSubcluster?: boolean;
   isExternalNeighbor?: boolean;
   isBridgeOrigin?: boolean;
@@ -159,6 +162,9 @@ export function buildFlowGraph(
           folder: node.cluster.folder,
           count: node.cluster.count,
           breakdown: node.cluster.breakdown,
+          humanTitle: node.cluster.humanTitle,
+          humanSubtitle: node.cluster.humanSubtitle,
+          isNeutralFallback: node.cluster.isNeutralFallback,
           isSubcluster: node.cluster.isSubcluster,
           isExternalNeighbor: node.cluster.isExternalNeighbor,
         },

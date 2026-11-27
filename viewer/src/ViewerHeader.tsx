@@ -1,7 +1,14 @@
-import { folderKey } from "./clusterGraph";
 import { openCommandPalette } from "./CanvasGuideBar";
+import { humanizeAreaIdentity } from "./humanSemantics";
 import { InsightsBadge } from "./InsightsBadge";
 import type { AtlasGraphNode, GraphInsight } from "./types";
+
+export type BreadcrumbTrailItem = {
+  scopeKey: string;
+  label: string;
+  sublabel?: string;
+  isCurrent: boolean;
+};
 
 type BridgeInfo = {
   fromDomain: string;
@@ -15,10 +22,11 @@ type Props = {
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   isBuilding: boolean;
-  activeDomain: string | null;
-  domainTrail: readonly string[];
-  selectedDomain: string | null;
-  selectedNode: AtlasGraphNode | null;
+  canStepBack: boolean;
+  trailItems: readonly BreadcrumbTrailItem[];
+  hasFocusedStory: boolean;
+  inspectorOpen: boolean;
+  onToggleInspector: () => void;
   bridgeInfo: BridgeInfo | null;
   onClearBridge: () => void;
   searchLower: string;
@@ -29,8 +37,7 @@ type Props = {
   onInsightClick: (insight: GraphInsight) => void;
   onTraceFromEntry: () => void;
   onStepBack: () => void;
-  onBackToOverview: () => void;
-  onSelectTrailDomain: (domain: string, index: number) => void;
+  onSelectTrailItem: (scopeKey: string) => void;
 };
 
 function SidebarToggleIcon() {
@@ -58,10 +65,11 @@ export function ViewerHeader({
   sidebarOpen,
   onToggleSidebar,
   isBuilding,
-  activeDomain,
-  domainTrail,
-  selectedDomain,
-  selectedNode,
+  canStepBack,
+  trailItems,
+  hasFocusedStory,
+  inspectorOpen,
+  onToggleInspector,
   bridgeInfo,
   onClearBridge,
   searchLower,
@@ -72,26 +80,10 @@ export function ViewerHeader({
   onInsightClick,
   onTraceFromEntry,
   onStepBack,
-  onBackToOverview,
-  onSelectTrailDomain,
+  onSelectTrailItem,
 }: Props) {
-  const effectiveTrail: string[] =
-    domainTrail.length > 0
-      ? [...domainTrail]
-      : activeDomain
-        ? [activeDomain]
-        : selectedDomain
-          ? [selectedDomain]
-          : selectedNode &&
-              !selectedNode.cluster &&
-              selectedNode.file !== "external"
-            ? [folderKey(selectedNode.file)]
-            : [];
-
-  const canStepBack = Boolean(activeDomain || searchLower);
-  const hasCrumbs =
-    canStepBack || effectiveTrail.length > 0 || Boolean(selectedNode);
-  const hasSelectedSymbol = Boolean(selectedNode && !selectedNode.cluster);
+  const showBreadcrumbs =
+    canStepBack || trailItems.length > 1 || Boolean(searchLower);
 
   return (
     <header className="viewer-header">
@@ -114,14 +106,17 @@ export function ViewerHeader({
           <span className="viewer-header__project-name">
             {projectName ?? "arclens"}
           </span>
-          <span className="viewer-header__project-stats">
-            {totalNodes} nodes · {totalEdges} edges
+          <span
+            className="viewer-header__project-stats"
+            title={`${totalNodes} analyzed elements · ${totalEdges} relationships`}
+          >
+            {totalNodes} elements
           </span>
         </div>
       </div>
 
       <div className="viewer-header__center">
-        {hasCrumbs ? (
+        {showBreadcrumbs ? (
           <nav className="viewer-header__crumbs" aria-label="Explorer breadcrumb">
             {canStepBack && (
               <button
@@ -134,62 +129,46 @@ export function ViewerHeader({
               </button>
             )}
 
-            <button
-              type="button"
-              className={`viewer-header__crumb${effectiveTrail.length === 0 && !hasSelectedSymbol && !searchLower ? " viewer-header__crumb--current" : ""}`}
-              onClick={onBackToOverview}
-              title="Return to system overview"
-            >
-              Overview
-            </button>
-
-            {effectiveTrail.map((crumbDomain, idx) => {
-              const isLastDomain = idx === effectiveTrail.length - 1;
-              const isCurrent = isLastDomain && !hasSelectedSymbol;
-
-              return (
-                <span key={`${crumbDomain}-${idx}`} className="viewer-header__crumb-group">
+            {trailItems.map((item, idx) => (
+              <span key={`${item.scopeKey}-${idx}`} className="viewer-header__crumb-group">
+                {idx > 0 && (
                   <span className="viewer-header__sep" aria-hidden="true">
                     ›
                   </span>
-                  {isCurrent ? (
-                    <span className="viewer-header__crumb viewer-header__crumb--current">
-                      {crumbDomain}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="viewer-header__crumb"
-                      onClick={() => onSelectTrailDomain(crumbDomain, idx)}
-                      title={`Jump back to ${crumbDomain}`}
-                    >
-                      {crumbDomain}
-                    </button>
-                  )}
-                </span>
-              );
-            })}
-
-            {hasSelectedSymbol && selectedNode && (
-              <span className="viewer-header__crumb-group">
-                <span className="viewer-header__sep" aria-hidden="true">
-                  ›
-                </span>
-                <span className="viewer-header__crumb viewer-header__crumb--current">
-                  {selectedNode.name}
-                </span>
+                )}
+                {item.isCurrent ? (
+                  <span className="viewer-header__crumb viewer-header__crumb--current">
+                    {item.label}
+                    {item.sublabel && (
+                      <span className="viewer-header__crumb-sub">
+                        {" "}
+                        · {item.sublabel}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="viewer-header__crumb"
+                    onClick={() => onSelectTrailItem(item.scopeKey)}
+                    title={`Return to ${item.label}`}
+                  >
+                    {item.label}
+                  </button>
+                )}
               </span>
-            )}
+            ))}
 
             {bridgeInfo && (
               <button
                 type="button"
                 className="viewer-header__bridge-chip"
                 onClick={onClearBridge}
-                title="Click to show all symbols in this domain"
+                title="Click to show all items in this area"
               >
                 <span>
-                  {bridgeInfo.count} linked from {bridgeInfo.fromDomain}
+                  {bridgeInfo.count} connected from{" "}
+                  {humanizeAreaIdentity(bridgeInfo.fromDomain).title}
                 </span>
                 <span className="viewer-header__bridge-clear" aria-hidden="true">
                   · Show all ×
@@ -215,16 +194,13 @@ export function ViewerHeader({
                 type="button"
                 className="viewer-header__pill viewer-header__pill--primary"
                 onClick={onTraceFromEntry}
-                title={`Open entry point (${primaryEntry.fileLabel})`}
+                title={`Start exploring from ${primaryEntry.name} (${primaryEntry.fileLabel})`}
               >
-                Trace from entry
-                <span className="viewer-header__pill-sub">
-                  {primaryEntry.fileLabel}
-                </span>
+                Start from app entry
               </button>
             )}
             <span className="viewer-header__hint">
-              Hover or click a domain to trace links · Double-click to open
+              Click an area to see what it does · Double-click or click Explore to step inside
             </span>
           </div>
         )}
@@ -235,11 +211,22 @@ export function ViewerHeader({
           <span className="viewer-header__building">updating…</span>
         )}
 
+        {hasFocusedStory && (
+          <button
+            type="button"
+            className={`viewer-header__pill${inspectorOpen ? " viewer-header__pill--primary" : ""}`}
+            onClick={onToggleInspector}
+            title="Show or hide code snippet, props, and technical metadata"
+          >
+            {inspectorOpen ? "Hide code" : "Technical details"}
+          </button>
+        )}
+
         <button
           type="button"
           className="viewer-header__pill"
           onClick={openCommandPalette}
-          title="Search symbols & commands (⌘K)"
+          title="Search features, screens, & commands (⌘K)"
         >
           Search <kbd className="viewer-header__kbd">⌘K</kbd>
         </button>
