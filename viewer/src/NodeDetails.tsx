@@ -1,5 +1,4 @@
 import { DetailsFieldMenu, useDetailsFieldPrefs } from "./DetailsFieldMenu";
-import { PanelMinimizeButton } from "./FloatingPanel";
 import { FileSnippetPreview } from "./FileSnippetPreview";
 import { InfoTip } from "./InfoTip";
 import type { DetailsFieldPrefs } from "./detailsPanelPrefs";
@@ -9,12 +8,36 @@ import { relFile, typeColors } from "./buildFlowGraph";
 type Props = {
   node: AtlasGraphNode;
   projectRoot?: string;
+  onSelectConnection?: (nodeId: string) => void;
   onClose: () => void;
 };
 
+export type DedupedConnection = GraphConnection & {
+  count: number;
+};
+
+/** Collapse repeated edges between the same symbol pair (e.g. `<Input />` rendered 5×). */
+export function dedupeConnections(
+  items: readonly GraphConnection[]
+): DedupedConnection[] {
+  const byKey = new Map<string, DedupedConnection>();
+
+  for (const item of items) {
+    const key = `${item.nodeId}::${item.edgeType}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      byKey.set(key, { ...item, count: 1 });
+    }
+  }
+
+  return [...byKey.values()];
+}
+
 const CONNECTION_TIPS = {
   importedBy: "Files that import this symbol.",
-  renderedBy: "Components that use this in JSX. Each tag counts separately.",
+  renderedBy: "Components that use this in JSX. Repeated tags are grouped.",
   calledFrom: "Files that call this hook.",
   imports: "Symbols this file imports.",
   renders: "Components this file renders in JSX.",
@@ -34,18 +57,21 @@ function ConnectionGroup({
   title,
   tip,
   items,
+  onSelectConnection,
 }: {
   title: string;
   tip?: string;
   items: GraphConnection[];
+  onSelectConnection?: (nodeId: string) => void;
 }) {
+  const deduped = dedupeConnections(items);
   const heading = (
     <h3>
       <FieldLabel label={title} tip={tip} />
     </h3>
   );
 
-  if (items.length === 0) {
+  if (deduped.length === 0) {
     return (
       <div className="details-section">
         {heading}
@@ -58,20 +84,51 @@ function ConnectionGroup({
     <div className="details-section">
       {heading}
       <ul className="details-list">
-        {items.map((conn) => (
-          <li key={`${conn.nodeId}-${conn.edgeType}`}>
-            <span className="details-list__name">{conn.name}</span>
-            <span className="details-list__meta">
-              {conn.edgeType} · {conn.file}
-            </span>
-          </li>
-        ))}
+        {deduped.map((conn) => {
+          const canJump =
+            Boolean(onSelectConnection) && conn.file !== "external";
+
+          const content = (
+            <>
+              <span className="details-list__head">
+                <span className="details-list__name">{conn.name}</span>
+                {conn.count > 1 && (
+                  <span className="details-list__count">×{conn.count}</span>
+                )}
+              </span>
+              <span className="details-list__meta">
+                {conn.edgeType} · {conn.file}
+              </span>
+            </>
+          );
+
+          return (
+            <li key={`${conn.nodeId}::${conn.edgeType}`}>
+              {canJump ? (
+                <button
+                  type="button"
+                  className="details-list__jump"
+                  onClick={() => onSelectConnection?.(conn.nodeId)}
+                >
+                  {content}
+                </button>
+              ) : (
+                content
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 }
 
-export function NodeDetails({ node, projectRoot, onClose }: Props) {
+export function NodeDetails({
+  node,
+  projectRoot,
+  onSelectConnection,
+  onClose,
+}: Props) {
   const [fieldPrefs, setFieldPrefs] = useDetailsFieldPrefs();
 
   const incoming = {
@@ -118,11 +175,11 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
         </div>
         <div className="graph-sidebar__header-actions">
           <DetailsFieldMenu prefs={fieldPrefs} onChange={setFieldPrefs} />
-          <PanelMinimizeButton />
           <button
             type="button"
             className="graph-sidebar__close"
             onClick={onClose}
+            aria-label="Close node details"
           >
             ×
           </button>
@@ -166,7 +223,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
               <dt>
                 <FieldLabel
                   label="Used by"
-                  tip="Incoming connections: imports, JSX renders, and hook calls. Each JSX tag counts once."
+                  tip="Incoming connections: imports, JSX renders, and hook calls."
                 />
               </dt>
               <dd>{usedByCount}</dd>
@@ -221,6 +278,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
             title="Imported by"
             tip={CONNECTION_TIPS.importedBy}
             items={incoming.imports}
+            onSelectConnection={onSelectConnection}
           />
         )}
         {show("renderedBy") && (
@@ -228,6 +286,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
             title="Rendered by"
             tip={CONNECTION_TIPS.renderedBy}
             items={incoming.renders}
+            onSelectConnection={onSelectConnection}
           />
         )}
         {show("calledFrom") && (
@@ -235,6 +294,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
             title="Called from"
             tip={CONNECTION_TIPS.calledFrom}
             items={incoming.uses}
+            onSelectConnection={onSelectConnection}
           />
         )}
         {show("imports") && (
@@ -242,6 +302,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
             title="Imports"
             tip={CONNECTION_TIPS.imports}
             items={outgoing.imports}
+            onSelectConnection={onSelectConnection}
           />
         )}
         {show("renders") && (
@@ -249,6 +310,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
             title="Renders"
             tip={CONNECTION_TIPS.renders}
             items={outgoing.renders}
+            onSelectConnection={onSelectConnection}
           />
         )}
         {show("callsHooks") && (
@@ -256,6 +318,7 @@ export function NodeDetails({ node, projectRoot, onClose }: Props) {
             title="Calls hooks"
             tip={CONNECTION_TIPS.callsHooks}
             items={outgoing.uses}
+            onSelectConnection={onSelectConnection}
           />
         )}
       </div>

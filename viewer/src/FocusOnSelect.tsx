@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, type Node } from "@xyflow/react";
+import type { AtlasNodeData } from "./buildFlowGraph";
+import { fitViewportInSafeArea } from "./fitViewSafeArea";
 
 type Props = {
   nodeId: string | null;
@@ -18,36 +20,36 @@ export function FocusOnSelect({
   layoutReady = true,
   onFocused,
 }: Props) {
-  const { fitView, getNode } = useReactFlow();
+  const rf = useReactFlow<Node<AtlasNodeData>>();
 
   useEffect(() => {
     if (!enabled || !layoutReady) return;
 
     const ids =
       nodeIds && nodeIds.length > 0
-        ? nodeIds.filter((id) => Boolean(getNode(id)))
-        : nodeId && getNode(nodeId)
+        ? nodeIds.filter((id) => Boolean(rf.getNode(id)))
+        : nodeId && rf.getNode(nodeId)
           ? [nodeId]
           : [];
 
     if (ids.length === 0) return;
 
     const timer = window.setTimeout(() => {
-      const resolved = ids.filter((id) => Boolean(getNode(id)));
+      const resolved = ids.filter((id) => Boolean(rf.getNode(id)));
       if (resolved.length === 0) return;
 
-      void fitView({
-        nodes: resolved.map((id) => ({ id })),
-        padding: resolved.length > 1 ? 0.28 : 0.55,
+      void fitViewportInSafeArea(rf, {
+        nodeIds: resolved,
+        padding: resolved.length > 1 ? 0.24 : 0.48,
         duration: 350,
-        maxZoom: resolved.length > 1 ? 1.2 : 1.4,
+        maxZoom: resolved.length > 1 ? 1.2 : 1.35,
       }).then(() => {
         onFocused?.();
       });
     }, 80);
 
     return () => window.clearTimeout(timer);
-  }, [nodeId, nodeIds, enabled, layoutReady, fitView, getNode, onFocused]);
+  }, [nodeId, nodeIds, enabled, layoutReady, rf, onFocused]);
 
   return null;
 }

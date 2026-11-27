@@ -32,6 +32,7 @@ export type AnalyzeOptions = {
   /** When omitted, plan default from entitlements is used */
   maxFiles?: string;
   cache?: boolean;
+  includeTests?: boolean;
   withSnippets?: boolean;
   reanalyze?: boolean;
 };
@@ -159,6 +160,11 @@ export function addAnalyzeOptions(command: Command): Command {
       `re-parse all files and ignore ${CACHE_DIR}/cache.json`
     )
     .option(
+      "--include-tests",
+      "include test, mock, and story files in the graph",
+      false
+    )
+    .option(
       "--with-snippets",
       `write truncated source sidecars to ${SNIPPETS_DIR}/ in the analyzed project`
     )
@@ -192,6 +198,7 @@ export async function runAnalyze(inputPath: string, options: AnalyzeOptions): Pr
     const result = await analyzeProject(targetDir, {
       maxFiles,
       cache: options.cache,
+      includeTests: options.includeTests,
       verbose: options.verbose,
       progress,
       entitlements,

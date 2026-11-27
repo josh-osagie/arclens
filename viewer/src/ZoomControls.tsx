@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Panel, useReactFlow, useViewport } from "@xyflow/react";
+import { Panel, useReactFlow, useViewport, type Node as FlowNode } from "@xyflow/react";
+import type { AtlasNodeData } from "./buildFlowGraph";
 import { triggerExport } from "./exportGraphBridge";
+import { fitViewportInSafeArea } from "./fitViewSafeArea";
 import {
   loadExportScope,
   saveExportScope,
@@ -41,7 +43,8 @@ function ExportIcon() {
 }
 
 export function ZoomControls() {
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const rf = useReactFlow<FlowNode<AtlasNodeData>>();
+  const { zoomIn, zoomOut } = rf;
   const { zoom } = useViewport();
   const percent = Math.round(zoom * 100);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -157,7 +160,9 @@ export function ZoomControls() {
           <button
             type="button"
             className="zoom-controls__btn"
-            onClick={() => fitView({ padding: 0.22, duration: 280 })}
+            onClick={() =>
+              void fitViewportInSafeArea(rf, { padding: 0.18, duration: 280 })
+            }
             aria-label="Fit view"
           >
             <FitViewIcon />

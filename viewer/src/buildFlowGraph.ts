@@ -15,7 +15,7 @@ import {
   primaryEdgeType,
   strokeColorForEdgeTypes,
 } from "./mergeFlowEdges";
-import type { AtlasGraph, AtlasGraphNode } from "./types";
+import type { AtlasGraph, AtlasGraphNode, GraphNodeType } from "./types";
 
 export { edgeColors, nodeTypes, typeColors, typeLabels } from "./design/tokens";
 
@@ -27,12 +27,17 @@ export type AtlasNodeData = {
   compact?: boolean;
   selected?: boolean;
   dimmed?: boolean;
+  linkedFrom?: string;
 };
 
 export type ClusterNodeData = {
   label: string;
   folder: string;
   count: number;
+  breakdown?: Partial<Record<GraphNodeType, number>>;
+  isSubcluster?: boolean;
+  isExternalNeighbor?: boolean;
+  isBridgeOrigin?: boolean;
   selected?: boolean;
   dimmed?: boolean;
 };
@@ -153,6 +158,9 @@ export function buildFlowGraph(
           label: node.name,
           folder: node.cluster.folder,
           count: node.cluster.count,
+          breakdown: node.cluster.breakdown,
+          isSubcluster: node.cluster.isSubcluster,
+          isExternalNeighbor: node.cluster.isExternalNeighbor,
         },
       } as unknown as Node<AtlasNodeData>;
     }

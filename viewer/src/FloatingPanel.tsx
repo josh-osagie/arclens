@@ -281,6 +281,7 @@ export function FloatingPanel({
     <FloatingPanelContext.Provider value={panelContext}>
       <div
         ref={panelRef}
+        data-panel-id={id}
         className={`floating-panel ${minimized ? "floating-panel--minimized" : ""} ${interaction ? `floating-panel--${interaction}` : ""} ${className}`.trim()}
         style={{
           left: rect.x,

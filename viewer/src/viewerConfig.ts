@@ -3,6 +3,9 @@
 /** Above this node count, compact mode and search-gated rendering apply. */
 export const LARGE_GRAPH_THRESHOLD = 500;
 
+/** Auto-enable domain folder clustering above this runtime node count. */
+export const CLUSTER_OVERVIEW_THRESHOLD = 40;
+
 /** Use dagre layout up to this many nodes; grid layout beyond that. */
 export const DAGRE_LAYOUT_THRESHOLD = 150;
 

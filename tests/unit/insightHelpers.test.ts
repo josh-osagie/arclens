@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  categorizeInsight,
   countInsightsBySeverity,
+  findNodeForInsight,
   insightBadgeSummary,
 } from "../../viewer/src/insightHelpers";
-import type { GraphInsight } from "../../viewer/src/types";
+import type { AtlasGraphNode, GraphInsight } from "../../viewer/src/types";
 
 const insight = (
   severity: GraphInsight["severity"],
@@ -72,15 +74,54 @@ describe("insightHelpers", () => {
       });
     });
 
-    it("shows a clean check when only info and tips remain", () => {
+    it("uses muted info count when only info and tips remain", () => {
       const summary = insightBadgeSummary([insight("info"), insight("tip")]);
 
       expect(summary).toEqual({
-        tone: "clean",
-        label: "✓",
+        tone: "muted",
+        label: "ℹ 2",
         alertCount: 0,
         totalCount: 2,
       });
+    });
+  });
+
+  describe("categorizeInsight & findNodeForInsight", () => {
+    it("categorizes insights into expected buckets", () => {
+      expect(categorizeInsight(insight("error", "Rules of Hooks: useState called conditionally"))).toBe("hooks");
+      expect(categorizeInsight(insight("warning", "Component naming: card"))).toBe("naming");
+      expect(categorizeInsight(insight("info", "Orphan export: LegacyHelper"))).toBe("unused");
+      expect(categorizeInsight(insight("info", "App imports but may not render Modal"))).toBe("imports");
+      expect(categorizeInsight(insight("tip", "Medium-sized codebase"))).toBe("other");
+    });
+
+    it("resolves the graph node matching an insight symbol and file", () => {
+      const nodes: AtlasGraphNode[] = [
+        {
+          id: "C:/repo/src/utils/legacy.ts::LegacyHelper",
+          name: "LegacyHelper",
+          file: "C:/repo/src/utils/legacy.ts",
+          type: "utility",
+        },
+        {
+          id: "C:/repo/src/other.ts::LegacyHelper",
+          name: "LegacyHelper",
+          file: "C:/repo/src/other.ts",
+          type: "utility",
+        },
+      ];
+
+      const matched = findNodeForInsight(
+        {
+          severity: "info",
+          title: "Orphan export: LegacyHelper",
+          detail: "unused",
+          file: "src/utils/legacy.ts",
+        },
+        nodes
+      );
+
+      expect(matched?.id).toBe("C:/repo/src/utils/legacy.ts::LegacyHelper");
     });
   });
 });

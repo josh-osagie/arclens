@@ -23,4 +23,15 @@ describe("spreadCoincidentNodes", () => {
     const ys = spread.map((entry) => entry.position.y);
     expect(new Set(ys).size).toBe(3);
   });
+
+  it("separates nodes whose bounding boxes overlap even when not identical", () => {
+    const spread = spreadCoincidentNodes([
+      node("a", 10, 10),
+      node("b", 40, 30),
+    ]);
+
+    const a = spread[0]!;
+    const b = spread[1]!;
+    expect(b.position.y).toBeGreaterThanOrEqual(a.position.y + 112);
+  });
 });

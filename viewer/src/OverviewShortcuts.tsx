@@ -15,7 +15,7 @@ import {
 } from "./sidebarPrefs";
 import type { AtlasGraphNode } from "./types";
 
-const DEFAULT_VISIBLE = 3;
+const DEFAULT_VISIBLE = 4;
 
 type Props = {
   entries: EntryOverview<AtlasGraphNode>[];
@@ -139,7 +139,7 @@ export function OverviewShortcuts({
       <OverviewSection
         sectionKey="entries"
         title="Entry points"
-        tip="Where the app starts — main.tsx, createRoot bootstrap, or Next.js root layouts. Click to spotlight on the canvas; click again to clear."
+        tip="Where the app starts — main.tsx, createRoot bootstrap, or root layouts. Click to inspect on the canvas."
         items={entries}
         expanded={sectionPrefs.entries}
         onToggleSection={onToggleSection}
@@ -172,8 +172,8 @@ export function OverviewShortcuts({
 
       <OverviewSection
         sectionKey="folders"
-        title="Top folders"
-        tip="Folders with the most nodes — click to spotlight that folder on the canvas."
+        title="Domains"
+        tip="Architectural domains ordered by size — click to step inside (Esc or ← Overview returns to your previous zoom)."
         items={folders}
         expanded={sectionPrefs.folders}
         onToggleSection={onToggleSection}
@@ -189,7 +189,7 @@ export function OverviewShortcuts({
               {folderLabel(folder.folder)}
             </span>
             <span className="overview-shortcuts__meta" title={folder.folder}>
-              {folder.count} node{folder.count === 1 ? "" : "s"} ·{" "}
+              {folder.count} symbol{folder.count === 1 ? "" : "s"} ·{" "}
               {truncatePath(folder.folder)}
             </span>
           </button>
@@ -199,7 +199,7 @@ export function OverviewShortcuts({
       <OverviewSection
         sectionKey="hubs"
         title="Hub nodes"
-        tip="Most connected nodes by incoming and outgoing edges. Click to spotlight on the canvas; click again to clear."
+        tip="Most connected symbols across the project. Click to jump to and inspect on the canvas."
         items={hubs}
         expanded={sectionPrefs.hubs}
         onToggleSection={onToggleSection}

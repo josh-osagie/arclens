@@ -66,8 +66,16 @@ export function CommandPalette({ state, actions }: Props) {
       }
     };
 
+    const onOpenEvent = () => {
+      setOpen(true);
+    };
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("arclens:open-command-palette", onOpenEvent);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("arclens:open-command-palette", onOpenEvent);
+    };
   }, [commandActions, open]);
 
   const runAndClose = (run: () => void) => {

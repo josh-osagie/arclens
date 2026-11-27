@@ -49,6 +49,30 @@ describe("discoverFiles", () => {
     expect(files[0]).not.toContain(".arclens");
   });
 
+  it("excludes test, mock, and story files by default unless includeTests is true", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-tests-opt-"));
+    const write = (rel: string) => {
+      const full = path.join(dir, rel);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, "export const x = 1;\n");
+    };
+
+    write("src/App.tsx");
+    write("src/App.test.tsx");
+    write("src/App.spec.ts");
+    write("src/Button.stories.tsx");
+    write("src/test/test-utils.tsx");
+    write("src/__tests__/helper.ts");
+    write("src/__mocks__/api.ts");
+
+    const defaultFiles = discoverSourceFiles(dir);
+    expect(defaultFiles).toHaveLength(1);
+    expect(defaultFiles[0]).toMatch(/App\.tsx$/);
+
+    const withTests = discoverSourceFiles(dir, { includeTests: true });
+    expect(withTests).toHaveLength(7);
+  });
+
   it("detects HTML-only folders for unsupported project hints", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arclens-html-"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html>\n");

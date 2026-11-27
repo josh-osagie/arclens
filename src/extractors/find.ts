@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ExportRecord } from "./exports";
+import type { ExportRecord, ReExportRecord } from "./exports";
 
 export function nodeId(exportRecord: ExportRecord): string {
   return `${exportRecord.file}::${exportRecord.name}`;
@@ -51,6 +51,57 @@ export function findExportByName(
   name: string
 ): ExportRecord | undefined {
   return exports.find((exp) => exp.name === name);
+}
+
+/** Resolve an imported symbol from a target file, following barrel re-exports up to 5 hops. */
+export function resolveImportedExport(
+  exports: ExportRecord[],
+  resolvedFile: string,
+  symbolName: string,
+  isDefault = false,
+  reExports: ReExportRecord[] = []
+): ExportRecord | undefined {
+  if (isDefault) {
+    const directDefault = findDefaultExportInFile(exports, resolvedFile);
+    if (directDefault) return directDefault;
+  }
+
+  const direct = findExportInFile(exports, resolvedFile, symbolName);
+  if (direct) return direct;
+
+  if (reExports.length > 0) {
+    let curFile = resolvedFile;
+    let curName = isDefault ? "default" : symbolName;
+    for (let depth = 0; depth < 5; depth++) {
+      const hop =
+        reExports.find((r) => r.file === curFile && r.exportName === curName) ??
+        (isDefault
+          ? reExports.find(
+              (r) => r.file === curFile && r.exportName === symbolName
+            )
+          : undefined);
+      if (!hop) break;
+
+      const match =
+        findExportInFile(exports, hop.targetFile, hop.targetName) ??
+        (hop.exportName === "default"
+          ? findDefaultExportInFile(exports, hop.targetFile)
+          : undefined);
+      if (match) return match;
+
+      curFile = hop.targetFile;
+      curName = hop.targetName;
+    }
+  }
+
+  const dir = path.dirname(resolvedFile);
+  const prefix = dir.endsWith(path.sep) ? dir : `${dir}${path.sep}`;
+  const inSubtree = exports.find(
+    (exp) => exp.name === symbolName && exp.file.startsWith(prefix)
+  );
+  if (inSubtree) return inSubtree;
+
+  return findExportByName(exports, symbolName);
 }
 
 /** @deprecated Use findPrimaryExportInFile */

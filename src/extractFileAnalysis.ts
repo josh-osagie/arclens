@@ -1,12 +1,14 @@
 import type { SourceFile, StandardizedFilePath } from "ts-morph";
 import path from "node:path";
 import { nodeId } from "./extractors/find";
-import type { ExportRecord } from "./extractors/exports";
+import type { ExportRecord, ReExportRecord } from "./extractors/exports";
 import {
   extractExportsDeclarations,
   extractHookUsage,
   extractImportEdges,
   extractJsxRenders,
+  extractReExports,
+  extractSameFileExportRefs,
 } from "./extractors/exports";
 import {
   detectHookRuleViolations,
@@ -28,6 +30,8 @@ export type FileAnalysisPayload = {
   filePath: string;
   importEdges: ImportEdge[];
   exports: ExportRecord[];
+  reExports?: ReExportRecord[];
+  sameFileRefs?: string[];
   renders: RenderEdge[];
   uses: UseEdge[];
   hookRuleViolations: HookRuleViolation[];
@@ -52,6 +56,12 @@ export function sanitizeFileAnalysisPayload(
       ...exp,
       file: normalizeFileRef(exp.file),
     })),
+    reExports: (payload.reExports ?? []).map((reExport) => ({
+      ...reExport,
+      file: normalizeFileRef(reExport.file),
+      targetFile: normalizeFileRef(reExport.targetFile),
+    })),
+    sameFileRefs: payload.sameFileRefs ?? [],
     renders: payload.renders.map((render) => ({
       ...render,
       file: normalizeFileRef(render.file),
@@ -88,6 +98,8 @@ export function extractFileAnalysis(
     filePath,
     importEdges: extractImportEdges(sourceFile),
     exports,
+    reExports: extractReExports(sourceFile),
+    sameFileRefs: extractSameFileExportRefs(sourceFile, exports),
     renders: extractJsxRenders(sourceFile),
     uses: extractHookUsage(sourceFile),
     hookRuleViolations: detectHookRuleViolations([sourceFile]),
@@ -99,6 +111,8 @@ export function extractFileAnalysis(
 export type MergedFileAnalysis = {
   importEdges: ImportEdge[];
   exports: ExportRecord[];
+  reExports: ReExportRecord[];
+  sameFileRefIds: Set<string>;
   renders: RenderEdge[];
   uses: UseEdge[];
   hookRuleViolations: HookRuleViolation[];
@@ -112,6 +126,8 @@ export function mergeFilePayloads(
 ): MergedFileAnalysis {
   const importEdges: ImportEdge[] = [];
   const exports: ExportRecord[] = [];
+  const reExports: ReExportRecord[] = [];
+  const sameFileRefIds = new Set<string>();
   const renders: RenderEdge[] = [];
   const uses: UseEdge[] = [];
   const hookRuleViolations: HookRuleViolation[] = [];
@@ -123,6 +139,12 @@ export function mergeFilePayloads(
     scannedFiles.push(payload.filePath);
     importEdges.push(...payload.importEdges);
     exports.push(...payload.exports);
+    if (payload.reExports) {
+      reExports.push(...payload.reExports);
+    }
+    for (const refName of payload.sameFileRefs ?? []) {
+      sameFileRefIds.add(`${payload.filePath}::${refName}`);
+    }
     renders.push(...payload.renders);
     uses.push(...payload.uses);
     hookRuleViolations.push(...payload.hookRuleViolations);
@@ -139,6 +161,8 @@ export function mergeFilePayloads(
   return {
     importEdges,
     exports,
+    reExports,
+    sameFileRefIds,
     renders,
     uses,
     hookRuleViolations,
